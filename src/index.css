@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: #F2F2F7;
+  font-family: var(--font-sans);
+  color: #1C1C1E;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom fine diffused scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Glassmorphism utility helpers */
+.frosted-glass-deep {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.frosted-glass-light {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Squircle corner matching */
+.rounded-squircle {
+  border-radius: 28px;
+}
+
+/* iOS Safari zoom fix: force font-size ≥ 16px on inputs */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+/* Smooth scrolling for iOS Safari */
+.overscroll-behavior-contain {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+
+
+/* Custom Markdown formatting overrides inside chat bubble */
+.markdown-body p {
+  margin-bottom: 0.75rem;
+}
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+.markdown-body ul, .markdown-body ol {
+  margin-left: 1.25rem;
+  margin-bottom: 0.75rem;
+  list-style-type: cubic-bezier(0.16, 1, 0.3, 1);
+}
+.markdown-body li {
+  margin-bottom: 0.25rem;
+}
+.markdown-body strong {
+  font-weight: 700;
+}
+.markdown-body blockquote {
+  border-left: 3px solid #e2e8f0;
+  padding-left: 0.75rem;
+  color: #64748b;
+  font-style: italic;
+}

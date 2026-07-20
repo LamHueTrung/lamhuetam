@@ -1,0 +1,6 @@
+{
+  "name": "iOS Personal Finance & AI Advisor",
+  "description": "Ứng dụng quản lý tài chính cá nhân dạng Single Page Application với giao diện iOS 26.4, tích hợp Scan AI OCR, giám sát ngân sách, động cơ công nợ và Cố vấn AI Gemini Co-Visor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

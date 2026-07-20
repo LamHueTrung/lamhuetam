@@ -1,0 +1,11 @@
+{
+  "name": "Tài Chính Cá Nhân",
+  "short_name": "TCP",
+  "description": "Ứng dụng quản lý tài chính cá nhân với AI Advisor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#1E293B",
+  "orientation": "portrait",
+  "lang": "vi-VN"
+}
