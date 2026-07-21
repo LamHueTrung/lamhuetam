@@ -6,7 +6,7 @@ import {
   mdiCheckCircleOutline, mdiChartLine, mdiChartAreaspline, mdiChartBar, mdiAutoFix,
   mdiLoading, mdiRefresh
 } from "@mdi/js";
-import { Transaction, DebtAccount, Category, Budget } from "../types";
+import { Transaction, DebtAccount, Category, Budget, SavingsGoal } from "../types";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 type Debt = DebtAccount;
 
@@ -15,6 +15,7 @@ interface DashboardProps {
   debts: Debt[];
   categories: Category[];
   budgets?: Budget[];
+  savings?: SavingsGoal[];
   onNavigateToTab: (tab: number) => void;
   username?: string;
 }
@@ -24,6 +25,7 @@ export default function Dashboard({
   debts,
   categories,
   budgets = [],
+  savings = [],
   onNavigateToTab,
   username = "bạn"
 }: DashboardProps) {

@@ -223,6 +223,7 @@ function AppContent() {
                   debts={debts}
                   categories={categories}
                   budgets={budgets}
+                  savings={savings}
                   onNavigateToTab={setCurrentTab}
                   username={username}
                 />
