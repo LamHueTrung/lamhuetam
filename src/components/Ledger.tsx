@@ -3,7 +3,8 @@ import { Icon } from "@mdi/react";
 import {
   mdiMagnify, mdiTune, mdiPlusCircle, mdiMinusCircleOutline, mdiTagOutline,
   mdiDeleteOutline, mdiChevronLeft, mdiChevronRight, mdiWallet, mdiDotsHorizontal,
-  mdiPencilOutline, mdiInformationOutline, mdiBank, mdiCash, mdiWalletOutline
+  mdiPencilOutline, mdiInformationOutline, mdiBank, mdiCash, mdiWalletOutline,
+  mdiClose
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import { Transaction, Category } from "../types";

@@ -158,7 +158,7 @@ function AppContent() {
   // Auth loading
   if (authLoading) {
     return (
-      <div className="h-screen bg-[#F2F2F7] flex items-center justify-center">
+      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
         <Icon path={mdiLoading} size={2} className="text-slate-400 animate-spin" />
       </div>
     );
@@ -170,7 +170,7 @@ function AppContent() {
   }
 
   return (
-    <div className="h-screen bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col justify-between select-none overflow-hidden">
+    <div className="h-screen min-h-0 bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col select-none overflow-hidden">
       {/* iOS Status Bar */}
       <div className="w-full max-w-md mx-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/30 dark:border-slate-700/30 px-6 py-3 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 z-10">
         <div className="flex items-center gap-1.5">
@@ -200,10 +200,10 @@ function AppContent() {
       <main
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-28 overflow-hidden relative"
+        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-4 min-h-0 overflow-hidden relative"
       >
         {isInitialLoading ? (
-          <div className="flex flex-col items-center justify-center h-[70vh] text-center space-y-4">
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
             <Icon path={mdiLoading} size={2.5} className="text-slate-400 dark:text-slate-500 animate-spin" />
             <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Đang tải dữ liệu...</p>
           </div>
@@ -302,7 +302,7 @@ function AuthRouter() {
 
   if (hasUser === null) {
     return (
-      <div className="h-screen bg-[#F2F2F7] flex items-center justify-center">
+      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
         <Icon path={mdiLoading} size={2} className="text-slate-400 animate-spin" />
       </div>
     );
