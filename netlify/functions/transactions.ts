@@ -5,7 +5,7 @@ export const handler: Handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Content-Type': 'application/json',
   };
 
@@ -50,6 +50,48 @@ export const handler: Handler = async (event) => {
         }
       }
       return { statusCode: 200, headers, body: JSON.stringify({ deleted: true }) };
+    }
+
+    if (event.httpMethod === 'PUT' && event.body) {
+      const body = JSON.parse(event.body);
+      const { id, ...updates } = body;
+      if (!id) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing id' }) };
+      }
+
+      const oldTx = await Transaction.findOne({ id } as any);
+      if (!oldTx) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Transaction not found' }) };
+      }
+
+      const updatedTx = await Transaction.findOneAndUpdate({ id } as any, updates, { new: true });
+
+      if (oldTx.type === 'expense') {
+        const oldBudget = await Budget.findOne({ category: oldTx.category } as any);
+        if (oldBudget) {
+          oldBudget.spent = Math.max(0, oldBudget.spent - oldTx.amount);
+          await oldBudget.save();
+        }
+
+        const newCategory = updates.category || oldTx.category;
+        const newAmount = updates.amount || oldTx.amount;
+
+        if (updates.category && updates.category !== oldTx.category) {
+          const newBudget = await Budget.findOne({ category: newCategory } as any);
+          if (newBudget) {
+            newBudget.spent += newAmount;
+            await newBudget.save();
+          }
+        } else {
+          const budget = await Budget.findOne({ category: newCategory } as any);
+          if (budget) {
+            budget.spent += newAmount;
+            await budget.save();
+          }
+        }
+      }
+
+      return { statusCode: 200, headers, body: JSON.stringify(updatedTx) };
     }
 
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };

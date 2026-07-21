@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "@mdi/react";
-import { mdiCellphone, mdiLoading, mdiLogout, mdiAccount } from "@mdi/js";
+import { mdiCellphone, mdiLoading, mdiLogout, mdiAccount, mdiAutoFix, mdiWeatherNight, mdiWeatherSunny } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -28,7 +28,7 @@ function AppContent() {
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
 
-  const { transactions, loading: txLoading, addTransaction, deleteTransaction } = useTransactions();
+  const { transactions, loading: txLoading, addTransaction, deleteTransaction, updateTransaction } = useTransactions();
   const { budgets, loading: budgetLoading, updateBudgetLimit } = useBudgets();
   const { debts, loading: debtLoading, addDebt, deleteDebt, payInstallments: payMultipleInstallments, updateDebt } = useDebts();
   const { savings, loading: saveLoading, updateSavings } = useSavings();
@@ -36,6 +36,47 @@ function AppContent() {
 
   const isInitialLoading = txLoading || budgetLoading || debtLoading || saveLoading;
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [alertsChecked, setAlertsChecked] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('dark_mode');
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dark_mode', String(isDarkMode));
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
+
+  const checkAiAlerts = useCallback(async () => {
+    if (alertsChecked) return;
+    setAlertsChecked(true);
+    try {
+      const response = await fetch("/.netlify/functions/gemini-advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactions, budgets, debts, savings,
+          promptType: 'alerts'
+        }),
+      });
+      const data = await response.json();
+      if (data.text && data.text !== 'OK') {
+        const alerts = data.text.split('\n').filter((l: string) => l.trim());
+        alerts.forEach((alert: string) => {
+          toast(alert, {
+            icon: '⚠️',
+            duration: 6000,
+            style: { borderRadius: '16px', fontSize: '12px', fontWeight: 600 },
+          });
+        });
+      }
+    } catch { }
+  }, [transactions, budgets, debts, savings, alertsChecked]);
+
+  useEffect(() => {
+    if (!isInitialLoading) checkAiAlerts();
+  }, [isInitialLoading, checkAiAlerts]);
 
   const handleAddTransaction = async (newTx: Omit<Transaction, "id">) => {
     try { await addTransaction(newTx); }
@@ -44,6 +85,11 @@ function AppContent() {
 
   const handleDeleteTransaction = async (id: string) => {
     try { await deleteTransaction(id); }
+    catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleUpdateTransaction = async (id: string, data: Partial<Transaction>) => {
+    try { await updateTransaction(id, data); toast.success('Đã cập nhật giao dịch'); }
     catch (err: any) { toast.error(err.message); }
   };
 
@@ -124,18 +170,21 @@ function AppContent() {
   }
 
   return (
-    <div className="h-screen bg-[#F2F2F7] flex flex-col justify-between select-none overflow-hidden">
-      {/* iOS Status Bar — thêm nút logout */}
-      <div className="w-full max-w-md mx-auto bg-white/70 backdrop-blur-md border-b border-slate-200/30 px-6 py-3 flex items-center justify-between text-xs font-bold text-slate-500 shrink-0 z-10">
+    <div className="h-screen bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col justify-between select-none overflow-hidden">
+      {/* iOS Status Bar */}
+      <div className="w-full max-w-md mx-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/30 dark:border-slate-700/30 px-6 py-3 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 z-10">
         <div className="flex items-center gap-1.5">
           <Icon path={mdiCellphone} size={0.875} />
           <span>iOS 26.4</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
-            <Icon path={mdiAccount} size={0.75} />
-            <span>{username}</span>
-          </div>
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md hover:bg-slate-200 transition-colors text-[10px] font-black cursor-pointer"
+            title={isDarkMode ? 'Chế độ sáng' : 'Chế độ tối'}
+          >
+            <Icon path={isDarkMode ? mdiWeatherSunny : mdiWeatherNight} size={0.75} />
+          </button>
           <button
             onClick={logout}
             className="flex items-center gap-1 text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md hover:bg-rose-100 transition-colors text-[10px] font-black cursor-pointer"
@@ -155,8 +204,8 @@ function AppContent() {
       >
         {isInitialLoading ? (
           <div className="flex flex-col items-center justify-center h-[70vh] text-center space-y-4">
-            <Icon path={mdiLoading} size={2.5} className="text-slate-400 animate-spin" />
-            <p className="text-sm font-semibold text-slate-500">Đang tải dữ liệu...</p>
+            <Icon path={mdiLoading} size={2.5} className="text-slate-400 dark:text-slate-500 animate-spin" />
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Đang tải dữ liệu...</p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -173,6 +222,7 @@ function AppContent() {
                   transactions={transactions}
                   debts={debts}
                   categories={categories}
+                  budgets={budgets}
                   onNavigateToTab={setCurrentTab}
                   username={username}
                 />
@@ -181,6 +231,7 @@ function AppContent() {
                 <Ledger
                   transactions={transactions}
                   onDeleteTransaction={handleDeleteTransaction}
+                  onUpdateTransaction={handleUpdateTransaction}
                   categories={categories}
                 />
               )}

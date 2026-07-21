@@ -19,8 +19,8 @@ export default function Navbar({ currentTab, setCurrentTab, onOpenQuickAdd }: Na
   ];
 
   return (
-    <div id="bottom-navbar" className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-2 bg-gradient-to-t from-slate-50/90 to-transparent pointer-events-none">
-      <div className="max-w-md mx-auto bg-white/70 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_12px_40px_rgba(0,0,0,0.06)] px-2 py-2 flex items-center justify-between pointer-events-auto">
+    <div id="bottom-navbar" className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-2 bg-gradient-to-t from-slate-50/90 dark:from-slate-900/90 to-transparent pointer-events-none">
+      <div className="max-w-md mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 rounded-[28px] shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] px-2 py-2 flex items-center justify-between pointer-events-auto">
         {tabs.map((tab) => {
           if (tab.isFab) {
             return (

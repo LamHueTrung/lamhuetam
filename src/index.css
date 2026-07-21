@@ -6,6 +6,8 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 html, body, #root {
   height: 100%;
   overflow: hidden;
@@ -16,6 +18,12 @@ body {
   font-family: var(--font-sans);
   color: #1C1C1E;
   -webkit-font-smoothing: antialiased;
+}
+
+.dark body,
+body.dark {
+  background-color: #1C1C1E;
+  color: #F2F2F7;
 }
 
 /* Custom fine diffused scrollbar */

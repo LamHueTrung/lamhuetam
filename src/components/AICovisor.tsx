@@ -31,22 +31,44 @@ const quickChips = [
   { label: "Mẹo tiết kiệm", icon: mdiTarget, promptType: 'savings' as const, color: "text-indigo-500" },
 ];
 
+const WELCOME_TEXT = "Xin chào! Tôi là **Gemini Co-Visor** — Trợ lý tài chính của bạn.\n\nTôi đã đồng bộ dữ liệu Sổ cái, Ngân sách, Công nợ và Mục tiêu tích lũy.\n\nHãy chọn một gợi ý bên dưới hoặc nhập câu hỏi để bắt đầu!";
+
+const SESSION_KEY = 'ai_chat_session';
+
 export default function AICovisor({ transactions, budgets, debts, savings }: AICovisorProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      sender: "gemini",
-      text: "Xin chào! Tôi là **Gemini Co-Visor** — Trợ lý tài chính của bạn.\n\nTôi đã đồng bộ dữ liệu Sổ cái, Ngân sách, Công nợ và Mục tiêu tích lũy.\n\nHãy chọn một gợi ý bên dưới hoặc nhập câu hỏi để bắt đầu!",
-      timestamp: new Date().toISOString()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Load chat history from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SESSION_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          setInitialized(true);
+          return;
+        }
+      }
+    } catch { }
+    setMessages([{ id: "welcome", sender: "gemini", text: WELCOME_TEXT, timestamp: new Date().toISOString() }]);
+    setInitialized(true);
+  }, []);
+
+  // Save messages to localStorage on change
+  useEffect(() => {
+    if (initialized) {
+      try { localStorage.setItem(SESSION_KEY, JSON.stringify(messages)); } catch { }
+    }
+  }, [messages, initialized]);
 
   const sendMessageToGemini = async (promptType: 'debt' | 'balance' | 'savings' | 'custom', customText?: string) => {
     if (isLoading) return;
@@ -105,10 +127,11 @@ export default function AICovisor({ transactions, budgets, debts, savings }: AIC
   };
 
   const clearChat = () => {
+    try { localStorage.removeItem(SESSION_KEY); } catch { }
     setMessages([{
       id: "welcome",
       sender: "gemini",
-      text: "Xin chào! Tôi là **Gemini Co-Visor** — Trợ lý tài chính của bạn.\n\nTôi đã đồng bộ dữ liệu Sổ cái, Ngân sách, Công nợ và Mục tiêu tích lũy.\n\nHãy chọn một gợi ý bên dưới hoặc nhập câu hỏi để bắt đầu!",
+      text: WELCOME_TEXT,
       timestamp: new Date().toISOString()
     }]);
   };

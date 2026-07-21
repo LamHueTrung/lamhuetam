@@ -16,6 +16,7 @@ export const api = {
   transactions: {
     list: () => request(`${BASE}/transactions`),
     create: (data: any) => request(`${BASE}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => request(`${BASE}/transactions`, { method: 'PUT', body: JSON.stringify({ id, ...data }) }),
     delete: (id: string) => request(`${BASE}/transactions?id=${id}`, { method: 'DELETE' }),
   },
 
@@ -50,6 +51,5 @@ export const api = {
 
   gemini: {
     advisor: (data: any) => request(`${BASE}/gemini-advisor`, { method: 'POST', body: JSON.stringify(data) }),
-    ocr: (data: any) => request(`${BASE}/gemini-ocr`, { method: 'POST', body: JSON.stringify(data) }),
   },
 };

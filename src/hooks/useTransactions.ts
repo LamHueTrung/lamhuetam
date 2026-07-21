@@ -33,5 +33,11 @@ export function useTransactions() {
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
-  return { transactions, loading, error, addTransaction, deleteTransaction, refetch: fetchTransactions };
+  const updateTransaction = async (id: string, data: Partial<Omit<Transaction, 'id'>>) => {
+    const updated = await api.transactions.update(id, data);
+    setTransactions(prev => prev.map(t => t.id === id ? updated : t));
+    return updated;
+  };
+
+  return { transactions, loading, error, addTransaction, deleteTransaction, updateTransaction, refetch: fetchTransactions };
 }

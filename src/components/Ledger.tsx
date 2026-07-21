@@ -2,15 +2,18 @@ import React, { useState } from "react";
 import { Icon } from "@mdi/react";
 import {
   mdiMagnify, mdiTune, mdiPlusCircle, mdiMinusCircleOutline, mdiTagOutline,
-  mdiDeleteOutline, mdiChevronLeft, mdiChevronRight, mdiWallet
+  mdiDeleteOutline, mdiChevronLeft, mdiChevronRight, mdiWallet, mdiDotsHorizontal,
+  mdiPencilOutline, mdiInformationOutline, mdiBank, mdiCash, mdiWalletOutline
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
+import EditTransactionModal from "./EditTransactionModal";
 
 interface LedgerProps {
   transactions: Transaction[];
   onDeleteTransaction: (id: string) => void;
+  onUpdateTransaction: (id: string, data: Partial<Transaction>) => void;
   categories: Category[];
 }
 
@@ -37,14 +40,18 @@ function formatVND(num: number) {
   return new Intl.NumberFormat("vi-VN").format(valueInK) + "k";
 }
 
-export default function Ledger({ transactions, onDeleteTransaction, categories }: LedgerProps) {
+export default function Ledger({ transactions, onDeleteTransaction, onUpdateTransaction, categories }: LedgerProps) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [walletFilter, setWalletFilter] = useState<'all' | 'Ngân hàng' | 'Tiền mặt' | 'Ví điện tử'>('all');
   const [searchQuery, setSearchQuery] = useState("");
   const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
+  const [moreActionTx, setMoreActionTx] = useState<Transaction | null>(null);
 
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
   const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
@@ -88,6 +95,10 @@ export default function Ledger({ transactions, onDeleteTransaction, categories }
           if (filter === 'expense') return t.type === 'expense';
           return true;
         })
+        .filter(t => {
+          if (walletFilter === 'all') return true;
+          return t.wallet === walletFilter;
+        })
         .filter(t =>
           t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
           t.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -96,10 +107,6 @@ export default function Ledger({ transactions, onDeleteTransaction, categories }
 
   const selectedIncome = selectedTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const selectedExpense = selectedTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-
-  const handleItemClick = (id: string) => {
-    setSwipedId(prev => prev === id ? null : id);
-  };
 
   const monthName = firstDayOfMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 
@@ -156,19 +163,38 @@ export default function Ledger({ transactions, onDeleteTransaction, categories }
       </div>
 
       {selectedDate && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 select-none">
-          <button onClick={() => setFilter("all")} className={`px-4 py-2.5 rounded-[20px] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${filter === "all" ? "bg-slate-900 text-white shadow-[0_6px_16px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
-            <Icon path={mdiTune} size={0.875} />
-            <span>Tất cả</span>
-          </button>
-          <button onClick={() => setFilter("income")} className={`px-4 py-2.5 rounded-[20px] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${filter === "income" ? "bg-slate-900 text-white shadow-[0_6px_16px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
-            <Icon path={mdiPlusCircle} size={0.875} className="text-emerald-500" />
-            <span>Khoản thu</span>
-          </button>
-          <button onClick={() => setFilter("expense")} className={`px-4 py-2.5 rounded-[20px] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${filter === "expense" ? "bg-slate-900 text-white shadow-[0_6px_16px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
-            <Icon path={mdiMinusCircleOutline} size={0.875} className="text-rose-500" />
-            <span>Khoản chi</span>
-          </button>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 select-none">
+            <button onClick={() => setFilter("all")} className={`px-4 py-2.5 rounded-[20px] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${filter === "all" ? "bg-slate-900 text-white shadow-[0_6px_16px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
+              <Icon path={mdiTune} size={0.875} />
+              <span>Tất cả</span>
+            </button>
+            <button onClick={() => setFilter("income")} className={`px-4 py-2.5 rounded-[20px] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${filter === "income" ? "bg-slate-900 text-white shadow-[0_6px_16px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
+              <Icon path={mdiPlusCircle} size={0.875} className="text-emerald-500" />
+              <span>Khoản thu</span>
+            </button>
+            <button onClick={() => setFilter("expense")} className={`px-4 py-2.5 rounded-[20px] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${filter === "expense" ? "bg-slate-900 text-white shadow-[0_6px_16px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
+              <Icon path={mdiMinusCircleOutline} size={0.875} className="text-rose-500" />
+              <span>Khoản chi</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 select-none">
+            <button onClick={() => setWalletFilter("all")} className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "all" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
+              <span>Tất cả ví</span>
+            </button>
+            <button onClick={() => setWalletFilter("Ngân hàng")} className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "Ngân hàng" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
+              <Icon path={mdiBank} size={0.75} />
+              <span>Ngân hàng</span>
+            </button>
+            <button onClick={() => setWalletFilter("Tiền mặt")} className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "Tiền mặt" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
+              <Icon path={mdiCash} size={0.75} />
+              <span>Tiền mặt</span>
+            </button>
+            <button onClick={() => setWalletFilter("Ví điện tử")} className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "Ví điện tử" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}>
+              <Icon path={mdiWalletOutline} size={0.75} />
+              <span>Ví điện tử</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -207,34 +233,19 @@ export default function Ledger({ transactions, onDeleteTransaction, categories }
                   };
                   const { icon: CatIcon, bg, text } = getCategoryMeta(transaction.category);
                   const isIncome = transaction.type === "income";
-                  const isSwiped = swipedId === transaction.id;
 
                   return (
                     <div key={transaction.id} className="relative overflow-hidden">
-                      <div className="absolute inset-y-0 right-0 w-20 bg-rose-500 flex items-center justify-center">
-                        <button onClick={(e) => { e.stopPropagation(); onDeleteTransaction(transaction.id); setSwipedId(null); }}
-                          className="w-full h-full text-white flex flex-col items-center justify-center gap-1 hover:bg-rose-600 transition-colors cursor-pointer">
-                          <Icon path={mdiDeleteOutline} size={1.25} />
-                          <span className="text-[10px] font-bold">Xóa</span>
-                        </button>
-                      </div>
                       <motion.div
-                        drag="x" dragConstraints={{ left: -80, right: 0 }} dragElastic={0.1}
-                        onDragEnd={(_, info) => { if (info.offset.x < -40) setSwipedId(transaction.id); else if (info.offset.x > 30) setSwipedId(null); }}
-                        animate={{ x: isSwiped ? -80 : 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        onClick={() => handleItemClick(transaction.id)}
-                        className={`bg-white p-4 flex items-center justify-between cursor-grab active:cursor-grabbing relative z-10 ${idx > 0 ? 'border-t border-slate-50' : ''}`}
+                        onClick={() => setDetailTransaction(transaction)}
+                        className={`bg-white p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 transition-colors relative z-10 ${idx > 0 ? 'border-t border-slate-50' : ''}`}
                       >
                         <div className="flex items-center gap-3.5">
                           <div className={`w-11 h-11 rounded-full ${bg} ${text} flex items-center justify-center shrink-0`}>
                             {CatIcon && <CatIcon className="w-5 h-5" />}
                           </div>
                           <div className="space-y-1">
-                            <div className="flex items-center gap-1.5">
-                              <h4 className="text-xs font-bold text-slate-800">{transaction.description}</h4>
-                              {transaction.isRecurring && <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.2 rounded-full font-bold">Định kỳ</span>}
-                            </div>
+                            <h4 className="text-xs font-bold text-slate-800">{transaction.description}</h4>
                             <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
                               <span className="flex items-center gap-0.5">
                                 <Icon path={mdiWallet} size={0.75} />
@@ -243,11 +254,19 @@ export default function Ledger({ transactions, onDeleteTransaction, categories }
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className={`text-xs font-extrabold ${isIncome ? "text-emerald-600" : "text-rose-500"}`}>
-                            {isIncome ? "+" : "-"}{formatVND(transaction.amount)}
-                          </span>
-                          <span className="block text-[9px] text-slate-400 font-medium mt-0.5">{transaction.category}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <span className={`text-xs font-extrabold ${isIncome ? "text-emerald-600" : "text-rose-500"}`}>
+                              {isIncome ? "+" : "-"}{formatVND(transaction.amount)}
+                            </span>
+                            <span className="block text-[9px] text-slate-400 font-medium mt-0.5">{transaction.category}</span>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setMoreActionTx(transaction); }}
+                            className="p-1.5 rounded-full hover:bg-slate-100 text-slate-300 hover:text-slate-500 transition-colors cursor-pointer shrink-0"
+                          >
+                            <Icon path={mdiDotsHorizontal} size={0.875} />
+                          </button>
                         </div>
                       </motion.div>
                     </div>
@@ -260,8 +279,169 @@ export default function Ledger({ transactions, onDeleteTransaction, categories }
       )}
 
       <div className="text-center text-[10px] text-slate-400 font-semibold italic">
-        * Chọn ngày trên lịch để xem chi tiết. Vuốt trái giao dịch để xóa.
+        Chọn ngày trên lịch để xem chi tiết. Bấm vào giao dịch để xem thông tin.
       </div>
+
+      {/* ACTION SHEET - Edit / Delete */}
+      <AnimatePresence>
+        {moreActionTx && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMoreActionTx(null)}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-800">Tùy chọn</h3>
+                <button onClick={() => setMoreActionTx(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
+                  <Icon path={mdiClose} size={1} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => { setEditingTransaction(moreActionTx); setMoreActionTx(null); }}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
+                    <Icon path={mdiPencilOutline} size={1} />
+                  </div>
+                  <div className="text-left">
+                    <span className="text-sm font-bold text-slate-800 block">Chỉnh sửa giao dịch</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Thay đổi thông tin giao dịch</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { onDeleteTransaction(moreActionTx.id); setMoreActionTx(null); }}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                    <Icon path={mdiDeleteOutline} size={1} />
+                  </div>
+                  <div className="text-left">
+                    <span className="text-sm font-bold text-rose-600 block">Xóa giao dịch</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Không thể khôi phục sau khi xóa</span>
+                  </div>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TRANSACTION DETAIL BOTTOM SHEET */}
+      <AnimatePresence>
+        {detailTransaction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setDetailTransaction(null)}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-slate-900 rounded-full" />
+                  <h3 className="text-base font-bold text-slate-800">Chi Tiết Giao Dịch</h3>
+                </div>
+                <button onClick={() => setDetailTransaction(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
+                  <Icon path={mdiClose} size={1} />
+                </button>
+              </div>
+
+              {(() => {
+                const tx = detailTransaction;
+                const cat = categories.find(c => c.name === tx.category);
+                const colorMap: Record<string, string> = {
+                  red: 'bg-red-100/80 text-red-700', amber: 'bg-amber-100/80 text-amber-700', blue: 'bg-blue-100/80 text-blue-700',
+                  teal: 'bg-teal-100/80 text-teal-700', emerald: 'bg-emerald-100/80 text-emerald-700', slate: 'bg-slate-100/80 text-slate-700',
+                  indigo: 'bg-indigo-100/80 text-indigo-700', rose: 'bg-rose-100/80 text-rose-700', purple: 'bg-purple-100/80 text-purple-700',
+                  orange: 'bg-orange-100/80 text-orange-700',
+                };
+                const color = cat?.color || 'slate';
+                const IconComp = iconMap[cat?.icon || 'Tag'];
+
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-slate-50 rounded-[24px] p-5 text-center">
+                      <div className={`w-14 h-14 rounded-full ${colorMap[color] || colorMap.slate} flex items-center justify-center mx-auto mb-3`}>
+                        <IconComp className="w-7 h-7" />
+                      </div>
+                      <h2 className="text-lg font-bold text-slate-800">{tx.description}</h2>
+                      <span className={`text-2xl font-black mt-1 block ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {tx.type === 'income' ? '+' : '-'}{new Intl.NumberFormat("vi-VN").format(tx.amount)}₫
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh mục</span>
+                        <span className="text-xs font-bold text-slate-700">{tx.category}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngày</span>
+                        <span className="text-xs font-bold text-slate-700">{getDateLabel(tx.date)}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ví</span>
+                        <span className="text-xs font-bold text-slate-700">{tx.wallet}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Loại</span>
+                        <span className={`text-xs font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          {tx.type === 'income' ? 'Khoản thu' : 'Khoản chi'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => { setEditingTransaction(tx); setDetailTransaction(null); }}
+                        className="flex-1 bg-slate-900 text-white font-bold text-xs py-3 rounded-xl hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Icon path={mdiPencilOutline} size={0.875} />
+                        Chỉnh sửa
+                      </button>
+                      <button
+                        onClick={() => { onDeleteTransaction(tx.id); setDetailTransaction(null); }}
+                        className="flex-1 bg-white border border-rose-100 text-rose-600 font-bold text-xs py-3 rounded-xl hover:bg-rose-50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Icon path={mdiDeleteOutline} size={0.875} />
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* EDIT TRANSACTION MODAL */}
+      <EditTransactionModal
+        isOpen={!!editingTransaction}
+        transaction={editingTransaction}
+        categories={categories}
+        onClose={() => setEditingTransaction(null)}
+        onUpdateTransaction={onUpdateTransaction}
+      />
     </div>
   );
 }

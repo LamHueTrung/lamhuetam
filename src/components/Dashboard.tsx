@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Icon } from "@mdi/react";
 import {
   mdiWallet, mdiTrendingUp, mdiTrendingDown, mdiArrowDownBold, mdiArrowUpBold,
   mdiAlertCircleOutline, mdiChartTimelineVariant, mdiChevronRight, mdiShieldAlertOutline,
-  mdiCheckCircleOutline, mdiChartLine, mdiChartAreaspline, mdiChartBar
+  mdiCheckCircleOutline, mdiChartLine, mdiChartAreaspline, mdiChartBar, mdiAutoFix,
+  mdiLoading, mdiRefresh
 } from "@mdi/js";
-import { Transaction, DebtAccount, Category } from "../types";
+import { Transaction, DebtAccount, Category, Budget } from "../types";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 type Debt = DebtAccount;
 
@@ -13,6 +14,7 @@ interface DashboardProps {
   transactions: Transaction[];
   debts: Debt[];
   categories: Category[];
+  budgets?: Budget[];
   onNavigateToTab: (tab: number) => void;
   username?: string;
 }
@@ -21,6 +23,7 @@ export default function Dashboard({
   transactions,
   debts,
   categories,
+  budgets = [],
   onNavigateToTab,
   username = "bạn"
 }: DashboardProps) {
@@ -206,6 +209,44 @@ export default function Dashboard({
       return new Date(aNext.dueDate).getTime() - new Date(bNext.dueDate).getTime();
     });
 
+  // AI Insights
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiLoaded, setAiLoaded] = useState(false);
+
+  const fetchAiInsight = useCallback(async () => {
+    const cached = localStorage.getItem('ai_insight_cache');
+    const cachedDate = localStorage.getItem('ai_insight_date');
+    const today = new Date().toISOString().split('T')[0];
+    if (cached && cachedDate === today) {
+      setAiInsight(cached);
+      setAiLoaded(true);
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const response = await fetch("/.netlify/functions/gemini-advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactions, budgets, debts, savings,
+          promptType: 'insights'
+        }),
+      });
+      const data = await response.json();
+      if (data.text) {
+        setAiInsight(data.text);
+        localStorage.setItem('ai_insight_cache', data.text);
+        localStorage.setItem('ai_insight_date', today);
+      }
+    } catch { } finally {
+      setAiLoading(false);
+      setAiLoaded(true);
+    }
+  }, [transactions, budgets, debts, savings]);
+
+  useEffect(() => { if (!aiLoaded && !aiLoading) fetchAiInsight(); }, [fetchAiInsight, aiLoaded, aiLoading]);
+
   return (
     <div className="space-y-6 pb-40">
       <div id="header-section" className="flex items-center justify-between">
@@ -277,6 +318,56 @@ export default function Dashboard({
           </div>
         </div>
       </div>
+
+      {/* MONTH COMPARISON */}
+      {(() => {
+        const now = new Date();
+        const thisMonth = now.toISOString().slice(0, 7);
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
+        const monthIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(thisMonth)).reduce((s, t) => s + t.amount, 0);
+        const monthExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(thisMonth)).reduce((s, t) => s + t.amount, 0);
+        const lastIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
+        const lastExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
+        const incomeChange = lastIncome > 0 ? Math.round((monthIncome - lastIncome) / lastIncome * 100) : 0;
+        const expenseChange = lastExpense > 0 ? Math.round((monthExpense - lastExpense) / lastExpense * 100) : 0;
+
+        return (
+          <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[24px] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">So sánh tháng này / tháng trước</h3>
+              <span className="text-[9px] text-slate-400 font-medium">{now.toLocaleDateString('vi-VN', { month: 'long' })}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 rounded-2xl p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">Thu</span>
+                  <span className={`text-[10px] font-black flex items-center gap-0.5 ${incomeChange >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    <Icon path={incomeChange >= 0 ? mdiTrendingUp : mdiTrendingDown} size={0.667} />
+                    {incomeChange >= 0 ? '+' : ''}{incomeChange}%
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline gap-1.5">
+                  <span className="text-sm font-black text-slate-800">{formatVND(monthIncome)}</span>
+                  <span className="text-[9px] text-slate-400 font-medium">{formatVND(lastIncome)}</span>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">Chi</span>
+                  <span className={`text-[10px] font-black flex items-center gap-0.5 ${expenseChange <= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    <Icon path={expenseChange <= 0 ? mdiTrendingDown : mdiTrendingUp} size={0.667} />
+                    {expenseChange > 0 ? '+' : ''}{expenseChange}%
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline gap-1.5">
+                  <span className="text-sm font-black text-slate-800">{formatVND(monthExpense)}</span>
+                  <span className="text-[9px] text-slate-400 font-medium">{formatVND(lastExpense)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div id="charts-section" className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-between mb-3">
@@ -503,6 +594,37 @@ export default function Dashboard({
           </div>
         </div>
       )}
+
+      {/* AI INSIGHTS CARD */}
+      <div id="ai-insights-card" className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+              <Icon path={mdiAutoFix} size={0.875} />
+            </div>
+            <h3 className="text-sm font-bold text-slate-800 tracking-tight">Gợi Ý từ AI</h3>
+          </div>
+          <button
+            onClick={() => { setAiLoaded(false); localStorage.removeItem('ai_insight_cache'); }}
+            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer"
+          >
+            <Icon path={mdiRefresh} size={0.75} />
+            Làm mới
+          </button>
+        </div>
+        <div className="min-h-[40px]">
+          {aiLoading ? (
+            <div className="flex items-center gap-2 text-slate-400">
+              <Icon path={mdiLoading} size={1} className="animate-spin" />
+              <span className="text-xs font-medium">AI đang phân tích...</span>
+            </div>
+          ) : aiInsight ? (
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">{aiInsight}</p>
+          ) : (
+            <p className="text-xs text-slate-400 font-medium italic">Chưa có dữ liệu. Thêm giao dịch để AI phân tích.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

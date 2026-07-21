@@ -26,7 +26,7 @@ interface FinanceBudgetProps {
   onUpdateDebt: (id: string, data: Partial<DebtAccount>) => void;
 }
 
-type ViewTab = 'debts' | 'cashflow' | 'savings';
+type ViewTab = 'debts' | 'budget' | 'cashflow' | 'savings';
 
 const debtTypeMeta: Record<string, { icon: string; label: string; color: string }> = {
   installment: { icon: mdiBank, label: 'Trả góp', color: 'bg-blue-50 text-blue-700' },
@@ -460,6 +460,67 @@ export default function FinanceBudget({
     </div>
   );
 
+  const renderBudget = () => (
+    <div className="space-y-5">
+      <div>
+        <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">QUẢN LÝ NGÂN SÁCH</span>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">Ngân Sách Theo Danh Mục</h1>
+      </div>
+
+      {budgets.length === 0 ? (
+        <div className="bg-white/60 border border-slate-100 rounded-[28px] p-8 text-center text-slate-400">
+          <Icon path={mdiWalletOutline} size={2} className="mx-auto text-slate-300 mb-2" />
+          <p className="text-sm font-semibold">Chưa có ngân sách nào</p>
+          <p className="text-[10px] mt-1">Thêm giao dịch để tự động tạo ngân sách theo danh mục</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {budgets.map(b => {
+            const pct = b.limit > 0 ? Math.round((b.spent / b.limit) * 100) : 0;
+            const barColor = pct >= 100 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+            const cat = categories.find(c => c.name === b.category);
+            const colorMap: Record<string, string> = {
+              red: 'bg-red-100/80 text-red-700', amber: 'bg-amber-100/80 text-amber-700', blue: 'bg-blue-100/80 text-blue-700',
+              teal: 'bg-teal-100/80 text-teal-700', emerald: 'bg-emerald-100/80 text-emerald-700', slate: 'bg-slate-100/80 text-slate-700',
+              indigo: 'bg-indigo-100/80 text-indigo-700', rose: 'bg-rose-100/80 text-rose-700', purple: 'bg-purple-100/80 text-purple-700',
+              orange: 'bg-orange-100/80 text-orange-700',
+            };
+            const color = cat?.color || 'slate';
+            const IconComp = iconMap[cat?.icon || 'Tag'];
+
+            return (
+              <div key={b.category} className="bg-white/95 border border-slate-100 rounded-[24px] p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded-lg ${colorMap[color] || colorMap.slate}`}>
+                      <IconComp className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-800">{b.category}</span>
+                  </div>
+                  <span className={`text-[10px] font-black ${pct >= 80 ? 'text-rose-500' : 'text-slate-500'}`}>
+                    {formatVND(b.spent)} / {formatVND(b.limit)}
+                  </span>
+                </div>
+                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${Math.min(100, pct)}%` }} />
+                </div>
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-[9px] text-slate-400 font-medium">{pct}% đã dùng</span>
+                  {pct >= 80 && (
+                    <span className="text-[9px] font-bold text-rose-500 flex items-center gap-0.5">
+                      <Icon path={mdiAlertCircleOutline} size={0.667} />
+                      {pct >= 100 ? 'Đã vượt ngân sách!' : 'Sắp hết ngân sách'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   const renderCashflowPlanner = () => (
     <div className="space-y-5">
       <div>
@@ -635,6 +696,7 @@ export default function FinanceBudget({
       <div className="flex items-center gap-1.5 bg-white/80 border border-slate-100 rounded-[20px] p-1 shadow-sm">
         {([
           { key: 'debts' as ViewTab, label: 'Nợ', icon: mdiChartTimelineVariant },
+          { key: 'budget' as ViewTab, label: 'Ngân sách', icon: mdiWalletOutline },
           { key: 'cashflow' as ViewTab, label: 'Dòng tiền', icon: mdiCashMultiple },
           { key: 'savings' as ViewTab, label: 'Tiết kiệm', icon: mdiPiggyBank },
         ]).map(tab => (
@@ -651,6 +713,7 @@ export default function FinanceBudget({
       <AnimatePresence mode="wait">
         <motion.div key={activeTab} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
           {activeTab === 'debts' && renderDebtDashboard()}
+          {activeTab === 'budget' && renderBudget()}
           {activeTab === 'cashflow' && renderCashflowPlanner()}
           {activeTab === 'savings' && renderSavings()}
         </motion.div>

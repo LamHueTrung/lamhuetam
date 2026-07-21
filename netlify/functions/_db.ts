@@ -79,9 +79,16 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 
+const ChatMessageSchema = new mongoose.Schema({
+  role: { type: String, enum: ['user', 'assistant'], required: true },
+  content: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+}, { versionKey: false });
+
 export const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);
 export const Budget = mongoose.models.Budget || mongoose.model('Budget', BudgetSchema);
 export const Debt = mongoose.models.Debt || mongoose.model('Debt', DebtSchema);
 export const SavingsGoal = mongoose.models.SavingsGoal || mongoose.model('SavingsGoal', SavingsGoalSchema);
 export const CategoryModel = mongoose.models.Category || mongoose.model('Category', CategorySchema);
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
+export const ChatMessage = mongoose.models.ChatMessage || mongoose.model('ChatMessage', ChatMessageSchema);

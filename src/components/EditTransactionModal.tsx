@@ -1,19 +1,19 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "@mdi/react";
 import {
-  mdiClose, mdiCurrencyUsd, mdiPlus, mdiCogOutline, mdiBank, mdiCash, mdiWalletOutline, mdiCalendar, mdiAutoFix
+  mdiClose, mdiCurrencyUsd, mdiCheck, mdiCogOutline, mdiBank, mdiCash, mdiWalletOutline, mdiCalendar
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
 
-interface QuickAddModalProps {
+interface EditTransactionModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onAddTransaction: (transaction: Omit<Transaction, "id">) => void;
+  transaction: Transaction | null;
   categories: Category[];
-  onOpenCategoryManager: () => void;
+  onClose: () => void;
+  onUpdateTransaction: (id: string, data: Partial<Transaction>) => void;
 }
 
 const wallets = [
@@ -22,41 +22,24 @@ const wallets = [
   { name: "Ví điện tử", icon: mdiWalletOutline }
 ];
 
-export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categories: propCategories, onOpenCategoryManager }: QuickAddModalProps) {
+export default function EditTransactionModal({ isOpen, transaction, categories: propCategories, onClose, onUpdateTransaction }: EditTransactionModalProps) {
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amountStr, setAmountStr] = useState("");
-  const [description, setDescription] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [category, setCategory] = useState("Ăn uống");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [wallet, setWallet] = useState("Ngân hàng");
-  const [aiSuggesting, setAiSuggesting] = useState(false);
-  const suggestTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    if (suggestTimer.current) clearTimeout(suggestTimer.current);
-    if (!description.trim() || type !== 'expense' || propCategories.length === 0) return;
-    setAiSuggesting(true);
-    suggestTimer.current = setTimeout(async () => {
-      try {
-        const response = await fetch("/.netlify/functions/gemini-advisor", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            promptType: 'suggest-category',
-            customMessage: description,
-            categoryDescription: propCategories.map(c => c.name),
-          }),
-        });
-        const data = await response.json();
-        if (data.text && propCategories.some(c => c.name === data.text.trim())) {
-          setCategory(data.text.trim());
-        }
-      } catch { } finally {
-        setAiSuggesting(false);
-      }
-    }, 800);
-    return () => { if (suggestTimer.current) clearTimeout(suggestTimer.current); };
-  }, [description, type]);
+    if (transaction) {
+      setType(transaction.type);
+      setAmountStr(new Intl.NumberFormat("vi-VN").format(transaction.amount));
+      setSelectedDate(transaction.date);
+      setDescription(transaction.description);
+      setCategory(transaction.category);
+      setWallet(transaction.wallet);
+    }
+  }, [transaction]);
 
   const categories = propCategories.length > 0
     ? propCategories.sort((a, b) => a.order - b.order).map(cat => ({
@@ -68,13 +51,15 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!transaction) return;
+
     const amountNum = parseFloat(amountStr.replace(/[^0-9]/g, ""));
     if (!amountNum || amountNum <= 0) {
       toast.error("Vui lòng nhập số tiền hợp lệ!");
       return;
     }
 
-    onAddTransaction({
+    onUpdateTransaction(transaction.id, {
       type,
       amount: amountNum,
       category,
@@ -83,16 +68,9 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
       wallet,
     });
 
-    // Reset Form
-    setAmountStr("");
-    setDescription("");
-    setSelectedDate(new Date().toISOString().split('T')[0]);
-    setCategory("Ăn uống");
-    setWallet("Ngân hàng");
     onClose();
   };
 
-  // Manual keypress input formatting for Vietnamese locale style
   const handleAmountChange = (val: string) => {
     const clean = val.replace(/[^0-9]/g, "");
     if (!clean) {
@@ -105,9 +83,8 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen && transaction && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
-          {/* Backdrop Blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -116,7 +93,6 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-md cursor-pointer"
           />
 
-          {/* Full-Screen Sheet Pop-up sliding from bottom */}
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -124,11 +100,10 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
             className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto z-10"
           >
-            {/* Grab handle top header */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-slate-900 rounded-full" />
-                <h2 className="text-base font-bold text-slate-800">Ghi Chép Một Chạm</h2>
+                <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
               </div>
               <button
                 onClick={onClose}
@@ -138,36 +113,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
               </button>
             </div>
 
-            {/* Income / Expense Switch Pill */}
-            <div className="bg-slate-100 p-1 rounded-2xl flex items-center mb-6">
-              <motion.button
-                type="button"
-                onClick={() => setType('expense')}
-                whileTap={{ scale: 0.95 }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  type === 'expense'
-                    ? "bg-white text-rose-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Khoản chi
-              </motion.button>
-              <motion.button
-                type="button"
-                onClick={() => setType('income')}
-                whileTap={{ scale: 0.95 }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  type === 'income'
-                    ? "bg-white text-emerald-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Khoản thu
-              </motion.button>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* LARGE AMOUNT INPUT CONTAINER */}
               <div className="bg-slate-50 rounded-[24px] p-5 border border-slate-100 text-center space-y-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SỐ TIỀN GIAO DỊCH</label>
                 <div className="flex items-center justify-center gap-1.5">
@@ -184,29 +130,44 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                 </div>
               </div>
 
-              {/* INPUT DESCRIPTION */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ghi chú mô tả</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Ví dụ: Đi ăn phở gia đình, mua sắm Tiki..."
-                    className="w-full px-4 py-3 bg-slate-50/80 border border-slate-100 rounded-[20px] text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
-                  />
-                  {aiSuggesting && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400">
-                      <Icon path={mdiAutoFix} size={0.75} className="animate-pulse" />
-                    </div>
-                  )}
-                </div>
-                {aiSuggesting && (
-                  <p className="text-[9px] text-indigo-400 font-medium italic">AI đang gợi ý danh mục...</p>
-                )}
+              <div className="bg-slate-100 p-1 rounded-2xl flex items-center">
+                <motion.button
+                  type="button"
+                  onClick={() => setType('expense')}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    type === 'expense'
+                      ? "bg-white text-rose-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Khoản chi
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={() => setType('income')}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    type === 'income'
+                      ? "bg-white text-emerald-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Khoản thu
+                </motion.button>
               </div>
 
-              {/* DATE PICKER */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ghi chú mô tả</label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Mô tả giao dịch..."
+                  className="w-full px-4 py-3 bg-slate-50/80 border border-slate-100 rounded-[20px] text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Chọn ngày</label>
                 <div className="relative">
@@ -220,7 +181,6 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                 </div>
               </div>
 
-              {/* CATEGORY GRID LIST */}
               <div className="space-y-2.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Chọn danh mục</label>
                 <div className="grid grid-cols-3 gap-2.5">
@@ -258,10 +218,9 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                       </motion.button>
                     );
                   })}
-                  {/* Plus button to add new category */}
                   <motion.button
                     type="button"
-                    onClick={onOpenCategoryManager}
+                    onClick={() => {}}
                     whileTap={{ scale: 0.95 }}
                     className="p-3 rounded-2xl border border-dashed border-slate-200 bg-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
@@ -271,13 +230,11 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                 </div>
               </div>
 
-              {/* SOURCE WALLET SELECTOR */}
               <div className="space-y-2.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ví thanh toán</label>
                 <div className="grid grid-cols-3 gap-3">
                   {wallets.map((w) => {
                     const isSelected = wallet === w.name;
-
                     return (
                       <motion.button
                         key={w.name}
@@ -298,15 +255,13 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                 </div>
               </div>
 
-              {/* SUBMIT BUTTON */}
               <motion.button
                 type="submit"
-                id="btn-add-transaction-submit"
                 whileTap={{ scale: 0.96 }}
                 className="w-full bg-slate-900 text-white py-4 rounded-[22px] font-bold text-sm shadow-[0_8px_24px_rgba(15,23,42,0.15)] hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <Icon path={mdiPlus} size={1} />
-                <span>Lưu Giao Dịch</span>
+                <Icon path={mdiCheck} size={1} />
+                <span>Cập Nhật Giao Dịch</span>
               </motion.button>
             </form>
           </motion.div>
