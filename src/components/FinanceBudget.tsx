@@ -383,9 +383,9 @@ export default function FinanceBudget({
                       <span className="text-sm font-black text-slate-800 truncate block">{formatVND(debt.currentBalance)}</span>
                       <span className="text-[10px] text-slate-400 font-medium truncate block">/ {formatVND(debt.originalAmount)}</span>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-bold text-slate-700 whitespace-nowrap">{formatVND(debt.monthlyPayment)}<span className="text-[9px] text-slate-400 font-medium">/kỳ</span></span>
-                      <span className="block text-[9px] text-slate-400 font-medium whitespace-nowrap">
+                    <div className="text-right min-w-0">
+                      <span className="text-xs font-bold text-slate-700 truncate block">{formatVND(debt.monthlyPayment)}<span className="text-[9px] text-slate-400 font-medium">/kỳ</span></span>
+                      <span className="block text-[9px] text-slate-400 font-medium">
                         {debt.paidInstallments}/{debt.totalInstallments} kỳ
                       </span>
                     </div>

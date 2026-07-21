@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
   mdiClose, mdiCurrencyUsd, mdiCheck, mdiCogOutline, mdiBank, mdiCash, mdiWalletOutline, mdiCalendar
@@ -81,7 +82,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
     setAmountStr(formatted);
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && transaction && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -267,6 +268,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

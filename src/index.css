@@ -14,6 +14,7 @@ html, body, #root {
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -63,6 +64,12 @@ body.dark {
   border-radius: 28px;
 }
 
+/* 100dvh fallback for iOS Safari */
+.h-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* iOS Safari zoom fix: force font-size ≥ 16px on inputs */
 input, select, textarea, [contenteditable] {
   font-size: 16px !important;
@@ -79,14 +86,15 @@ input, select, textarea, [contenteditable] {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
 }
 
-/* Prevent text size adjust on orientation change */
-html {
-  -webkit-text-size-adjust: 100%;
-}
+
 
 
 
 /* Custom Markdown formatting overrides inside chat bubble */
+.markdown-body {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
 .markdown-body p {
   margin-bottom: 0.75rem;
 }

@@ -165,7 +165,7 @@ export default function AICovisor({ transactions, budgets, debts, savings }: AIC
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 py-2 -mx-1 px-1 overscroll-behavior-contain">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 py-2 -mx-1 px-1 overscroll-behavior-contain">
         <div className="space-y-1">
           {groupedMessages.map((item, idx) => {
             if (item.type === 'timestamp') {

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
   mdiMagnify, mdiTune, mdiPlusCircle, mdiMinusCircleOutline, mdiTagOutline,
@@ -284,156 +285,162 @@ export default function Ledger({ transactions, onDeleteTransaction, onUpdateTran
       </div>
 
       {/* ACTION SHEET - Edit / Delete */}
-      <AnimatePresence>
-        {moreActionTx && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setMoreActionTx(null)}
-            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
-          >
+      {createPortal(
+        <AnimatePresence>
+          {moreActionTx && (
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMoreActionTx(null)}
+              className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-800">Tùy chọn</h3>
-                <button onClick={() => setMoreActionTx(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
-                  <Icon path={mdiClose} size={1} />
-                </button>
-              </div>
-              <div className="space-y-2">
-                <button
-                  onClick={() => { setEditingTransaction(moreActionTx); setMoreActionTx(null); }}
-                  className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
-                    <Icon path={mdiPencilOutline} size={1} />
-                  </div>
-                  <div className="text-left">
-                    <span className="text-sm font-bold text-slate-800 block">Chỉnh sửa giao dịch</span>
-                    <span className="text-[10px] text-slate-400 font-medium">Thay đổi thông tin giao dịch</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => { onDeleteTransaction(moreActionTx.id); setMoreActionTx(null); }}
-                  className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-rose-50 transition-colors cursor-pointer"
-                >
-                  <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
-                    <Icon path={mdiDeleteOutline} size={1} />
-                  </div>
-                  <div className="text-left">
-                    <span className="text-sm font-bold text-rose-600 block">Xóa giao dịch</span>
-                    <span className="text-[10px] text-slate-400 font-medium">Không thể khôi phục sau khi xóa</span>
-                  </div>
-                </button>
-              </div>
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-slate-800">Tùy chọn</h3>
+                  <button onClick={() => setMoreActionTx(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
+                    <Icon path={mdiClose} size={1} />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => { setEditingTransaction(moreActionTx); setMoreActionTx(null); }}
+                    className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
+                      <Icon path={mdiPencilOutline} size={1} />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-sm font-bold text-slate-800 block">Chỉnh sửa giao dịch</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Thay đổi thông tin giao dịch</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { onDeleteTransaction(moreActionTx.id); setMoreActionTx(null); }}
+                    className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-rose-50 transition-colors cursor-pointer"
+                  >
+                    <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                      <Icon path={mdiDeleteOutline} size={1} />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-sm font-bold text-rose-600 block">Xóa giao dịch</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Không thể khôi phục sau khi xóa</span>
+                    </div>
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* TRANSACTION DETAIL BOTTOM SHEET */}
-      <AnimatePresence>
-        {detailTransaction && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setDetailTransaction(null)}
-            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
-          >
+      {createPortal(
+        <AnimatePresence>
+          {detailTransaction && (
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDetailTransaction(null)}
+              className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
             >
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-slate-900 rounded-full" />
-                  <h3 className="text-base font-bold text-slate-800">Chi Tiết Giao Dịch</h3>
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-slate-900 rounded-full" />
+                    <h3 className="text-base font-bold text-slate-800">Chi Tiết Giao Dịch</h3>
+                  </div>
+                  <button onClick={() => setDetailTransaction(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
+                    <Icon path={mdiClose} size={1} />
+                  </button>
                 </div>
-                <button onClick={() => setDetailTransaction(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
-                  <Icon path={mdiClose} size={1} />
-                </button>
-              </div>
 
-              {(() => {
-                const tx = detailTransaction;
-                const cat = categories.find(c => c.name === tx.category);
-                const colorMap: Record<string, string> = {
-                  red: 'bg-red-100/80 text-red-700', amber: 'bg-amber-100/80 text-amber-700', blue: 'bg-blue-100/80 text-blue-700',
-                  teal: 'bg-teal-100/80 text-teal-700', emerald: 'bg-emerald-100/80 text-emerald-700', slate: 'bg-slate-100/80 text-slate-700',
-                  indigo: 'bg-indigo-100/80 text-indigo-700', rose: 'bg-rose-100/80 text-rose-700', purple: 'bg-purple-100/80 text-purple-700',
-                  orange: 'bg-orange-100/80 text-orange-700',
-                };
-                const color = cat?.color || 'slate';
-                const IconComp = iconMap[cat?.icon || 'Tag'];
+                {(() => {
+                  const tx = detailTransaction;
+                  const cat = categories.find(c => c.name === tx.category);
+                  const colorMap: Record<string, string> = {
+                    red: 'bg-red-100/80 text-red-700', amber: 'bg-amber-100/80 text-amber-700', blue: 'bg-blue-100/80 text-blue-700',
+                    teal: 'bg-teal-100/80 text-teal-700', emerald: 'bg-emerald-100/80 text-emerald-700', slate: 'bg-slate-100/80 text-slate-700',
+                    indigo: 'bg-indigo-100/80 text-indigo-700', rose: 'bg-rose-100/80 text-rose-700', purple: 'bg-purple-100/80 text-purple-700',
+                    orange: 'bg-orange-100/80 text-orange-700',
+                  };
+                  const color = cat?.color || 'slate';
+                  const IconComp = iconMap[cat?.icon || 'Tag'];
 
-                return (
-                  <div className="space-y-4">
-                    <div className="bg-slate-50 rounded-[24px] p-5 text-center">
-                      <div className={`w-14 h-14 rounded-full ${colorMap[color] || colorMap.slate} flex items-center justify-center mx-auto mb-3`}>
-                        <IconComp className="w-7 h-7" />
-                      </div>
-                      <h2 className="text-lg font-bold text-slate-800">{tx.description}</h2>
-                      <span className={`text-2xl font-black mt-1 block ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                        {tx.type === 'income' ? '+' : '-'}{new Intl.NumberFormat("vi-VN").format(tx.amount)}₫
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh mục</span>
-                        <span className="text-xs font-bold text-slate-700">{tx.category}</span>
-                      </div>
-                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngày</span>
-                        <span className="text-xs font-bold text-slate-700">{getDateLabel(tx.date)}</span>
-                      </div>
-                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ví</span>
-                        <span className="text-xs font-bold text-slate-700">{tx.wallet}</span>
-                      </div>
-                      <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Loại</span>
-                        <span className={`text-xs font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {tx.type === 'income' ? 'Khoản thu' : 'Khoản chi'}
+                  return (
+                    <div className="space-y-4">
+                      <div className="bg-slate-50 rounded-[24px] p-5 text-center">
+                        <div className={`w-14 h-14 rounded-full ${colorMap[color] || colorMap.slate} flex items-center justify-center mx-auto mb-3`}>
+                          <IconComp className="w-7 h-7" />
+                        </div>
+                        <h2 className="text-lg font-bold text-slate-800">{tx.description}</h2>
+                        <span className={`text-2xl font-black mt-1 block ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          {tx.type === 'income' ? '+' : '-'}{new Intl.NumberFormat("vi-VN").format(tx.amount)}₫
                         </span>
                       </div>
-                    </div>
 
-                    <div className="flex gap-3 pt-2">
-                      <button
-                        onClick={() => { setEditingTransaction(tx); setDetailTransaction(null); }}
-                        className="flex-1 bg-slate-900 text-white font-bold text-xs py-3 rounded-xl hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <Icon path={mdiPencilOutline} size={0.875} />
-                        Chỉnh sửa
-                      </button>
-                      <button
-                        onClick={() => { onDeleteTransaction(tx.id); setDetailTransaction(null); }}
-                        className="flex-1 bg-white border border-rose-100 text-rose-600 font-bold text-xs py-3 rounded-xl hover:bg-rose-50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <Icon path={mdiDeleteOutline} size={0.875} />
-                        Xóa
-                      </button>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh mục</span>
+                          <span className="text-xs font-bold text-slate-700">{tx.category}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngày</span>
+                          <span className="text-xs font-bold text-slate-700">{getDateLabel(tx.date)}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ví</span>
+                          <span className="text-xs font-bold text-slate-700">{tx.wallet}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Loại</span>
+                          <span className={`text-xs font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                            {tx.type === 'income' ? 'Khoản thu' : 'Khoản chi'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={() => { setEditingTransaction(tx); setDetailTransaction(null); }}
+                          className="flex-1 bg-slate-900 text-white font-bold text-xs py-3 rounded-xl hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Icon path={mdiPencilOutline} size={0.875} />
+                          Chỉnh sửa
+                        </button>
+                        <button
+                          onClick={() => { onDeleteTransaction(tx.id); setDetailTransaction(null); }}
+                          className="flex-1 bg-white border border-rose-100 text-rose-600 font-bold text-xs py-3 rounded-xl hover:bg-rose-50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Icon path={mdiDeleteOutline} size={0.875} />
+                          Xóa
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* EDIT TRANSACTION MODAL */}
       <EditTransactionModal
