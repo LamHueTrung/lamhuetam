@@ -733,7 +733,7 @@ export default function FinanceBudget({
                   <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                     transition={{ type: "spring", damping: 25, stiffness: 220 }}
                     onClick={e => e.stopPropagation()}
-                    className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 max-h-[80vh] overflow-y-auto shadow-[0_-12px_48px_rgba(0,0,0,0.12)]">
+                    className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 max-h-[80vh] overflow-y-auto overflow-x-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.12)]">
                     <div className="flex items-start justify-between gap-2 mb-5">
                       <div className="min-w-0">
                         <h3 className="text-base font-bold text-slate-800">Thanh toán</h3>

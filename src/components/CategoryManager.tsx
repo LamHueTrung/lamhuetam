@@ -60,7 +60,7 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
           <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[85vh] overflow-y-auto z-10">
+            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[85vh] overflow-y-auto overflow-x-hidden z-10">
             <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 p-5 pb-3 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Icon path={mdiPalette} size={1.25} className="text-slate-700" />

@@ -215,7 +215,7 @@ function AppContent() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -12 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={currentTab === 5 ? "h-full flex flex-col min-h-0" : "h-full overflow-y-auto overscroll-behavior-contain"}
+              className={currentTab === 5 ? "h-full flex flex-col min-h-0 overflow-x-hidden" : "h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"}
             >
               {currentTab === 1 && (
                 <Dashboard
