@@ -200,7 +200,7 @@ function AppContent() {
       <main
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-4 min-h-0 overflow-hidden relative"
+        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-[84px] min-h-0 overflow-hidden relative"
       >
         {isInitialLoading ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
