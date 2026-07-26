@@ -9,7 +9,7 @@ import {
   mdiCalendarCheck, mdiClockOutline, mdiFormatListBulletedSquare,
   mdiTag, mdiFire, mdiCoffee, mdiLightningBolt, mdiCarSide, mdiMotorbike,
   mdiOil, mdiHomeCity, mdiWifi, mdiPhone, mdiShoppingOutline,
-  mdiSmoking, mdiDumbbell, mdiBeerOutline, mdiMedicalBag, mdiFoodForkDrink,
+  mdiSmoking, mdiKettlebell, mdiBeerOutline, mdiMedicalBag, mdiFoodForkDrink,
   mdiGamepadVariantOutline, mdiCat, mdiGift, mdiBookOpenVariant, mdiContentCut,
   mdiEye, mdiEyeOff, mdiTrashCanOutline, mdiSwapHorizontal,
 } from "@mdi/js";
@@ -56,7 +56,7 @@ const ICON_OPTIONS = [
   { key: 'phone', icon: mdiPhone, label: 'Điện thoại' },
   { key: 'shopping', icon: mdiShoppingOutline, label: 'Mua sắm' },
   { key: 'smoking', icon: mdiSmoking, label: 'Thuốc lá' },
-  { key: 'gym', icon: mdiDumbbell, label: 'Gym' },
+  { key: 'gym', icon: mdiKettlebell, label: 'Gym' },
   { key: 'beer', icon: mdiBeerOutline, label: 'Bia / Nhậu' },
   { key: 'medical', icon: mdiMedicalBag, label: 'Thuốc / Y tế' },
   { key: 'food', icon: mdiFoodForkDrink, label: 'Ăn uống' },
