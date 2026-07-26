@@ -129,6 +129,36 @@ const DiaryEntrySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 
+const UserProfileSchema = new mongoose.Schema({
+  fullName: { type: String, default: 'Lâm Huệ Trung' },
+  dob: { type: String, default: '08/01/2003' },
+  hometown: { type: String, default: 'Tiểu Cần - Trà Vinh' },
+  livingContext: { type: String, default: 'Ở quê (Tiểu Cần - Trà Vinh), di chuyển xa để đi làm, áp lực gia đình và tiền bạc thường trực.' },
+  currentJob: { type: String, default: 'Lập trình viên tại Rynan Technologies' },
+  position: { type: String, default: 'Lập trình UI/UX và API' },
+  skills: {
+    strongest: { type: String, default: 'Node.js' },
+    foundation: { type: String, default: 'Từng có nền tảng và tư duy tốt về UI/UX kết hợp API' },
+    usedTech: { type: [String], default: ['Node.js', 'NestJS', 'Next.js', 'ReactJS', 'MongoDB', 'SQL', 'GIS', 'Openplayer'] },
+    companyTech: { type: [String], default: ['Laravel PHP 7.3', 'Vue 2'] },
+    currentWorry: { type: String, default: 'Cảm giác bị "mất gốc" Node.js vì môi trường hiện tại không còn phù hợp định hướng dài hạn' }
+  },
+  education: {
+    school: { type: String, default: 'Sinh viên khóa 21 Đại học Trà Vinh' },
+    status: { type: String, default: 'Chưa làm lễ tốt nghiệp, đã lấy bằng tốt nghiệp' }
+  },
+  avatar: { type: String, default: '' },
+  phone: { type: String, default: '' },
+  emails: { type: [String], default: [] },
+  customFields: [{
+    id: { type: String },
+    label: { type: String },
+    value: { type: String },
+    category: { type: String, default: 'Khác' }
+  }],
+  updatedAt: { type: Date, default: Date.now }
+}, { versionKey: false });
+
 export const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);
 export const Budget = mongoose.models.Budget || mongoose.model('Budget', BudgetSchema);
 export const Debt = mongoose.models.Debt || mongoose.model('Debt', DebtSchema);
@@ -140,3 +170,5 @@ export const SalaryConfig = mongoose.models.SalaryConfig || mongoose.model('Sala
 export const FixedExpenseCategory = mongoose.models.FixedExpenseCategory || mongoose.model('FixedExpenseCategory', FixedExpenseCategorySchema);
 export const FixedExpenseTask = mongoose.models.FixedExpenseTask || mongoose.model('FixedExpenseTask', FixedExpenseTaskSchema);
 export const DiaryEntry = mongoose.models.DiaryEntry || mongoose.model('DiaryEntry', DiaryEntrySchema);
+export const UserProfile = mongoose.models.UserProfile || mongoose.model('UserProfile', UserProfileSchema);
+

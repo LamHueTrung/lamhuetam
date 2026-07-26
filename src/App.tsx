@@ -19,6 +19,7 @@ import FinanceBudget from "./components/FinanceBudget";
 import AICovisor from "./components/AICovisor";
 import CategoryManager from "./components/CategoryManager";
 import DiaryView from "./components/DiaryView";
+import UserProfileView from "./components/UserProfileView";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import { useTransactions } from "./hooks/useTransactions";
@@ -28,8 +29,10 @@ import { useSavings } from "./hooks/useSavings";
 import { useCategories } from "./hooks/useCategories";
 import { useFixedExpenses } from "./hooks/useFixedExpenses";
 import { useSalary } from "./hooks/useSalary";
+import { useUserProfile } from "./hooks/useUserProfile";
 import { Transaction, DebtAccount, Category } from "./types";
 type Debt = DebtAccount;
+
 
 function AppContent() {
   const { isAuthenticated, loading: authLoading, username, logout } = useAuth();
@@ -66,6 +69,8 @@ function AppContent() {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const { categories: fixedCats, tasks: fixedTasks, totalFixed } = useFixedExpenses(currentMonth);
   const { salaryConfig } = useSalary();
+  const { profile: userProfile, updateProfile } = useUserProfile();
+
 
   const isInitialLoading =
     txLoading || budgetLoading || debtLoading || saveLoading;
@@ -316,8 +321,9 @@ function AppContent() {
     const diffX = touchStartX - e.changedTouches[0].clientX;
     const diffY = touchStartY - e.changedTouches[0].clientY;
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
-      const tabSequence = [1, 2, 4, 5, 6];
+      const tabSequence = [1, 2, 4, 5, 7, 6];
       const currentIndex = tabSequence.indexOf(currentTab);
+
       if (diffX > 0 && currentIndex < tabSequence.length - 1)
         setCurrentTab(tabSequence[currentIndex + 1]);
       else if (diffX < 0 && currentIndex > 0)
@@ -422,6 +428,7 @@ function AppContent() {
                   totalFixed={totalFixed}
                   onNavigateToTab={setCurrentTab}
                   username={username}
+                  userProfile={userProfile}
                 />
               )}
               {currentTab === 2 && (
@@ -449,11 +456,20 @@ function AppContent() {
                   budgets={budgets}
                   debts={debts}
                   savings={savings}
+                  userProfile={userProfile}
                 />
               )}
               {currentTab === 6 && (
                 <DiaryView />
               )}
+              {currentTab === 7 && (
+                <UserProfileView
+                  profile={userProfile}
+                  onUpdateProfile={updateProfile}
+                  onNavigateToTab={setCurrentTab}
+                />
+              )}
+
             </motion.div>
           </AnimatePresence>
         )}

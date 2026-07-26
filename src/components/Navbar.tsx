@@ -1,6 +1,6 @@
 import React from "react";
 import { Icon } from "@mdi/react";
-import { mdiHome, mdiReceiptTextCheckOutline, mdiPlus, mdiSwapHorizontal, mdiAutoFix, mdiBookOpenVariant } from "@mdi/js";
+import { mdiHome, mdiReceiptTextCheckOutline, mdiPlus, mdiSwapHorizontal, mdiAutoFix, mdiBookOpenVariant, mdiAccountCircle } from "@mdi/js";
 import { motion } from "motion/react";
 
 interface NavbarProps {
@@ -16,7 +16,9 @@ export default function Navbar({ currentTab, setCurrentTab, onOpenQuickAdd }: Na
     { id: 3, label: "Thêm nhanh", icon: mdiPlus, isFab: true },
     { id: 4, label: "Tài chính", icon: mdiSwapHorizontal },
     { id: 5, label: "Cố vấn AI", icon: mdiAutoFix },
+    { id: 7, label: "Tôi", icon: mdiAccountCircle },
   ];
+
 
   return (
     <div id="bottom-navbar" className="fixed bottom-0 left-0 right-0 z-40 px-4 safe-area-bottom pt-2 bg-gradient-to-t from-slate-50/90 dark:from-slate-900/90 to-transparent pointer-events-none">

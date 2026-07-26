@@ -149,3 +149,38 @@ export interface DiaryEntry {
   replies?: DiaryReply[];
   createdAt?: string;
 }
+
+// ── NEW: User Profile (Hồ sơ nhân vật) ───────────────────
+export interface CustomProfileField {
+  id: string;
+  label: string;
+  value: string;
+  category?: string;
+}
+
+export interface UserProfile {
+  _id?: string;
+  fullName: string;
+  dob: string;
+  hometown: string;
+  livingContext: string;
+  currentJob: string;
+  position: string;
+  skills: {
+    strongest: string;
+    foundation: string;
+    usedTech: string[];
+    companyTech: string[];
+    currentWorry: string;
+  };
+  education: {
+    school: string;
+    status: string;
+  };
+  avatar: string;
+  phone: string;
+  emails: string[];
+  customFields: CustomProfileField[];
+  updatedAt?: string;
+}
+

@@ -4,9 +4,9 @@ import {
   mdiWallet, mdiTrendingUp, mdiTrendingDown, mdiArrowDownBold, mdiArrowUpBold,
   mdiAlertCircleOutline, mdiChartTimelineVariant, mdiChevronRight, mdiShieldAlertOutline,
   mdiCheckCircleOutline, mdiChartLine, mdiChartAreaspline, mdiChartBar, mdiAutoFix,
-  mdiLoading, mdiRefresh
+  mdiLoading, mdiRefresh, mdiAccountCircle, mdiBriefcaseOutline, mdiMapMarkerOutline
 } from "@mdi/js";
-import { Transaction, DebtAccount, Category, Budget, SavingsGoal } from "../types";
+import { Transaction, DebtAccount, Category, Budget, SavingsGoal, UserProfile } from "../types";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 type Debt = DebtAccount;
 
@@ -19,6 +19,7 @@ interface DashboardProps {
   totalFixed?: number;
   onNavigateToTab: (tab: number) => void;
   username?: string;
+  userProfile?: UserProfile;
 }
 
 export default function Dashboard({
@@ -29,8 +30,10 @@ export default function Dashboard({
   savings = [],
   totalFixed = 0,
   onNavigateToTab,
-  username = "bạn"
+  username = "bạn",
+  userProfile
 }: DashboardProps) {
+
 
   const formatVND = (num: number) => {
     if (num < 1000 && num > 0) return num + "đ";
@@ -254,12 +257,55 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6 pb-40">
-      <div id="header-section" className="flex items-center justify-between">
-        <div>
-          <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">TÀI KHOẢN CỦA TÔI</span>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">Chào {username}!</h1>
+      {/* Personal Profile Summary Card */}
+      <div
+        id="header-section"
+        onClick={() => onNavigateToTab(7)}
+        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-slate-800 rounded-[28px] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="relative shrink-0">
+              {userProfile?.avatar ? (
+                <img
+                  src={userProfile.avatar}
+                  alt={userProfile.fullName}
+                  className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-cyan-400 font-black text-lg flex items-center justify-center shadow-xs border border-slate-800">
+                  {userProfile?.fullName ? userProfile.fullName.split(" ").pop()?.charAt(0) : "T"}
+                </div>
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  HỒ SƠ CỦA TÔI
+                </span>
+                <span className="bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 text-[9px] font-bold px-2 py-0.5 rounded-full border border-cyan-200/50 dark:border-cyan-800/50">
+                  ⚡ {userProfile?.skills?.strongest || "Node.js"}
+                </span>
+              </div>
+              <h1 className="text-base font-bold text-slate-900 dark:text-white tracking-tight truncate mt-0.5 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                {userProfile?.fullName || "Lâm Huệ Trung"}
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium flex items-center gap-1">
+                <Icon path={mdiBriefcaseOutline} size={0.55} className="text-slate-400" />
+                <span>{userProfile?.position || "Lập trình UI/UX và API"}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 shrink-0">
+            <span className="text-[11px] font-bold hidden sm:inline">Chi tiết</span>
+            <Icon path={mdiChevronRight} size={0.9} className="group-hover:translate-x-0.5 transition-transform" />
+          </div>
         </div>
       </div>
+
 
       <div id="net-balance-card" className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between">

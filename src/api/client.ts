@@ -79,4 +79,10 @@ export const api = {
     update: (id: string, data: any) => request(`${BASE}/diary`, { method: 'PUT', body: JSON.stringify({ id, ...data }) }),
     delete: (id: string) => request(`${BASE}/diary?id=${id}`, { method: 'DELETE' }),
   },
+
+  profile: {
+    get: () => request(`${BASE}/profile`),
+    save: (data: any) => request(`${BASE}/profile`, { method: 'POST', body: JSON.stringify(data) }),
+  },
 };
+

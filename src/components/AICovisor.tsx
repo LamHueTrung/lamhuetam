@@ -19,7 +19,9 @@ import {
   DebtAccount,
   SavingsGoal,
   Message,
+  UserProfile,
 } from "../types";
+import { mdiCodeBraces, mdiHeartOutline } from "@mdi/js";
 type Debt = DebtAccount;
 
 interface AICovisorProps {
@@ -27,6 +29,7 @@ interface AICovisorProps {
   budgets: Budget[];
   debts: Debt[];
   savings: SavingsGoal[];
+  userProfile?: UserProfile;
 }
 
 function formatTime(ts: string) {
@@ -46,16 +49,30 @@ function formatTime(ts: string) {
 
 const quickChips = [
   {
+    label: "Lộ trình Node.js",
+    icon: mdiCodeBraces,
+    promptType: "custom" as const,
+    customText: "Làm sao để lấy lại gốc Node.js và phát triển sự nghiệp trong bối cảnh công việc hiện tại dùng Laravel/Vue 2?",
+    color: "text-cyan-600",
+  },
+  {
+    label: "Áp lực tài chính gia đình",
+    icon: mdiHeartOutline,
+    promptType: "custom" as const,
+    customText: "Tư vấn giúp tôi chiến lược quản lý tài chính khi làm việc xa nhà, vừa trả nợ vừa hỗ trợ gia đình ở quê.",
+    color: "text-rose-500",
+  },
+  {
     label: "Phân tích nợ",
     icon: mdiTrendingUp,
     promptType: "debt" as const,
-    color: "text-rose-500",
+    color: "text-amber-500",
   },
   {
     label: "Dự báo dòng tiền",
     icon: mdiScale,
     promptType: "balance" as const,
-    color: "text-amber-500",
+    color: "text-emerald-500",
   },
   {
     label: "Mẹo tiết kiệm",
@@ -66,7 +83,7 @@ const quickChips = [
 ];
 
 const WELCOME_TEXT =
-  "Xin chào! Tôi là **Gemini Co-Visor** — Trợ lý tài chính của bạn.\n\nTôi đã đồng bộ dữ liệu Sổ cái, Ngân sách, Công nợ và Mục tiêu tích lũy.\n\nHãy chọn một gợi ý bên dưới hoặc nhập câu hỏi để bắt đầu!";
+  "Xin chào **Lâm Huệ Trung**! Tôi là **Gemini Co-Visor** — Cố vấn tài chính & sự nghiệp riêng của bạn.\n\nTôi đã đồng bộ toàn bộ **Hồ sơ cá nhân**, Sổ cái, Ngân sách, Công nợ và Mục tiêu tích lũy của bạn.\n\nHãy chọn một gợi ý bên dưới hoặc nhập câu hỏi để bắt đầu!";
 
 const SESSION_KEY = "ai_chat_session";
 
@@ -75,7 +92,9 @@ export default function AICovisor({
   budgets,
   debts,
   savings,
+  userProfile,
 }: AICovisorProps) {
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -155,8 +174,10 @@ export default function AICovisor({
           savings,
           promptType,
           customMessage: promptType === "custom" ? userText : undefined,
+          userProfile,
         }),
       });
+
 
       const data = await response.json();
       if (!response.ok)
@@ -344,10 +365,11 @@ export default function AICovisor({
             return (
               <button
                 key={chip.label}
-                onClick={() => sendMessageToGemini(chip.promptType)}
+                onClick={() => sendMessageToGemini(chip.promptType, chip.customText)}
                 disabled={isLoading}
                 className="px-3.5 py-2 bg-white border border-slate-100 hover:bg-slate-50 rounded-full text-[11px] font-bold flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm disabled:opacity-50 transition-all"
               >
+
                 <Icon path={chip.icon} size={0.875} className={chip.color} />
                 <span className="text-slate-700">{chip.label}</span>
               </button>
