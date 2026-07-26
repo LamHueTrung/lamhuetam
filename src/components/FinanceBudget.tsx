@@ -592,12 +592,12 @@ export default function FinanceBudget({
       {!salaryEdit && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-teal-400 to-emerald-500 rounded-[24px] p-4 text-white">
+            <div className="bg-gradient-to-br from-emerald-800 to-cyan-500 rounded-[24px] p-4 text-white">
               <span className="text-[9px] font-bold uppercase opacity-80 block">Lương thực nhận</span>
               <p className="text-xl font-black mt-1">{formatVND(salaryConfig.netSalary)}</p>
               <span className="text-[9px] opacity-70 block mt-1">Gross: {formatVND(salaryConfig.grossSalary)}</span>
             </div>
-            <div className="bg-gradient-to-br from-cyan-400 to-blue-500 rounded-[24px] p-4 text-white">
+            <div className="bg-gradient-to-br from-emerald-800 to-cyan-600 rounded-[24px] p-4 text-white">
               <span className="text-[9px] font-bold uppercase opacity-80 block">Ngày nhận lương</span>
               <p className="text-xl font-black mt-1">Ngày {salaryConfig.receiveDay || '—'}</p>
               <span className="text-[9px] opacity-70 block mt-1">Hàng tháng</span>
@@ -749,14 +749,15 @@ export default function FinanceBudget({
         <div className="flex items-center gap-2">
           <input type="month" value={fixedMonth} onChange={e => setFixedMonth(e.target.value)} className="bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-2 py-1.5 text-[10px] font-bold outline-none dark:text-white" />
           <button onClick={() => { setShowCatForm(true); setEditCatId(null); setCatName(""); setCatIcon("cash"); setCatColor("slate"); }}
-            className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[10px] px-3 py-2 rounded-xl hover:opacity-90 cursor-pointer flex items-center gap-1">
-            <Icon path={mdiPlus} size={0.75} />Danh mục
+            title="Thêm danh mục"
+            className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold p-2.5 rounded-xl hover:opacity-90 cursor-pointer flex items-center justify-center">
+            <Icon path={mdiPlus} size={0.75} />
           </button>
         </div>
       </div>
 
       {/* Total summary */}
-      <div className="bg-gradient-to-r from-orange-400 to-rose-500 rounded-[24px] p-4 text-white flex items-center justify-between">
+      <div className="bg-gradient-to-r from-emerald-800 to-cyan-500 rounded-[24px] p-4 text-white flex items-center justify-between">
         <div>
           <span className="text-[9px] font-bold uppercase opacity-80 block">Tổng chi cố định</span>
           <p className="text-2xl font-black mt-0.5">{formatVND(totalFixed)}</p>
@@ -900,10 +901,9 @@ export default function FinanceBudget({
           { key: 'fixed' as ViewTab, label: 'Cố định', icon: mdiFormatListBulletedSquare },
         ]).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-            title={tab.label}
             className={`flex-1 py-2 rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${activeTab === tab.key ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>
             <Icon path={tab.icon} size={0.75} />
-            <span className="hidden sm:inline">{tab.label}</span>
+            {tab.label}
           </button>
         ))}
       </div>

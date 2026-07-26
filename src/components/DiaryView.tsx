@@ -365,7 +365,7 @@ export default function DiaryView() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">Nhật Ký Đời Tôi</h1>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true); }}
-          className="bg-gradient-to-br from-violet-500 to-indigo-600 text-white font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-lg flex items-center gap-1.5">
+          className="bg-gradient-to-br from-emerald-800 to-cyan-500 text-white font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-lg flex items-center gap-1.5">
           <Icon path={mdiPlus} size={0.875} /><span>Viết nhật ký</span>
         </button>
       </div>
@@ -494,7 +494,7 @@ export default function DiaryView() {
                 </div>
 
                 <button onClick={handleSubmit} disabled={isSaving}
-                  className="w-full mt-6 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-50 cursor-pointer transition-all shadow-lg flex items-center justify-center gap-2">
+                  className="w-full mt-6 bg-gradient-to-r from-emerald-800 to-cyan-500 text-white font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-50 cursor-pointer transition-all shadow-lg flex items-center justify-center gap-2">
                   {isSaving ? <Icon path={mdiLoading} size={0.875} className="animate-spin" /> : null}
                   {isSaving ? 'Đang lưu...' : (editId ? 'Cập nhật nhật ký' : 'Lưu nhật ký')}
                 </button>

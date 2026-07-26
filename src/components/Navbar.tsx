@@ -70,7 +70,7 @@ export default function Navbar({ currentTab, setCurrentTab, onOpenQuickAdd }: Na
         onClick={() => setCurrentTab(6)}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        className={`fixed bottom-24 right-5 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer pointer-events-auto z-50 ${currentTab === 6 ? 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-indigo-600 border border-indigo-100 dark:border-indigo-900'}`}
+        className={`fixed bottom-24 right-5 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer pointer-events-auto z-50 ${currentTab === 6 ? 'bg-gradient-to-br from-emerald-800 to-cyan-500 text-white ring-2 ring-emerald-300' : 'bg-white dark:bg-slate-800 text-indigo-600 border border-indigo-100 dark:border-indigo-900'}`}
         title="Nhật ký Đời Tôi"
       >
         <Icon path={mdiBookOpenVariant} size={1.25} />
