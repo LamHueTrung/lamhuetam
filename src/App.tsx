@@ -53,14 +53,6 @@ function AppContent() {
     payInstallments: payMultipleInstallments,
     updateDebt,
   } = useDebts();
-  const {
-    debts,
-    loading: debtLoading,
-    addDebt,
-    deleteDebt,
-    payInstallments: payMultipleInstallments,
-    updateDebt,
-  } = useDebts();
   const { savings, loading: saveLoading, updateSavings } = useSavings();
   const {
     categories,
@@ -75,22 +67,15 @@ function AppContent() {
 
   const isInitialLoading =
     txLoading || budgetLoading || debtLoading || saveLoading;
-  const isInitialLoading =
-    txLoading || budgetLoading || debtLoading || saveLoading;
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [alertsChecked, setAlertsChecked] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("dark_mode");
     if (saved !== null) return saved === "true";
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const saved = localStorage.getItem("dark_mode");
-    if (saved !== null) return saved === "true";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   useEffect(() => {
-    localStorage.setItem("dark_mode", String(isDarkMode));
-    document.documentElement.classList.toggle("dark", isDarkMode);
     localStorage.setItem("dark_mode", String(isDarkMode));
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
@@ -108,29 +93,19 @@ function AppContent() {
           debts,
           savings,
           promptType: "alerts",
-          transactions,
-          budgets,
-          debts,
-          savings,
-          promptType: "alerts",
         }),
       });
       const data = await response.json();
       if (data.text && data.text !== "OK") {
         const alerts = data.text.split("\n").filter((l: string) => l.trim());
-      if (data.text && data.text !== "OK") {
-        const alerts = data.text.split("\n").filter((l: string) => l.trim());
         alerts.forEach((alert: string) => {
           toast(alert, {
             icon: "⚠️",
-            icon: "⚠️",
             duration: 6000,
-            style: { borderRadius: "16px", fontSize: "12px", fontWeight: 600 },
             style: { borderRadius: "16px", fontSize: "12px", fontWeight: 600 },
           });
         });
       }
-    } catch {}
     } catch {}
   }, [transactions, budgets, debts, savings, alertsChecked]);
 
@@ -144,19 +119,9 @@ function AppContent() {
     } catch (err: any) {
       toast.error(err.message);
     }
-    try {
-      await addTransaction(newTx);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    try {
-      await deleteTransaction(id);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
     try {
       await deleteTransaction(id);
     } catch (err: any) {
@@ -203,30 +168,9 @@ function AppContent() {
     } catch (err: any) {
       toast.error(err.message);
     }
-  const handlePayMultipleInstallments = async (
-    debtId: string,
-    installmentIndices: number[],
-    partialAmounts?: Record<number, number>,
-    note?: string,
-  ) => {
-    try {
-      await payMultipleInstallments(
-        debtId,
-        installmentIndices,
-        partialAmounts,
-        note,
-      );
-    } catch (err: any) {
-      toast.error(err.message);
-    }
   };
 
   const handleAddDebt = async (newDebt: Omit<DebtAccount, "id">) => {
-    try {
-      await addDebt(newDebt as any);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
     try {
       await addDebt(newDebt as any);
     } catch (err: any) {
@@ -240,11 +184,6 @@ function AppContent() {
     } catch (err: any) {
       toast.error(err.message);
     }
-    try {
-      await deleteDebt(id);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
   };
 
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -253,16 +192,6 @@ function AppContent() {
   const handleTouchStart = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
     if (
-      target.closest(".no-swipe") ||
-      target.closest("[drag]") ||
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest("select") ||
-      target.closest("textarea") ||
-      target.closest("a")
-    ) {
-      return;
-    }
       target.closest(".no-swipe") ||
       target.closest("[drag]") ||
       target.closest("button") ||
@@ -288,10 +217,6 @@ function AppContent() {
         setCurrentTab(tabSequence[currentIndex + 1]);
       else if (diffX < 0 && currentIndex > 0)
         setCurrentTab(tabSequence[currentIndex - 1]);
-      if (diffX > 0 && currentIndex < tabSequence.length - 1)
-        setCurrentTab(tabSequence[currentIndex + 1]);
-      else if (diffX < 0 && currentIndex > 0)
-        setCurrentTab(tabSequence[currentIndex - 1]);
     }
     setTouchStartX(null);
     setTouchStartY(null);
@@ -300,12 +225,6 @@ function AppContent() {
   // Auth loading
   if (authLoading) {
     return (
-      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
-        <Icon
-          path={mdiLoading}
-          size={2}
-          className="text-slate-400 animate-spin"
-        />
       <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
         <Icon
           path={mdiLoading}
@@ -323,7 +242,6 @@ function AppContent() {
 
   return (
     <div className="h-screen min-h-0 bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col select-none overflow-hidden">
-    <div className="h-screen min-h-0 bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col select-none overflow-hidden">
       {/* iOS Status Bar */}
       <div className="w-full max-w-md mx-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/30 dark:border-slate-700/30 px-6 py-3 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 z-10">
         <div className="flex items-center gap-1.5">
@@ -335,12 +253,7 @@ function AppContent() {
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md hover:bg-slate-200 transition-colors text-[10px] font-black cursor-pointer"
             title={isDarkMode ? "Chế độ sáng" : "Chế độ tối"}
-            title={isDarkMode ? "Chế độ sáng" : "Chế độ tối"}
           >
-            <Icon
-              path={isDarkMode ? mdiWeatherSunny : mdiWeatherNight}
-              size={0.75}
-            />
             <Icon
               path={isDarkMode ? mdiWeatherSunny : mdiWeatherNight}
               size={0.75}
@@ -357,9 +270,6 @@ function AppContent() {
           <span className="text-slate-400 font-extrabold">
             {new Date().toLocaleDateString("vi-VN")}
           </span>
-          <span className="text-slate-400 font-extrabold">
-            {new Date().toLocaleDateString("vi-VN")}
-          </span>
         </div>
       </div>
 
@@ -367,18 +277,8 @@ function AppContent() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-[127px] min-h-0 overflow-hidden relative"
-        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-[127px] min-h-0 overflow-hidden relative"
       >
         {isInitialLoading ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-            <Icon
-              path={mdiLoading}
-              size={2.5}
-              className="text-slate-400 dark:text-slate-500 animate-spin"
-            />
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-              Đang tải dữ liệu...
-            </p>
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
             <Icon
               path={mdiLoading}
@@ -397,11 +297,6 @@ function AppContent() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -12 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={
-                currentTab === 5
-                  ? "h-full flex flex-col min-h-0 overflow-x-hidden"
-                  : "h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"
-              }
               className={
                 currentTab === 5
                   ? "h-full flex flex-col min-h-0 overflow-x-hidden"
@@ -460,10 +355,6 @@ function AppContent() {
         setCurrentTab={setCurrentTab}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
       />
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-        onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-      />
 
       <QuickAddModal
         isOpen={isQuickAddOpen}
@@ -493,20 +384,11 @@ function AuthRouter() {
     fetch("/.netlify/functions/auth")
       .then((r) => r.json())
       .then((data) => setHasUser(data.hasUser))
-    fetch("/.netlify/functions/auth")
-      .then((r) => r.json())
-      .then((data) => setHasUser(data.hasUser))
       .catch(() => setHasUser(false));
   }, []);
 
   if (hasUser === null) {
     return (
-      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
-        <Icon
-          path={mdiLoading}
-          size={2}
-          className="text-slate-400 animate-spin"
-        />
       <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
         <Icon
           path={mdiLoading}
