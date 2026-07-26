@@ -335,8 +335,9 @@ export default function UserProfileView({
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
-              <Icon path={mdiAccountCardDetailsOutline} size={0.9} />
+              <Icon path={mdiAccountBadgeOutline} size={0.9} />
             </div>
+
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
                 1. Hồ sơ nhân vật của tôi
