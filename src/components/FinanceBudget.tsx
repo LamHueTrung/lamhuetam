@@ -10,7 +10,7 @@ import {
   mdiTag, mdiFire, mdiCoffee, mdiLightningBolt, mdiCarSide, mdiMotorbike,
   mdiOil, mdiHomeCity, mdiWifi, mdiPhone, mdiShoppingOutline,
   mdiSmoking, mdiDumbbell, mdiBeerOutline, mdiMedicalBag, mdiFoodForkDrink,
-  mdiGamepadVariantOutline, mdiCat, mdiGift, mdiBookOpenVariant, mdiScissors,
+  mdiGamepadVariantOutline, mdiCat, mdiGift, mdiBookOpenVariant, mdiContentCut,
   mdiEye, mdiEyeOff, mdiTrashCanOutline, mdiSwapHorizontal,
 } from "@mdi/js";
 import toast from "react-hot-toast";
@@ -64,7 +64,7 @@ const ICON_OPTIONS = [
   { key: 'pet', icon: mdiCat, label: 'Thú cưng' },
   { key: 'gift', icon: mdiGift, label: 'Quà tặng' },
   { key: 'book', icon: mdiBookOpenVariant, label: 'Sách / Học' },
-  { key: 'scissors', icon: mdiScissors, label: 'Cắt tóc' },
+  { key: 'scissors', icon: mdiContentCut, label: 'Cắt tóc' },
   { key: 'tag', icon: mdiTag, label: 'Khác' },
 ];
 
