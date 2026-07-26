@@ -6,21 +6,21 @@ import {
   mdiMapMarker, mdiCalendar, mdiTag, mdiChevronDown, mdiChevronRight,
   mdiEmoticonHappyOutline, mdiEmoticonSadOutline, mdiEmoticonNeutralOutline,
   mdiStar, mdiWeatherLightning, mdiHeart, mdiHandsPray, mdiLoading,
-  mdiFormatListBulleted, mdiMap, mdiEarth, mdiMagnify,
+  mdiFormatListBulleted, mdiMap, mdiEarth, mdiMagnify, mdiCommentTextOutline,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
-import { DiaryEntry, DiaryMood } from "../types";
+import { DiaryEntry, DiaryMood, DiaryReply } from "../types";
 import { useDiary } from "../hooks/useDiary";
 
-const MOOD_CONFIG: Record<DiaryMood, { icon: string; label: string; color: string; bg: string; hex: string }> = {
-  positive: { icon: mdiEmoticonHappyOutline, label: 'Tích cực', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800', hex: '#10b981' },
-  excited: { icon: mdiStar, label: 'Phấn khích', color: 'text-yellow-500', bg: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800', hex: '#eab308' },
-  grateful: { icon: mdiHandsPray, label: 'Biết ơn', color: 'text-cyan-600', bg: 'bg-cyan-50 border-cyan-200 dark:bg-cyan-900/20 dark:border-cyan-800', hex: '#06b6d4' },
-  neutral: { icon: mdiEmoticonNeutralOutline, label: 'Trung hòa', color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700', hex: '#64748b' },
-  sad: { icon: mdiEmoticonSadOutline, label: 'Buồn', color: 'text-blue-500', bg: 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800', hex: '#3b82f6' },
-  angry: { icon: mdiWeatherLightning, label: 'Tức giận', color: 'text-rose-600', bg: 'bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-800', hex: '#ef4444' },
-  negative: { icon: mdiHeart, label: 'Tiêu cực', color: 'text-rose-400', bg: 'bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-800', hex: '#f43f5e' },
+const MOOD_CONFIG: Record<DiaryMood, { icon: string; emoji: string; label: string; color: string; bg: string; hex: string }> = {
+  positive: { icon: mdiEmoticonHappyOutline, emoji: '😊', label: 'Tích cực', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800', hex: '#10b981' },
+  excited: { icon: mdiStar, emoji: '⭐', label: 'Phấn khích', color: 'text-yellow-500', bg: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800', hex: '#eab308' },
+  grateful: { icon: mdiHandsPray, emoji: '🙏', label: 'Biết ơn', color: 'text-cyan-600', bg: 'bg-cyan-50 border-cyan-200 dark:bg-cyan-900/20 dark:border-cyan-800', hex: '#06b6d4' },
+  neutral: { icon: mdiEmoticonNeutralOutline, emoji: '😐', label: 'Trung hòa', color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700', hex: '#64748b' },
+  sad: { icon: mdiEmoticonSadOutline, emoji: '😢', label: 'Buồn', color: 'text-blue-500', bg: 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800', hex: '#3b82f6' },
+  angry: { icon: mdiWeatherLightning, emoji: '⚡', label: 'Tức giận', color: 'text-rose-600', bg: 'bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-800', hex: '#ef4444' },
+  negative: { icon: mdiHeart, emoji: '❤️', label: 'Tiêu cực', color: 'text-rose-400', bg: 'bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-800', hex: '#f43f5e' },
 };
 
 function groupByMonth(entries: DiaryEntry[]): Record<string, DiaryEntry[]> {
@@ -85,28 +85,30 @@ function LeafletMap({ entries, onSelectEntryDetail }: { entries: DiaryEntry[]; o
       validEntries.forEach(e => {
         const mood = MOOD_CONFIG[e.mood] || MOOD_CONFIG.neutral;
         const hex = mood.hex;
+        const emoji = mood.emoji || '😐';
+
         const marker = L.circleMarker([e.lat, e.lng], {
-          radius: 9,
+          radius: 10,
           fillColor: hex,
           color: '#ffffff',
           weight: 2.5,
           opacity: 1,
-          fillOpacity: 0.9,
+          fillOpacity: 0.95,
         }).addTo(map);
 
         const snippet = e.content.length > 50 ? e.content.slice(0, 50) + '...' : e.content;
 
         marker.bindPopup(`
-          <div style="font-family:sans-serif;padding:4px;min-width:160px;max-width:210px">
+          <div style="font-family:sans-serif;padding:4px;min-width:175px;max-width:220px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px">
-              <span style="font-size:10px;font-weight:700;color:${hex};background:${hex}18;padding:2px 8px;border-radius:12px;border:1px solid ${hex}40">
-                ${mood.label}
+              <span style="font-size:11px;font-weight:800;color:${hex};background:${hex}18;padding:3px 10px;border-radius:14px;border:1.5px solid ${hex}40;display:inline-flex;align-items:center;gap:4px">
+                ${emoji} ${mood.label}
               </span>
               <span style="font-size:10px;color:#94a3b8;font-weight:600">${e.date}</span>
             </div>
             ${e.location ? `<div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px">📍 ${e.location}</div>` : ''}
             <p style="font-size:11px;color:#334155;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${snippet}</p>
-            <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;padding:6px 0;background:linear-gradient(to right, #06b6d4, #3b82f6);color:#fff;border:none;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer">
+            <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;padding:7px 0;background:linear-gradient(to right, #06b6d4, #3b82f6);color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(6,182,212,0.25)">
               Xem chi tiết
             </button>
           </div>
@@ -184,6 +186,10 @@ export default function DiaryView() {
   const [tags, setTags] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Reply state for Detail Modal
+  const [replyText, setReplyText] = useState('');
+  const [isSavingReply, setIsSavingReply] = useState(false);
 
   // Tree expanded months
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set([new Date().toISOString().slice(0, 7)]));
@@ -286,6 +292,30 @@ export default function DiaryView() {
     }
   };
 
+  const handleSaveReply = async () => {
+    if (!detailEntry || !replyText.trim()) return;
+    setIsSavingReply(true);
+    try {
+      const nowStr = new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+      const newReply: DiaryReply = {
+        id: Date.now().toString(),
+        time: nowStr,
+        content: replyText.trim(),
+      };
+      const updatedReplies = [...(detailEntry.replies || []), newReply];
+      await updateEntry(detailEntry.id, { replies: updatedReplies });
+
+      const updatedEntry = { ...detailEntry, replies: updatedReplies };
+      setDetailEntry(updatedEntry);
+      setReplyText('');
+      toast.success('Đã gửi phản hồi!');
+    } catch (e: any) {
+      toast.error(e.message || 'Lỗi khi lưu phản hồi');
+    } finally {
+      setIsSavingReply(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     toast((t) => (
       <div className="flex flex-col gap-2">
@@ -332,6 +362,20 @@ export default function DiaryView() {
         </div>
 
         <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium whitespace-pre-wrap break-words">{entry.content}</p>
+
+        {(entry.replies || []).length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            {entry.replies?.map(r => (
+              <div key={r.id} className="bg-white/80 dark:bg-black/20 p-2.5 rounded-xl text-xs space-y-0.5 border border-slate-100/50 dark:border-slate-800">
+                <div className="flex items-center justify-between text-[9px] font-bold text-cyan-600 dark:text-cyan-400">
+                  <span>💬 Trả lời</span>
+                  <span className="text-slate-400">{r.time}</span>
+                </div>
+                <p className="text-[11px] text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap">{r.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {(entry.tags || []).length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">
@@ -425,6 +469,8 @@ export default function DiaryView() {
     </div>
   );
 
+  const currentTimeStr = new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+
   // ── MAIN RENDER ─────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 pb-40 min-w-0 max-w-full overflow-x-hidden">
@@ -485,7 +531,7 @@ export default function DiaryView() {
           {detailEntry && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-4"
-              onClick={() => setDetailEntry(null)}>
+              onClick={() => { setDetailEntry(null); setReplyText(''); }}>
               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
                 onClick={e => e.stopPropagation()}
                 className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[28px] p-6 max-h-[85vh] overflow-y-auto overflow-x-hidden shadow-2xl space-y-4 min-w-0">
@@ -497,17 +543,20 @@ export default function DiaryView() {
                     </div>
                     <span className="text-xs font-bold text-slate-400">{formatDate(detailEntry.date)}</span>
                   </div>
-                  <button onClick={() => setDetailEntry(null)} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 cursor-pointer"><Icon path={mdiClose} size={1} /></button>
+                  <button onClick={() => { setDetailEntry(null); setReplyText(''); }} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 cursor-pointer"><Icon path={mdiClose} size={1} /></button>
                 </div>
+
                 {detailEntry.location && (
                   <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400">
                     <Icon path={mdiMapMarker} size={0.75} />
                     <span>{detailEntry.location}</span>
                   </div>
                 )}
+
                 <div className="text-sm font-medium text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 break-words">
                   {detailEntry.content}
                 </div>
+
                 {(detailEntry.tags || []).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {detailEntry.tags.map((t, i) => (
@@ -517,13 +566,52 @@ export default function DiaryView() {
                     ))}
                   </div>
                 )}
-                <div className="flex justify-end gap-2 pt-2">
-                  <button onClick={() => { const e = detailEntry; setDetailEntry(null); openEdit(e); }}
-                    className="flex items-center gap-1 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 cursor-pointer">
-                    <Icon path={mdiPencil} size={0.7} />Sửa
-                  </button>
-                  <button onClick={() => setDetailEntry(null)}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] text-white font-bold text-xs hover:opacity-90 cursor-pointer">
+
+                {/* Existing Replies List */}
+                {(detailEntry.replies || []).length > 0 && (
+                  <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Các phản hồi ({detailEntry.replies?.length})</span>
+                    <div className="space-y-2">
+                      {detailEntry.replies?.map(r => (
+                        <div key={r.id} className="bg-cyan-50/60 dark:bg-slate-800/80 border border-cyan-100 dark:border-slate-700 p-3 rounded-2xl space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-cyan-700 dark:text-cyan-400 font-bold">
+                            <span>💬 Trả lời</span>
+                            <span className="text-slate-400 font-normal">{r.time}</span>
+                          </div>
+                          <p className="text-xs text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap leading-relaxed">{r.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New Reply Box */}
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Trả lời nhật ký</span>
+                    <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">⏱ {currentTimeStr}</span>
+                  </div>
+                  <textarea
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    rows={2}
+                    placeholder="Nhập suy nghĩ / phản hồi của bạn..."
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-3.5 py-2.5 text-xs font-medium outline-none dark:text-white resize-none min-w-0"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={handleSaveReply}
+                      disabled={isSavingReply || !replyText.trim()}
+                      className="bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5 shadow-sm">
+                      {isSavingReply ? <Icon path={mdiLoading} size={0.6} className="animate-spin" /> : <Icon path={mdiPlus} size={0.6} />}
+                      {isSavingReply ? 'Đang lưu...' : 'Lưu trả lời'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button onClick={() => { setDetailEntry(null); setReplyText(''); }}
+                    className="px-5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 cursor-pointer">
                     Đóng
                   </button>
                 </div>

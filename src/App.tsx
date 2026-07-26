@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "@mdi/react";
 import {
-  mdiCellphone,
+  mdiContentCopy,
   mdiLoading,
   mdiLogout,
   mdiWeatherNight,
@@ -27,6 +27,7 @@ import { useDebts } from "./hooks/useDebts";
 import { useSavings } from "./hooks/useSavings";
 import { useCategories } from "./hooks/useCategories";
 import { useFixedExpenses } from "./hooks/useFixedExpenses";
+import { useSalary } from "./hooks/useSalary";
 import { Transaction, DebtAccount, Category } from "./types";
 type Debt = DebtAccount;
 
@@ -63,7 +64,8 @@ function AppContent() {
   } = useCategories();
 
   const currentMonth = new Date().toISOString().slice(0, 7);
-  const { totalFixed } = useFixedExpenses(currentMonth);
+  const { categories: fixedCats, tasks: fixedTasks, totalFixed } = useFixedExpenses(currentMonth);
+  const { salaryConfig } = useSalary();
 
   const isInitialLoading =
     txLoading || budgetLoading || debtLoading || saveLoading;
@@ -79,6 +81,109 @@ function AppContent() {
     localStorage.setItem("dark_mode", String(isDarkMode));
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
+
+  const handleCopyFinancialMarkdown = useCallback(() => {
+    const nowStr = new Date().toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+
+    const numFmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' VNĐ';
+
+    let md = `# 📊 BÁO CÁO TÀI CHÍNH TỔNG QUAN\n`;
+    md += `*Xuất dữ liệu lúc: ${nowStr}*\n\n`;
+    md += `---\n\n`;
+
+    // 1. Dòng tiền & Lương
+    md += `## 1. 💵 DÒNG TIỀN & LƯƠNG\n`;
+    if (salaryConfig && (salaryConfig.netSalary > 0 || salaryConfig.grossSalary > 0)) {
+      md += `- **Lương thực nhận (Net):** ${numFmt(salaryConfig.netSalary || 0)}\n`;
+      md += `- **Lương Gross:** ${numFmt(salaryConfig.grossSalary || 0)}\n`;
+      md += `- **Ngày nhận lương:** Ngày ${salaryConfig.receiveDay || '—'} hàng tháng\n`;
+      md += `- **Số ngày công:** ${salaryConfig.workDays || 0} ngày\n`;
+      const totalLeaveDays = (salaryConfig.leaveDays || []).reduce((s, l) => s + l.count, 0);
+      md += `- **Tổng số ngày nghỉ:** ${totalLeaveDays} ngày\n`;
+      if (salaryConfig.notes) md += `- **Ghi chú:** ${salaryConfig.notes}\n`;
+    } else {
+      md += `*Chưa có thông tin cấu hình lương*\n`;
+    }
+    md += `\n---\n\n`;
+
+    // 2. Chi tiêu cố định
+    md += `## 2. 📌 CHI TIÊU CỐ ĐỊNH (Tháng ${currentMonth})\n`;
+    md += `**Tổng Chi Cố Định:** ${numFmt(totalFixed || 0)}\n\n`;
+    if (fixedCats.length > 0) {
+      fixedCats.forEach(cat => {
+        const catTasks = fixedTasks.filter(t => t.categoryId === cat.id);
+        const catTotal = catTasks.reduce((s, t) => s + t.amount, 0);
+        md += `### 📁 ${cat.name} (Tổng: ${numFmt(catTotal)})\n`;
+        if (catTasks.length === 0) {
+          md += `- *(Chưa có khoản chi)*\n`;
+        } else {
+          catTasks.forEach(t => {
+            md += `- **${t.name}**: ${numFmt(t.amount)}${t.note ? ` *(Ghi chú: ${t.note})*` : ''}\n`;
+          });
+        }
+        md += `\n`;
+      });
+    } else {
+      md += `*Chưa có danh mục chi tiêu cố định*\n\n`;
+    }
+    md += `---\n\n`;
+
+    // 3. Danh sách nợ & Trả góp
+    const totalDebtsRemaining = debts.reduce((s, d) => s + (d.remainingAmount || 0), 0);
+    md += `## 3. 💳 DỰ NỢ & TRẢ GÓP\n`;
+    md += `**Tổng Dư Nợ Còn Lại:** ${numFmt(totalDebtsRemaining)}\n\n`;
+    if (debts.length > 0) {
+      debts.forEach((d, i) => {
+        const typeLabel = d.type === 'credit_card' ? 'Thẻ tín dụng' : d.type === 'installment' ? 'Trả góp' : 'Vay nợ';
+        md += `### ${i + 1}. ${d.name} (${typeLabel})\n`;
+        md += `- **Dư nợ còn lại:** ${numFmt(d.remainingAmount || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
+        if (d.type === 'installment') {
+          md += `- **Tiến độ trả góp:** Đã trả ${d.paidInstallments || 0}/${d.totalInstallments || 0} kỳ\n`;
+          md += `- **Số tiền trả hàng tháng:** ${numFmt(d.monthlyPayment || 0)} (Hạn trả: Ngày ${d.payDay || '—'})\n`;
+        } else if (d.type === 'credit_card') {
+          md += `- **Hạn mức:** ${numFmt(d.creditLimit || 0)} (Hạn thanh toán: Ngày ${d.payDay || '—'})\n`;
+        }
+        if (d.notes) md += `- **Ghi chú:** ${d.notes}\n`;
+        md += `\n`;
+      });
+    } else {
+      md += `*Chưa có khoản vay nợ / trả góp*\n\n`;
+    }
+    md += `---\n\n`;
+
+    // 4. Giao dịch thu chi gần đây
+    md += `## 4. 📈 LỊCH SỬ GIAO DỊCH THU CHI (Gần đây)\n`;
+    if (transactions.length > 0) {
+      const recentTx = transactions.slice(0, 30);
+      recentTx.forEach(t => {
+        const typeSign = t.type === 'income' ? '+' : '-';
+        md += `- [${t.date}] **${t.type === 'income' ? 'Thu' : 'Chi'}**: ${typeSign}${numFmt(t.amount)} | Danh mục: ${t.category} | Ví: ${t.wallet || 'Mặc định'}${t.description ? ` | Ghi chú: ${t.description}` : ''}\n`;
+      });
+    } else {
+      md += `*Chưa có lịch sử giao dịch*\n`;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(md)
+        .then(() => toast.success('Đã sao chép toàn bộ dữ liệu tài chính (Markdown)!'))
+        .catch(() => toast.error('Lỗi khi sao chép'));
+    } else {
+      const textArea = document.createElement('textarea');
+      textArea.value = md;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success('Đã sao chép toàn bộ dữ liệu tài chính (Markdown)!');
+      } catch {
+        toast.error('Lỗi khi sao chép');
+      }
+      document.body.removeChild(textArea);
+    }
+  }, [salaryConfig, fixedCats, fixedTasks, totalFixed, currentMonth, debts, transactions]);
 
   const checkAiAlerts = useCallback(async () => {
     if (alertsChecked) return;
@@ -244,10 +349,14 @@ function AppContent() {
     <div className="h-screen min-h-0 bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col select-none overflow-hidden">
       {/* iOS Status Bar */}
       <div className="w-full max-w-md mx-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/30 dark:border-slate-700/30 px-6 py-3 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 z-10">
-        <div className="flex items-center gap-1.5">
-          <Icon path={mdiCellphone} size={0.875} />
-          <span>iOS 26.4</span>
-        </div>
+        <button
+          onClick={handleCopyFinancialMarkdown}
+          className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 px-2.5 py-1 rounded-lg transition-all text-[11px] font-bold cursor-pointer border border-slate-200/50 dark:border-slate-700 shadow-sm"
+          title="Sao chép toàn bộ dữ liệu tài chính (dạng Markdown)"
+        >
+          <Icon path={mdiContentCopy} size={0.7} />
+          <span>Copy MD</span>
+        </button>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}

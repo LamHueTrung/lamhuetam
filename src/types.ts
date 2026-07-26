@@ -130,6 +130,12 @@ export interface FixedExpenseTask {
 // ── NEW: Diary ────────────────────────────────────────────
 export type DiaryMood = 'positive' | 'negative' | 'neutral' | 'excited' | 'sad' | 'angry' | 'grateful';
 
+export interface DiaryReply {
+  id: string;
+  time: string;
+  content: string;
+}
+
 export interface DiaryEntry {
   _id?: string;
   id: string;
@@ -140,5 +146,6 @@ export interface DiaryEntry {
   lat: number | null;
   lng: number | null;
   tags: string[];
+  replies?: DiaryReply[];
   createdAt?: string;
 }
