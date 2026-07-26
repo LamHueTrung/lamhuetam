@@ -9,6 +9,9 @@ import {
   mdiCalendarCheck, mdiClockOutline, mdiFormatListBulletedSquare,
   mdiTag, mdiFire, mdiCoffee, mdiLightningBolt, mdiCarSide, mdiMotorbike,
   mdiOil, mdiHomeCity, mdiWifi, mdiPhone, mdiShoppingOutline,
+  mdiSmoking, mdiDumbbell, mdiBeerOutline, mdiMedicalBag, mdiFoodForkDrink,
+  mdiGamepadVariantOutline, mdiCat, mdiGift, mdiBookOpenVariant, mdiScissors,
+  mdiEye, mdiEyeOff, mdiTrashCanOutline, mdiSwapHorizontal,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
@@ -52,29 +55,49 @@ const ICON_OPTIONS = [
   { key: 'wifi', icon: mdiWifi, label: 'Internet' },
   { key: 'phone', icon: mdiPhone, label: 'Điện thoại' },
   { key: 'shopping', icon: mdiShoppingOutline, label: 'Mua sắm' },
+  { key: 'smoking', icon: mdiSmoking, label: 'Thuốc lá' },
+  { key: 'gym', icon: mdiDumbbell, label: 'Gym' },
+  { key: 'beer', icon: mdiBeerOutline, label: 'Bia / Nhậu' },
+  { key: 'medical', icon: mdiMedicalBag, label: 'Thuốc / Y tế' },
+  { key: 'food', icon: mdiFoodForkDrink, label: 'Ăn uống' },
+  { key: 'game', icon: mdiGamepadVariantOutline, label: 'Giải trí' },
+  { key: 'pet', icon: mdiCat, label: 'Thú cưng' },
+  { key: 'gift', icon: mdiGift, label: 'Quà tặng' },
+  { key: 'book', icon: mdiBookOpenVariant, label: 'Sách / Học' },
+  { key: 'scissors', icon: mdiScissors, label: 'Cắt tóc' },
   { key: 'tag', icon: mdiTag, label: 'Khác' },
 ];
 
 const ICON_MAP: Record<string, string> = Object.fromEntries(ICON_OPTIONS.map(o => [o.key, o.icon]));
 
 const COLOR_OPTIONS = [
-  { key: 'slate', cls: 'bg-slate-500' },
-  { key: 'rose', cls: 'bg-rose-500' },
-  { key: 'amber', cls: 'bg-amber-500' },
-  { key: 'emerald', cls: 'bg-emerald-500' },
-  { key: 'blue', cls: 'bg-blue-500' },
-  { key: 'purple', cls: 'bg-purple-500' },
-  { key: 'orange', cls: 'bg-orange-500' },
+  { key: 'slate',   cls: 'bg-slate-500',   label: 'Xám' },
+  { key: 'rose',    cls: 'bg-rose-500',    label: 'Hồng' },
+  { key: 'red',     cls: 'bg-red-500',     label: 'Đỏ' },
+  { key: 'amber',   cls: 'bg-amber-500',   label: 'Vàng' },
+  { key: 'orange',  cls: 'bg-orange-500',  label: 'Cam' },
+  { key: 'emerald', cls: 'bg-emerald-500', label: 'Xanh lá' },
+  { key: 'teal',    cls: 'bg-teal-500',    label: 'Xanh ngọc' },
+  { key: 'cyan',    cls: 'bg-cyan-500',    label: 'Cyan' },
+  { key: 'blue',    cls: 'bg-blue-500',    label: 'Xanh dương' },
+  { key: 'indigo',  cls: 'bg-indigo-500',  label: 'Chàm' },
+  { key: 'purple',  cls: 'bg-purple-500',  label: 'Tím' },
+  { key: 'pink',    cls: 'bg-pink-500',    label: 'Hồng đậm' },
 ];
 
 const COLOR_BG_MAP: Record<string, string> = {
-  slate: 'bg-slate-100 text-slate-700',
-  rose: 'bg-rose-100 text-rose-700',
-  amber: 'bg-amber-100 text-amber-700',
+  slate:   'bg-slate-100   text-slate-700',
+  rose:    'bg-rose-100    text-rose-700',
+  red:     'bg-red-100     text-red-700',
+  amber:   'bg-amber-100   text-amber-700',
+  orange:  'bg-orange-100  text-orange-700',
   emerald: 'bg-emerald-100 text-emerald-700',
-  blue: 'bg-blue-100 text-blue-700',
-  purple: 'bg-purple-100 text-purple-700',
-  orange: 'bg-orange-100 text-orange-700',
+  teal:    'bg-teal-100    text-teal-700',
+  cyan:    'bg-cyan-100    text-cyan-700',
+  blue:    'bg-blue-100    text-blue-700',
+  indigo:  'bg-indigo-100  text-indigo-700',
+  purple:  'bg-purple-100  text-purple-700',
+  pink:    'bg-pink-100    text-pink-700',
 };
 
 function formatVND(num: number) {
@@ -110,6 +133,7 @@ export default function FinanceBudget({
   onPayMultipleInstallments, onAddDebt, onDeleteDebt, onUpdateDebt, onTransactionAdded,
 }: FinanceBudgetProps) {
   const [activeTab, setActiveTab] = useState<ViewTab>('debts');
+  const [showSalary, setShowSalary] = useState(false);
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [fixedMonth, setFixedMonth] = useState(currentMonth);
 
@@ -295,8 +319,16 @@ export default function FinanceBudget({
   };
 
   const handleDeleteCat = async (id: string) => {
-    if (!confirm("Xóa danh mục và tất cả khoản chi trong đó?")) return;
-    try { await deleteCategory(id); toast.success("Đã xóa danh mục!"); } catch (e: any) { toast.error(e.message); }
+    toast((t) => (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-bold text-slate-800">Xóa danh mục?</p>
+        <p className="text-xs text-slate-500">Tất cả khoản chi trong danh mục này sẽ bị xóa.</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => toast.dismiss(t.id)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold cursor-pointer">Hủy</button>
+          <button onClick={async () => { toast.dismiss(t.id); try { await deleteCategory(id); toast.success('Đã xóa danh mục!'); } catch (e: any) { toast.error(e.message); } }} className="text-xs px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold cursor-pointer">Xóa</button>
+        </div>
+      </div>
+    ), { duration: 10000 });
   };
 
   const handleSaveTask = async (catId: string, catName: string) => {
@@ -315,7 +347,15 @@ export default function FinanceBudget({
   };
 
   const handleDeleteTask = async (id: string) => {
-    try { await deleteTask(id); toast.success("Đã xóa!"); } catch (e: any) { toast.error(e.message); }
+    toast((t) => (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-bold text-slate-800">Xóa khoản chi này?</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => toast.dismiss(t.id)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold cursor-pointer">Hủy</button>
+          <button onClick={async () => { toast.dismiss(t.id); try { await deleteTask(id); toast.success('Đã xóa!'); } catch (e: any) { toast.error(e.message); } }} className="text-xs px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold cursor-pointer">Xóa</button>
+        </div>
+      </div>
+    ), { duration: 10000 });
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -581,23 +621,32 @@ export default function FinanceBudget({
           <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">DÒNG TIỀN</span>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">Quản Lý Lương</h1>
         </div>
-        {!salaryEdit && (
-          <button onClick={startEditSalary} className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-1.5">
-            <Icon path={mdiPencil} size={0.875} /><span>Cấu hình</span>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowSalary(s => !s)}
+            className="p-2.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+            title={showSalary ? 'Ẩn số tiền' : 'Hiển thị số tiền'}>
+            <Icon path={showSalary ? mdiEye : mdiEyeOff} size={0.875} />
           </button>
-        )}
+          {!salaryEdit && (
+            <button onClick={startEditSalary} className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-1.5">
+              <Icon path={mdiPencil} size={0.875} /><span>Cấu hình</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary cards */}
       {!salaryEdit && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-emerald-800 to-cyan-500 rounded-[24px] p-4 text-white">
+            <div className="bg-gradient-to-br from-[#1a4731] to-[#06b6d4] rounded-[24px] p-4 text-white shadow-lg">
               <span className="text-[9px] font-bold uppercase opacity-80 block">Lương thực nhận</span>
-              <p className="text-xl font-black mt-1">{formatVND(salaryConfig.netSalary)}</p>
-              <span className="text-[9px] opacity-70 block mt-1">Gross: {formatVND(salaryConfig.grossSalary)}</span>
+              <p className="text-xl font-black mt-1 tracking-wide">
+                {showSalary ? formatVND(salaryConfig.netSalary) : '••••••'}
+              </p>
+              <span className="text-[9px] opacity-70 block mt-1">Gross: {showSalary ? formatVND(salaryConfig.grossSalary) : '••••••'}</span>
             </div>
-            <div className="bg-gradient-to-br from-emerald-800 to-cyan-600 rounded-[24px] p-4 text-white">
+            <div className="bg-gradient-to-br from-[#0c3322] to-[#0891b2] rounded-[24px] p-4 text-white shadow-lg">
               <span className="text-[9px] font-bold uppercase opacity-80 block">Ngày nhận lương</span>
               <p className="text-xl font-black mt-1">Ngày {salaryConfig.receiveDay || '—'}</p>
               <span className="text-[9px] opacity-70 block mt-1">Hàng tháng</span>
@@ -787,9 +836,11 @@ export default function FinanceBudget({
             </div>
             <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Màu sắc</span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {COLOR_OPTIONS.map(c => (
-                  <button key={c.key} type="button" onClick={() => setCatColor(c.key)} className={`w-7 h-7 rounded-full ${c.cls} ${catColor === c.key ? 'ring-2 ring-offset-1 ring-slate-700' : ''} cursor-pointer transition-all`} />
+                  <button key={c.key} type="button" onClick={() => setCatColor(c.key)}
+                    title={c.label}
+                    className={`w-7 h-7 rounded-full ${c.cls} ${catColor === c.key ? 'ring-2 ring-offset-2 ring-slate-700 scale-110' : 'hover:scale-105'} cursor-pointer transition-all`} />
                 ))}
               </div>
             </div>
@@ -822,21 +873,24 @@ export default function FinanceBudget({
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2.5">
-                      <div className={`p-2 rounded-xl ${bgCls}`}>
-                        <Icon path={catIcon} size={0.875} />
+                      <div className={`p-2.5 rounded-2xl ${bgCls}`}>
+                        <Icon path={catIcon} size={1} />
                       </div>
                       <div>
                         <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">{cat.name}</h3>
                         <span className="text-[9px] text-slate-400 font-semibold">{catTasks.length} khoản • {formatVND(catTotal)}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => { setEditCatId(cat.id); setCatName(cat.name); setCatIcon(cat.icon); setCatColor(cat.color); setShowCatForm(true); }}
-                        className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 cursor-pointer transition-all">
-                        <Icon path={mdiPencil} size={0.667} />
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => { setEditCatId(cat.id); setCatName(cat.name); setCatIcon(cat.icon); setCatColor(cat.color); setShowCatForm(true); }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 cursor-pointer transition-all text-[9px] font-bold">
+                        <Icon path={mdiPencil} size={0.6} />Sửa
                       </button>
-                      <button onClick={() => handleDeleteCat(cat.id)} className="p-1.5 rounded-full hover:bg-rose-50 text-slate-300 hover:text-rose-500 cursor-pointer transition-all">
-                        <Icon path={mdiDeleteOutline} size={0.667} />
+                      <button
+                        onClick={() => handleDeleteCat(cat.id)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 text-rose-500 dark:text-rose-400 cursor-pointer transition-all text-[9px] font-bold">
+                        <Icon path={mdiTrashCanOutline} size={0.6} />Xóa
                       </button>
                     </div>
                   </div>
@@ -844,18 +898,23 @@ export default function FinanceBudget({
                   {/* Tasks list */}
                   <div className="space-y-2 mb-3">
                     {catTasks.map(task => (
-                      <div key={task.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700 rounded-2xl px-3 py-2">
+                      <div key={task.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700 rounded-2xl px-3 py-2.5">
                         <div className="flex-1 min-w-0">
                           <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate block">{task.name}</span>
                           {task.note && <span className="text-[9px] text-slate-400 truncate block">{task.note}</span>}
                         </div>
-                        <span className="text-[11px] font-black text-slate-800 dark:text-white shrink-0">{formatVND(task.amount)}</span>
-                        <button onClick={() => { setEditTaskId(task.id); setTaskName(task.name); setTaskAmount(numFmt(String(task.amount))); setTaskNote(task.note); setShowTaskForm(cat.id); }}
-                          className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400 cursor-pointer shrink-0">
+                        <span className="text-[11px] font-black text-slate-800 dark:text-white shrink-0 mr-1">{formatVND(task.amount)}</span>
+                        <button
+                          onClick={() => { setEditTaskId(task.id); setTaskName(task.name); setTaskAmount(numFmt(String(task.amount))); setTaskNote(task.note); setShowTaskForm(cat.id); }}
+                          title="Sửa khoản chi"
+                          className="p-1.5 rounded-xl bg-slate-200 dark:bg-slate-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-slate-500 hover:text-blue-600 cursor-pointer shrink-0 transition-all">
                           <Icon path={mdiPencil} size={0.6} />
                         </button>
-                        <button onClick={() => handleDeleteTask(task.id)} className="p-1 rounded-full hover:bg-rose-50 text-slate-300 hover:text-rose-500 cursor-pointer shrink-0">
-                          <Icon path={mdiDeleteOutline} size={0.6} />
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          title="Xóa khoản chi"
+                          className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 text-rose-400 hover:text-rose-600 cursor-pointer shrink-0 transition-all">
+                          <Icon path={mdiTrashCanOutline} size={0.6} />
                         </button>
                       </div>
                     ))}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
@@ -151,9 +151,24 @@ export default function DiaryView() {
   const [lng, setLng] = useState('');
   const [tags, setTags] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Tree expanded months
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set([new Date().toISOString().slice(0, 7)]));
+
+  // Request geolocation permission when opening diary tab
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLat(String(pos.coords.latitude.toFixed(5)));
+          setLng(String(pos.coords.longitude.toFixed(5)));
+        },
+        () => {},
+        { timeout: 8000 }
+      );
+    }
+  }, []);
 
   const grouped = groupByMonth(entries);
   const months = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
@@ -167,6 +182,19 @@ export default function DiaryView() {
     setLng('');
     setTags('');
     setEditId(null);
+    // Auto-request location for new entries
+    if (navigator.geolocation) {
+      setIsGettingLocation(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLat(String(pos.coords.latitude.toFixed(5)));
+          setLng(String(pos.coords.longitude.toFixed(5)));
+          setIsGettingLocation(false);
+        },
+        () => setIsGettingLocation(false),
+        { timeout: 8000 }
+      );
+    }
   };
 
   const openEdit = (entry: DiaryEntry) => {
@@ -210,8 +238,16 @@ export default function DiaryView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Xóa nhật ký này?')) return;
-    try { await deleteEntry(id); toast.success('Đã xóa!'); } catch (e: any) { toast.error(e.message); }
+    toast((t) => (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-bold text-slate-800">Xóa nhật ký này?</p>
+        <p className="text-xs text-slate-500">Không thể khôi phục sau khi xóa.</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => toast.dismiss(t.id)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold cursor-pointer">Hủy</button>
+          <button onClick={async () => { toast.dismiss(t.id); try { await deleteEntry(id); toast.success('Đã xóa!'); } catch (e: any) { toast.error(e.message); } }} className="text-xs px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold cursor-pointer">Xóa</button>
+        </div>
+      </div>
+    ), { duration: 10000 });
   };
 
   const moodStats = Object.entries(MOOD_CONFIG).map(([k, v]) => ({
@@ -365,7 +401,7 @@ export default function DiaryView() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">Nhật Ký Đời Tôi</h1>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true); }}
-          className="bg-gradient-to-br from-emerald-800 to-cyan-500 text-white font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-lg flex items-center gap-1.5">
+          className="bg-gradient-to-br from-[#1a4731] to-[#06b6d4] text-white font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-lg flex items-center gap-1.5">
           <Icon path={mdiPlus} size={0.875} /><span>Viết nhật ký</span>
         </button>
       </div>
@@ -463,7 +499,27 @@ export default function DiaryView() {
                     <div className="relative">
                       <Icon path={mdiMapMarker} size={0.875} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="VD: Hà Nội, Hội An..."
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] text-sm font-medium outline-none dark:text-white" />
+                        className="w-full pl-9 pr-28 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] text-sm font-medium outline-none dark:text-white" />
+                      <button type="button"
+                        onClick={() => {
+                          if (!navigator.geolocation) { toast.error('Trình duyệt không hỗ trợ vị trí'); return; }
+                          setIsGettingLocation(true);
+                          navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                              setLat(String(pos.coords.latitude.toFixed(5)));
+                              setLng(String(pos.coords.longitude.toFixed(5)));
+                              setIsGettingLocation(false);
+                              toast.success('Đã lấy vị trí hiện tại!');
+                            },
+                            (err) => { setIsGettingLocation(false); toast.error('Không lấy được vị trí. Hãy cấp quyền truy cập.'); },
+                            { timeout: 8000 }
+                          );
+                        }}
+                        disabled={isGettingLocation}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold px-2.5 py-1 bg-gradient-to-r from-[#1a4731] to-[#06b6d4] text-white rounded-lg cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center gap-1">
+                        <Icon path={isGettingLocation ? mdiLoading : mdiMapMarker} size={0.5} className={isGettingLocation ? 'animate-spin' : ''} />
+                        {isGettingLocation ? 'Đang lấy...' : 'Lấy vị trí'}
+                      </button>
                     </div>
                   </div>
 
@@ -494,7 +550,7 @@ export default function DiaryView() {
                 </div>
 
                 <button onClick={handleSubmit} disabled={isSaving}
-                  className="w-full mt-6 bg-gradient-to-r from-emerald-800 to-cyan-500 text-white font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-50 cursor-pointer transition-all shadow-lg flex items-center justify-center gap-2">
+                  className="w-full mt-6 bg-gradient-to-r from-[#1a4731] to-[#06b6d4] text-white font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-50 cursor-pointer transition-all shadow-lg flex items-center justify-center gap-2">
                   {isSaving ? <Icon path={mdiLoading} size={0.875} className="animate-spin" /> : null}
                   {isSaving ? 'Đang lưu...' : (editId ? 'Cập nhật nhật ký' : 'Lưu nhật ký')}
                 </button>
