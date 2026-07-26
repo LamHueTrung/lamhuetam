@@ -639,14 +639,14 @@ export default function FinanceBudget({
       {!salaryEdit && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-[#1a4731] to-[#06b6d4] rounded-[24px] p-4 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-[#06b6d4] to-[#3b82f6] rounded-[24px] p-4 text-white shadow-lg">
               <span className="text-[9px] font-bold uppercase opacity-80 block">Lương thực nhận</span>
               <p className="text-xl font-black mt-1 tracking-wide">
                 {showSalary ? formatVND(salaryConfig.netSalary) : '••••••'}
               </p>
               <span className="text-[9px] opacity-70 block mt-1">Gross: {showSalary ? formatVND(salaryConfig.grossSalary) : '••••••'}</span>
             </div>
-            <div className="bg-gradient-to-br from-[#0c3322] to-[#0891b2] rounded-[24px] p-4 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-[#0891b2] to-[#0284c7] rounded-[24px] p-4 text-white shadow-lg">
               <span className="text-[9px] font-bold uppercase opacity-80 block">Ngày nhận lương</span>
               <p className="text-xl font-black mt-1">Ngày {salaryConfig.receiveDay || '—'}</p>
               <span className="text-[9px] opacity-70 block mt-1">Hàng tháng</span>
@@ -806,7 +806,7 @@ export default function FinanceBudget({
       </div>
 
       {/* Total summary */}
-      <div className="bg-gradient-to-r from-emerald-800 to-cyan-500 rounded-[24px] p-4 text-white flex items-center justify-between">
+      <div className="bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] rounded-[24px] p-4 text-white flex items-center justify-between shadow-lg">
         <div>
           <span className="text-[9px] font-bold uppercase opacity-80 block">Tổng chi cố định</span>
           <p className="text-2xl font-black mt-0.5">{formatVND(totalFixed)}</p>
