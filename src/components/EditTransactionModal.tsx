@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
   mdiClose, mdiCurrencyUsd, mdiCheck, mdiCogOutline, mdiBank, mdiCash, mdiWalletOutline, mdiCalendar
@@ -81,7 +82,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
     setAmountStr(formatted);
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && transaction && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -98,7 +99,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto z-10"
+            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
           >
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
@@ -214,7 +215,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                         }`}
                       >
                         <CatIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-bold">{cat.name}</span>
+                        <span className="text-[10px] font-bold truncate w-full">{cat.name}</span>
                       </motion.button>
                     );
                   })}
@@ -248,7 +249,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                         }`}
                       >
                         <Icon path={w.icon} size={0.875} className="shrink-0" />
-                        <span className="text-[10px] font-bold">{w.name}</span>
+                        <span className="text-[10px] font-bold truncate w-full">{w.name}</span>
                       </motion.button>
                     );
                   })}
@@ -267,6 +268,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

@@ -6,7 +6,7 @@ import {
   mdiCheckCircleOutline, mdiChartLine, mdiChartAreaspline, mdiChartBar, mdiAutoFix,
   mdiLoading, mdiRefresh
 } from "@mdi/js";
-import { Transaction, DebtAccount, Category, Budget } from "../types";
+import { Transaction, DebtAccount, Category, Budget, SavingsGoal } from "../types";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 type Debt = DebtAccount;
 
@@ -15,6 +15,8 @@ interface DashboardProps {
   debts: Debt[];
   categories: Category[];
   budgets?: Budget[];
+  savings?: SavingsGoal[];
+  totalFixed?: number;
   onNavigateToTab: (tab: number) => void;
   username?: string;
 }
@@ -24,11 +26,14 @@ export default function Dashboard({
   debts,
   categories,
   budgets = [],
+  savings = [],
+  totalFixed = 0,
   onNavigateToTab,
   username = "bạn"
 }: DashboardProps) {
 
   const formatVND = (num: number) => {
+    if (num < 1000 && num > 0) return num + "đ";
     const valueInK = Math.round(num / 1000);
     return new Intl.NumberFormat("vi-VN").format(valueInK) + "k";
   };
@@ -466,7 +471,7 @@ export default function Dashboard({
           <h3 className="text-sm font-bold text-slate-800 tracking-tight">Dự Báo Dòng Tiền</h3>
           <span className="text-[10px] font-bold text-slate-400">{new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</span>
         </div>
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="bg-slate-50 rounded-2xl p-3">
             <span className="text-[9px] font-bold text-slate-400 uppercase block">Thu nhập</span>
             <span className="text-xs font-extrabold text-emerald-600 mt-0.5 block">{formatVND(incomeThisMonth)}</span>
@@ -477,15 +482,22 @@ export default function Dashboard({
             <span className="text-xs font-extrabold text-rose-600 mt-0.5 block">{formatVND(totalExpense)}</span>
             <span className="text-[9px] text-slate-400 font-medium">Trả nợ: {formatVND(totalPayablesMonthly)}</span>
           </div>
+          {totalFixed > 0 && (
+            <div className="bg-orange-50 rounded-2xl p-3">
+              <span className="text-[9px] font-bold text-orange-400 uppercase block">Chi cố định</span>
+              <span className="text-xs font-extrabold text-orange-600 mt-0.5 block">{formatVND(totalFixed)}</span>
+              <span className="text-[9px] text-slate-400 font-medium">Tháng này</span>
+            </div>
+          )}
           <div className="bg-slate-50 rounded-2xl p-3">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">Dự báo</span>
-            <span className={`text-xs font-extrabold mt-0.5 block ${projectedIncome - totalExpense - totalPayablesMonthly >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {formatVND(projectedIncome - totalExpense - totalPayablesMonthly)}
+            <span className="text-[9px] font-bold text-slate-400 uppercase block">Dự báo cuối tháng</span>
+            <span className={`text-xs font-extrabold mt-0.5 block ${projectedIncome - totalExpense - totalPayablesMonthly - totalFixed >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {formatVND(projectedIncome - totalExpense - totalPayablesMonthly - totalFixed)}
             </span>
-            <span className="text-[9px] text-slate-400 font-medium">Cuối tháng</span>
+            <span className="text-[9px] text-slate-400 font-medium">Sau nợ + cố định</span>
           </div>
         </div>
-        {projectedIncome - totalExpense - totalPayablesMonthly < 0 && (
+        {projectedIncome - totalExpense - totalPayablesMonthly - totalFixed < 0 && (
           <div className="bg-rose-50 border border-rose-100 rounded-2xl p-3 flex items-center gap-2">
             <Icon path={mdiAlertCircleOutline} size={0.75} className="text-rose-500 shrink-0" />
             <span className="text-[10px] font-bold text-rose-600">Dự báo âm. Cần cắt giảm chi tiêu hoặc tăng thu nhập.</span>

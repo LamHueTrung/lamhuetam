@@ -122,7 +122,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto z-10"
+            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
           >
             {/* Grab handle top header */}
             <div className="flex items-center justify-between mb-5">
@@ -254,7 +254,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                         }`}
                       >
                         <CatIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-bold">{cat.name}</span>
+                        <span className="text-[10px] font-bold truncate w-full">{cat.name}</span>
                       </motion.button>
                     );
                   })}
@@ -291,7 +291,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                         }`}
                       >
                         <Icon path={w.icon} size={0.875} className="shrink-0" />
-                        <span className="text-[10px] font-bold">{w.name}</span>
+                        <span className="text-[10px] font-bold truncate w-full">{w.name}</span>
                       </motion.button>
                     );
                   })}

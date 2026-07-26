@@ -87,3 +87,58 @@ export interface Message {
   text: string;
   timestamp: string;
 }
+
+// ── NEW: Salary ──────────────────────────────────────────
+export type LeaveType = 'annual' | 'personal' | 'unpaid';
+
+export interface LeaveDay {
+  count: number;
+  type: LeaveType;
+}
+
+export interface SalaryConfig {
+  _id?: string;
+  grossSalary: number;
+  netSalary: number;
+  receiveDay: number;
+  workDays: number;
+  leaveDays: LeaveDay[];
+  lastAutoAddMonth: string;
+  notes: string;
+}
+
+// ── NEW: Fixed Expenses ───────────────────────────────────
+export interface FixedExpenseCategory {
+  _id?: string;
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
+export interface FixedExpenseTask {
+  _id?: string;
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  name: string;
+  amount: number;
+  month: string;
+  note: string;
+}
+
+// ── NEW: Diary ────────────────────────────────────────────
+export type DiaryMood = 'positive' | 'negative' | 'neutral' | 'excited' | 'sad' | 'angry' | 'grateful';
+
+export interface DiaryEntry {
+  _id?: string;
+  id: string;
+  date: string;
+  content: string;
+  mood: DiaryMood;
+  location: string;
+  lat: number | null;
+  lng: number | null;
+  tags: string[];
+  createdAt?: string;
+}

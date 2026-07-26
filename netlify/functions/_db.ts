@@ -85,6 +85,50 @@ const ChatMessageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 
+const SalaryLeaveDaySchema = new mongoose.Schema({
+  count: { type: Number, default: 0 },
+  type: { type: String, enum: ['annual', 'personal', 'unpaid'], default: 'personal' }
+}, { _id: false });
+
+const SalaryConfigSchema = new mongoose.Schema({
+  grossSalary: { type: Number, default: 0 },
+  netSalary: { type: Number, default: 0 },
+  receiveDay: { type: Number, default: 1, min: 1, max: 31 },
+  workDays: { type: Number, default: 26 },
+  leaveDays: [SalaryLeaveDaySchema],
+  lastAutoAddMonth: { type: String, default: '' },
+  notes: { type: String, default: '' }
+}, { versionKey: false });
+
+const FixedExpenseCategorySchema = new mongoose.Schema({
+  id: { type: String, default: () => 'fec-' + Math.random().toString(36).substr(2, 9) },
+  name: { type: String, required: true },
+  icon: { type: String, default: 'cash' },
+  color: { type: String, default: 'slate' }
+}, { versionKey: false });
+
+const FixedExpenseTaskSchema = new mongoose.Schema({
+  id: { type: String, default: () => 'fet-' + Math.random().toString(36).substr(2, 9) },
+  categoryId: { type: String, required: true },
+  categoryName: { type: String, default: '' },
+  name: { type: String, required: true },
+  amount: { type: Number, required: true },
+  month: { type: String, required: true },
+  note: { type: String, default: '' }
+}, { versionKey: false });
+
+const DiaryEntrySchema = new mongoose.Schema({
+  id: { type: String, default: () => 'diary-' + Math.random().toString(36).substr(2, 9) },
+  date: { type: String, required: true },
+  content: { type: String, required: true },
+  mood: { type: String, enum: ['positive', 'negative', 'neutral', 'excited', 'sad', 'angry', 'grateful'], default: 'neutral' },
+  location: { type: String, default: '' },
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
+  tags: [{ type: String }],
+  createdAt: { type: Date, default: Date.now }
+}, { versionKey: false });
+
 export const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);
 export const Budget = mongoose.models.Budget || mongoose.model('Budget', BudgetSchema);
 export const Debt = mongoose.models.Debt || mongoose.model('Debt', DebtSchema);
@@ -92,3 +136,7 @@ export const SavingsGoal = mongoose.models.SavingsGoal || mongoose.model('Saving
 export const CategoryModel = mongoose.models.Category || mongoose.model('Category', CategorySchema);
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
 export const ChatMessage = mongoose.models.ChatMessage || mongoose.model('ChatMessage', ChatMessageSchema);
+export const SalaryConfig = mongoose.models.SalaryConfig || mongoose.model('SalaryConfig', SalaryConfigSchema);
+export const FixedExpenseCategory = mongoose.models.FixedExpenseCategory || mongoose.model('FixedExpenseCategory', FixedExpenseCategorySchema);
+export const FixedExpenseTask = mongoose.models.FixedExpenseTask || mongoose.model('FixedExpenseTask', FixedExpenseTaskSchema);
+export const DiaryEntry = mongoose.models.DiaryEntry || mongoose.model('DiaryEntry', DiaryEntrySchema);

@@ -1,6 +1,6 @@
 import React from "react";
 import { Icon } from "@mdi/react";
-import { mdiHome, mdiReceiptTextCheckOutline, mdiPlus, mdiSwapHorizontal, mdiAutoFix } from "@mdi/js";
+import { mdiHome, mdiReceiptTextCheckOutline, mdiPlus, mdiSwapHorizontal, mdiAutoFix, mdiBookOpenVariant } from "@mdi/js";
 import { motion } from "motion/react";
 
 interface NavbarProps {
@@ -19,7 +19,7 @@ export default function Navbar({ currentTab, setCurrentTab, onOpenQuickAdd }: Na
   ];
 
   return (
-    <div id="bottom-navbar" className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-2 bg-gradient-to-t from-slate-50/90 dark:from-slate-900/90 to-transparent pointer-events-none">
+    <div id="bottom-navbar" className="fixed bottom-0 left-0 right-0 z-40 px-4 safe-area-bottom pt-2 bg-gradient-to-t from-slate-50/90 dark:from-slate-900/90 to-transparent pointer-events-none">
       <div className="max-w-md mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 rounded-[28px] shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] px-2 py-2 flex items-center justify-between pointer-events-auto">
         {tabs.map((tab) => {
           if (tab.isFab) {
@@ -63,6 +63,18 @@ export default function Navbar({ currentTab, setCurrentTab, onOpenQuickAdd }: Na
           );
         })}
       </div>
+
+      {/* Diary floating button — bottom right */}
+      <motion.button
+        id="btn-diary"
+        onClick={() => setCurrentTab(6)}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className={`fixed bottom-24 right-5 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer pointer-events-auto z-50 ${currentTab === 6 ? 'bg-indigo-600 text-white ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-indigo-600 border border-indigo-100 dark:border-indigo-900'}`}
+        title="Nhật ký Đời Tôi"
+      >
+        <Icon path={mdiBookOpenVariant} size={1.25} />
+      </motion.button>
     </div>
   );
 }

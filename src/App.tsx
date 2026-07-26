@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "@mdi/react";
-import { mdiCellphone, mdiLoading, mdiLogout, mdiAccount, mdiAutoFix, mdiWeatherNight, mdiWeatherSunny } from "@mdi/js";
+import {
+  mdiCellphone,
+  mdiLoading,
+  mdiLogout,
+  mdiWeatherNight,
+  mdiWeatherSunny,
+} from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -12,6 +18,7 @@ import QuickAddModal from "./components/QuickAddModal";
 import FinanceBudget from "./components/FinanceBudget";
 import AICovisor from "./components/AICovisor";
 import CategoryManager from "./components/CategoryManager";
+import DiaryView from "./components/DiaryView";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import { useTransactions } from "./hooks/useTransactions";
@@ -19,6 +26,7 @@ import { useBudgets } from "./hooks/useBudgets";
 import { useDebts } from "./hooks/useDebts";
 import { useSavings } from "./hooks/useSavings";
 import { useCategories } from "./hooks/useCategories";
+import { useFixedExpenses } from "./hooks/useFixedExpenses";
 import { Transaction, DebtAccount, Category } from "./types";
 type Debt = DebtAccount;
 
@@ -28,24 +36,48 @@ function AppContent() {
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
 
-  const { transactions, loading: txLoading, addTransaction, deleteTransaction, updateTransaction } = useTransactions();
+  const {
+    transactions,
+    loading: txLoading,
+    addTransaction,
+    deleteTransaction,
+    updateTransaction,
+    refetch: refetchTransactions,
+  } = useTransactions();
   const { budgets, loading: budgetLoading, updateBudgetLimit } = useBudgets();
-  const { debts, loading: debtLoading, addDebt, deleteDebt, payInstallments: payMultipleInstallments, updateDebt } = useDebts();
+  const {
+    debts,
+    loading: debtLoading,
+    addDebt,
+    deleteDebt,
+    payInstallments: payMultipleInstallments,
+    updateDebt,
+  } = useDebts();
   const { savings, loading: saveLoading, updateSavings } = useSavings();
-  const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories();
+  const {
+    categories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    reorderCategories,
+  } = useCategories();
 
-  const isInitialLoading = txLoading || budgetLoading || debtLoading || saveLoading;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const { totalFixed } = useFixedExpenses(currentMonth);
+
+  const isInitialLoading =
+    txLoading || budgetLoading || debtLoading || saveLoading;
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [alertsChecked, setAlertsChecked] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('dark_mode');
-    if (saved !== null) return saved === 'true';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const saved = localStorage.getItem("dark_mode");
+    if (saved !== null) return saved === "true";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   useEffect(() => {
-    localStorage.setItem('dark_mode', String(isDarkMode));
-    document.documentElement.classList.toggle('dark', isDarkMode);
+    localStorage.setItem("dark_mode", String(isDarkMode));
+    document.documentElement.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
 
   const checkAiAlerts = useCallback(async () => {
@@ -56,22 +88,25 @@ function AppContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          transactions, budgets, debts, savings,
-          promptType: 'alerts'
+          transactions,
+          budgets,
+          debts,
+          savings,
+          promptType: "alerts",
         }),
       });
       const data = await response.json();
-      if (data.text && data.text !== 'OK') {
-        const alerts = data.text.split('\n').filter((l: string) => l.trim());
+      if (data.text && data.text !== "OK") {
+        const alerts = data.text.split("\n").filter((l: string) => l.trim());
         alerts.forEach((alert: string) => {
           toast(alert, {
-            icon: '⚠️',
+            icon: "⚠️",
             duration: 6000,
-            style: { borderRadius: '16px', fontSize: '12px', fontWeight: 600 },
+            style: { borderRadius: "16px", fontSize: "12px", fontWeight: 600 },
           });
         });
       }
-    } catch { }
+    } catch {}
   }, [transactions, budgets, debts, savings, alertsChecked]);
 
   useEffect(() => {
@@ -79,48 +114,76 @@ function AppContent() {
   }, [isInitialLoading, checkAiAlerts]);
 
   const handleAddTransaction = async (newTx: Omit<Transaction, "id">) => {
-    try { await addTransaction(newTx); }
-    catch (err: any) { toast.error(err.message); }
+    try {
+      await addTransaction(newTx);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    try { await deleteTransaction(id); }
-    catch (err: any) { toast.error(err.message); }
+    try {
+      await deleteTransaction(id);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
-  const handleUpdateTransaction = async (id: string, data: Partial<Transaction>) => {
-    try { await updateTransaction(id, data); toast.success('Đã cập nhật giao dịch'); }
-    catch (err: any) { toast.error(err.message); }
+  const handleUpdateTransaction = async (
+    id: string,
+    data: Partial<Transaction>,
+  ) => {
+    try {
+      await updateTransaction(id, data);
+      toast.success("Đã cập nhật giao dịch");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
-  const handleUpdateSavings = async (amount: number) => {
-    try { await updateSavings(amount); }
-    catch (err: any) { toast.error(err.message); }
+  const handleUpdateBudgetLimit = async (
+    category: string,
+    newLimit: number,
+  ) => {
+    try {
+      await updateBudgetLimit(category, newLimit);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
-  const handleUpdateBudgetLimit = async (category: string, newLimit: number) => {
-    try { await updateBudgetLimit(category, newLimit); }
-    catch (err: any) { toast.error(err.message); }
-  };
-
-  const handlePayDebtInstallment = async (debtId: string, installmentIndex: number) => {
-    try { await payMultipleInstallments(debtId, [installmentIndex]); }
-    catch (err: any) { toast.error(err.message); }
-  };
-
-  const handlePayMultipleInstallments = async (debtId: string, installmentIndices: number[], partialAmounts?: Record<number, number>, note?: string) => {
-    try { await payMultipleInstallments(debtId, installmentIndices, partialAmounts, note); }
-    catch (err: any) { toast.error(err.message); }
+  const handlePayMultipleInstallments = async (
+    debtId: string,
+    installmentIndices: number[],
+    partialAmounts?: Record<number, number>,
+    note?: string,
+  ) => {
+    try {
+      await payMultipleInstallments(
+        debtId,
+        installmentIndices,
+        partialAmounts,
+        note,
+      );
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const handleAddDebt = async (newDebt: Omit<DebtAccount, "id">) => {
-    try { await addDebt(newDebt as any); }
-    catch (err: any) { toast.error(err.message); }
+    try {
+      await addDebt(newDebt as any);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const handleDeleteDebt = async (id: string) => {
-    try { await deleteDebt(id); }
-    catch (err: any) { toast.error(err.message); }
+    try {
+      await deleteDebt(id);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -129,14 +192,16 @@ function AppContent() {
   const handleTouchStart = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
     if (
-      target.closest('.no-swipe') || 
-      target.closest('[drag]') || 
-      target.closest('button') || 
-      target.closest('input') || 
-      target.closest('select') || 
-      target.closest('textarea') ||
-      target.closest('a')
-    ) { return; }
+      target.closest(".no-swipe") ||
+      target.closest("[drag]") ||
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest("select") ||
+      target.closest("textarea") ||
+      target.closest("a")
+    ) {
+      return;
+    }
     setTouchStartX(e.targetTouches[0].clientX);
     setTouchStartY(e.targetTouches[0].clientY);
   };
@@ -146,10 +211,12 @@ function AppContent() {
     const diffX = touchStartX - e.changedTouches[0].clientX;
     const diffY = touchStartY - e.changedTouches[0].clientY;
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
-      const tabSequence = [1, 2, 4, 5];
+      const tabSequence = [1, 2, 4, 5, 6];
       const currentIndex = tabSequence.indexOf(currentTab);
-      if (diffX > 0 && currentIndex < tabSequence.length - 1) setCurrentTab(tabSequence[currentIndex + 1]);
-      else if (diffX < 0 && currentIndex > 0) setCurrentTab(tabSequence[currentIndex - 1]);
+      if (diffX > 0 && currentIndex < tabSequence.length - 1)
+        setCurrentTab(tabSequence[currentIndex + 1]);
+      else if (diffX < 0 && currentIndex > 0)
+        setCurrentTab(tabSequence[currentIndex - 1]);
     }
     setTouchStartX(null);
     setTouchStartY(null);
@@ -158,8 +225,12 @@ function AppContent() {
   // Auth loading
   if (authLoading) {
     return (
-      <div className="h-screen bg-[#F2F2F7] flex items-center justify-center">
-        <Icon path={mdiLoading} size={2} className="text-slate-400 animate-spin" />
+      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
+        <Icon
+          path={mdiLoading}
+          size={2}
+          className="text-slate-400 animate-spin"
+        />
       </div>
     );
   }
@@ -170,7 +241,7 @@ function AppContent() {
   }
 
   return (
-    <div className="h-screen bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col justify-between select-none overflow-hidden">
+    <div className="h-screen min-h-0 bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col select-none overflow-hidden">
       {/* iOS Status Bar */}
       <div className="w-full max-w-md mx-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/30 dark:border-slate-700/30 px-6 py-3 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 z-10">
         <div className="flex items-center gap-1.5">
@@ -181,9 +252,12 @@ function AppContent() {
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md hover:bg-slate-200 transition-colors text-[10px] font-black cursor-pointer"
-            title={isDarkMode ? 'Chế độ sáng' : 'Chế độ tối'}
+            title={isDarkMode ? "Chế độ sáng" : "Chế độ tối"}
           >
-            <Icon path={isDarkMode ? mdiWeatherSunny : mdiWeatherNight} size={0.75} />
+            <Icon
+              path={isDarkMode ? mdiWeatherSunny : mdiWeatherNight}
+              size={0.75}
+            />
           </button>
           <button
             onClick={logout}
@@ -193,19 +267,27 @@ function AppContent() {
             <Icon path={mdiLogout} size={0.75} />
             <span>Thoát</span>
           </button>
-          <span className="text-slate-400 font-extrabold">{new Date().toLocaleDateString("vi-VN")}</span>
+          <span className="text-slate-400 font-extrabold">
+            {new Date().toLocaleDateString("vi-VN")}
+          </span>
         </div>
       </div>
 
       <main
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-28 overflow-hidden relative"
+        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-[127px] min-h-0 overflow-hidden relative"
       >
         {isInitialLoading ? (
-          <div className="flex flex-col items-center justify-center h-[70vh] text-center space-y-4">
-            <Icon path={mdiLoading} size={2.5} className="text-slate-400 dark:text-slate-500 animate-spin" />
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Đang tải dữ liệu...</p>
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+            <Icon
+              path={mdiLoading}
+              size={2.5}
+              className="text-slate-400 dark:text-slate-500 animate-spin"
+            />
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+              Đang tải dữ liệu...
+            </p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -215,7 +297,11 @@ function AppContent() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -12 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={currentTab === 5 ? "h-full flex flex-col min-h-0" : "h-full overflow-y-auto overscroll-behavior-contain"}
+              className={
+                currentTab === 5
+                  ? "h-full flex flex-col min-h-0 overflow-x-hidden"
+                  : "h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"
+              }
             >
               {currentTab === 1 && (
                 <Dashboard
@@ -223,6 +309,8 @@ function AppContent() {
                   debts={debts}
                   categories={categories}
                   budgets={budgets}
+                  savings={savings}
+                  totalFixed={totalFixed}
                   onNavigateToTab={setCurrentTab}
                   username={username}
                 />
@@ -236,18 +324,15 @@ function AppContent() {
                 />
               )}
               {currentTab === 4 && (
-                  <FinanceBudget
-                    budgets={budgets}
-                    debts={debts}
-                    savings={savings}
-                    transactions={transactions}
-                    onUpdateSavings={handleUpdateSavings}
-                    onUpdateBudgetLimit={handleUpdateBudgetLimit}
-                    onPayMultipleInstallments={handlePayMultipleInstallments}
-                    onAddDebt={handleAddDebt}
-                    onDeleteDebt={handleDeleteDebt}
-                    onUpdateDebt={(id, data) => updateDebt(id, data)}
-                  />
+                <FinanceBudget
+                  debts={debts}
+                  transactions={transactions}
+                  onPayMultipleInstallments={handlePayMultipleInstallments}
+                  onAddDebt={handleAddDebt}
+                  onDeleteDebt={handleDeleteDebt}
+                  onUpdateDebt={(id, data) => updateDebt(id, data)}
+                  onTransactionAdded={refetchTransactions}
+                />
               )}
               {currentTab === 5 && (
                 <AICovisor
@@ -257,16 +342,19 @@ function AppContent() {
                   savings={savings}
                 />
               )}
+              {currentTab === 6 && (
+                <DiaryView />
+              )}
             </motion.div>
           </AnimatePresence>
         )}
       </main>
 
       <Navbar
-          currentTab={currentTab}
-          setCurrentTab={setCurrentTab}
-          onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-        />
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+      />
 
       <QuickAddModal
         isOpen={isQuickAddOpen}
@@ -293,16 +381,20 @@ function AuthRouter() {
   const [hasUser, setHasUser] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch('/.netlify/functions/auth')
-      .then(r => r.json())
-      .then(data => setHasUser(data.hasUser))
+    fetch("/.netlify/functions/auth")
+      .then((r) => r.json())
+      .then((data) => setHasUser(data.hasUser))
       .catch(() => setHasUser(false));
   }, []);
 
   if (hasUser === null) {
     return (
-      <div className="h-screen bg-[#F2F2F7] flex items-center justify-center">
-        <Icon path={mdiLoading} size={2} className="text-slate-400 animate-spin" />
+      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
+        <Icon
+          path={mdiLoading}
+          size={2}
+          className="text-slate-400 animate-spin"
+        />
       </div>
     );
   }

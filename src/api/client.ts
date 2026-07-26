@@ -52,4 +52,31 @@ export const api = {
   gemini: {
     advisor: (data: any) => request(`${BASE}/gemini-advisor`, { method: 'POST', body: JSON.stringify(data) }),
   },
+
+  salary: {
+    get: () => request(`${BASE}/salary`),
+    save: (data: any) => request(`${BASE}/salary`, { method: 'POST', body: JSON.stringify(data) }),
+    autoAdd: () => request(`${BASE}/salary`, { method: 'POST', body: JSON.stringify({ action: 'auto_add' }) }),
+  },
+
+  fixedExpenses: {
+    getCategories: () => request(`${BASE}/fixed-expenses?type=categories`),
+    getTasks: (month: string) => request(`${BASE}/fixed-expenses?type=tasks&month=${month}`),
+    createCategory: (data: any) => request(`${BASE}/fixed-expenses`, { method: 'POST', body: JSON.stringify({ ...data, entity: 'category' }) }),
+    updateCategory: (data: any) => request(`${BASE}/fixed-expenses`, { method: 'PUT', body: JSON.stringify({ ...data, entity: 'category' }) }),
+    deleteCategory: (id: string) => request(`${BASE}/fixed-expenses?id=${id}&entity=category`, { method: 'DELETE' }),
+    createTask: (data: any) => request(`${BASE}/fixed-expenses`, { method: 'POST', body: JSON.stringify({ ...data, entity: 'task' }) }),
+    updateTask: (data: any) => request(`${BASE}/fixed-expenses`, { method: 'PUT', body: JSON.stringify({ ...data, entity: 'task' }) }),
+    deleteTask: (id: string) => request(`${BASE}/fixed-expenses?id=${id}&entity=task`, { method: 'DELETE' }),
+  },
+
+  diary: {
+    list: (params?: { month?: string; mood?: string }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request(`${BASE}/diary${qs ? '?' + qs : ''}`);
+    },
+    create: (data: any) => request(`${BASE}/diary`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => request(`${BASE}/diary`, { method: 'PUT', body: JSON.stringify({ id, ...data }) }),
+    delete: (id: string) => request(`${BASE}/diary?id=${id}`, { method: 'DELETE' }),
+  },
 };
