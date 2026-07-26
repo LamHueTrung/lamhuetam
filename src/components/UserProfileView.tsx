@@ -17,9 +17,9 @@ import {
   mdiPencilOutline,
   mdiContentSave,
   mdiAccountBadgeOutline,
-  mdiSparkles,
   mdiLightbulbOutline,
   mdiOpenInNew,
+
   mdiClose,
   mdiAutoFix,
   mdiDomain,
@@ -314,9 +314,10 @@ export default function UserProfileView({
         {/* Highlight Chips */}
         <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-            <Icon path={mdiSparkles} size={0.65} className="text-amber-400" />
+            <Icon path={mdiAutoFix} size={0.65} className="text-amber-400" />
             Thế mạnh:
           </span>
+
           <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
             ⚡ {strongestSkill}
           </span>
@@ -849,9 +850,10 @@ export default function UserProfileView({
         {/* Auto-suggest buttons */}
         <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
           <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-            <Icon path={mdiSparkles} size={0.65} className="text-amber-500" />
+            <Icon path={mdiAutoFix} size={0.65} className="text-amber-500" />
             Gợi ý thông tin nên bổ sung cho Cố vấn AI:
           </span>
+
           <div className="flex flex-wrap gap-2">
             {autoSuggestSuggestions.map((sug, i) => (
               <button
