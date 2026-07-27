@@ -170,22 +170,6 @@ export default function Ledger({
         <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
           LỊCH SỬ GIAO DỊCH
         </span>
-        {/* <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">Sổ Cái Nhật Ký</h1> */}
-      </div>
-
-      <div className="relative">
-        <Icon
-          path={mdiMagnify}
-          size={1}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-        />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm kiếm giao dịch..."
-          className="w-full pl-11 pr-4 py-3.5 bg-white/80 backdrop-blur-sm border border-slate-100 rounded-[22px] text-[16px] focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder-slate-400 font-medium transition-all shadow-[0_4px_16px_rgba(0,0,0,0.01)]"
-        />
       </div>
 
       <div className="flex items-center justify-between bg-white/80 border border-slate-100 rounded-[24px] px-5 py-3 shadow-sm">
@@ -293,30 +277,31 @@ export default function Ledger({
           <div className="flex items-center gap-2 overflow-x-auto pb-1 select-none">
             <button
               onClick={() => setWalletFilter("all")}
-              className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "all" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
+              title="Tất cả ví"
+              className={`p-2.5 rounded-full flex items-center justify-center transition-all cursor-pointer ${walletFilter === "all" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
             >
-              <span>Tất cả ví</span>
+              <Icon path={mdiWallet} size={0.875} />
             </button>
             <button
               onClick={() => setWalletFilter("Ngân hàng")}
-              className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "Ngân hàng" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
+              title="Ngân hàng"
+              className={`p-2.5 rounded-full flex items-center justify-center transition-all cursor-pointer ${walletFilter === "Ngân hàng" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
             >
-              <Icon path={mdiBank} size={0.75} />
-              <span>Ngân hàng</span>
+              <Icon path={mdiBank} size={0.875} />
             </button>
             <button
               onClick={() => setWalletFilter("Tiền mặt")}
-              className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "Tiền mặt" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
+              title="Tiền mặt"
+              className={`p-2.5 rounded-full flex items-center justify-center transition-all cursor-pointer ${walletFilter === "Tiền mặt" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
             >
-              <Icon path={mdiCash} size={0.75} />
-              <span>Tiền mặt</span>
+              <Icon path={mdiCash} size={0.875} />
             </button>
             <button
               onClick={() => setWalletFilter("Ví điện tử")}
-              className={`px-3 py-2 rounded-[16px] text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${walletFilter === "Ví điện tử" ? "bg-slate-900 text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
+              title="Ví điện tử"
+              className={`p-2.5 rounded-full flex items-center justify-center transition-all cursor-pointer ${walletFilter === "Ví điện tử" ? "bg-slate-900 text-white shadow-[0_4px_12px_rgba(15,23,42,0.15)]" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"}`}
             >
-              <Icon path={mdiWalletOutline} size={0.75} />
-              <span>Ví điện tử</span>
+              <Icon path={mdiWalletOutline} size={0.875} />
             </button>
           </div>
         </div>
