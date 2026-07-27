@@ -36,7 +36,8 @@ export default function Dashboard({
 
 
   const formatVND = (num: number) => {
-    if (num < 1000 && num > 0) return num + "đ";
+    if (!num || num === 0) return "0đ";
+    if (Math.abs(num) < 1000) return num + "đ";
     const valueInK = Math.round(num / 1000);
     return new Intl.NumberFormat("vi-VN").format(valueInK) + "k";
   };
@@ -66,20 +67,22 @@ export default function Dashboard({
   const isPositiveTrend = totalIncome >= totalExpense;
   const trendPercentage = totalIncome > 0 ? Math.round(((totalIncome - totalExpense) / totalIncome) * 100) : 0;
 
-  const categorySpentMap: { [key: string]: number } = {};
-  categories.forEach(c => { categorySpentMap[c.name] = 0; });
-  categorySpentMap["Khác"] = 0;
+  // ── 1. Cơ cấu chi tiêu tháng này: lấy Top 5, còn lại gộp thành "Khác" ──
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  transactions
-    .filter((t) => t.type === "expense")
-    .forEach((t) => {
-      const cat = t.category;
-      if (categorySpentMap[cat] !== undefined) {
-        categorySpentMap[cat] += t.amount;
-      } else {
-        categorySpentMap["Khác"] += t.amount;
-      }
-    });
+  const thisMonthExpenses = transactions.filter(
+    (t) => t.type === "expense" && t.date.startsWith(currentMonthStr)
+  );
+
+  // If this month has no expenses yet, fallback to all expenses to avoid empty chart
+  const expenseTarget = thisMonthExpenses.length > 0 ? thisMonthExpenses : transactions.filter((t) => t.type === "expense");
+
+  const rawCatMap: Record<string, number> = {};
+  expenseTarget.forEach((t) => {
+    const cat = t.category?.trim() || "Khác";
+    rawCatMap[cat] = (rawCatMap[cat] || 0) + t.amount;
+  });
 
   const colorHexMap: Record<string, string> = {
     red: '#FED7D7', amber: '#FEEBC8', blue: '#EBF8FF', teal: '#E6FFFA',
@@ -93,11 +96,32 @@ export default function Dashboard({
     return '#EDF2F7';
   };
 
-  const categoriesData = Object.keys(categorySpentMap).map((key) => ({
-    name: key,
-    value: categorySpentMap[key],
-    color: getColor(key),
+  // Sort categories by spent amount descending (exclude 'Khác' first to group properly)
+  const sortedNonKhac = Object.entries(rawCatMap)
+    .filter(([name, val]) => val > 0 && name !== "Khác")
+    .sort((a, b) => b[1] - a[1]);
+
+  const top5Pairs = sortedNonKhac.slice(0, 5);
+  const remainingPairs = sortedNonKhac.slice(5);
+
+  const otherAmount = (rawCatMap["Khác"] || 0) + remainingPairs.reduce((sum, [, val]) => sum + val, 0);
+
+  const categoriesData = top5Pairs.map(([name, value]) => ({
+    name,
+    value,
+    color: getColor(name),
   }));
+
+  if (otherAmount > 0) {
+    categoriesData.push({
+      name: "Khác",
+      value: otherAmount,
+      color: "#EDF2F7",
+    });
+  }
+
+  const categorySpentMap: Record<string, number> = {};
+  categoriesData.forEach(c => { categorySpentMap[c.name] = c.value; });
 
   const totalExpenseComputed = categoriesData.reduce((sum, c) => sum + c.value, 0);
 
@@ -135,10 +159,10 @@ export default function Dashboard({
       };
     });
 
+
   const [trendRange, setTrendRange] = useState<'7d' | '30d' | '12m'>('30d');
   const [chartView, setChartView] = useState<'trend' | 'networth'>('trend');
 
-  const now = new Date();
   const trendData = useMemo(() => {
     const filtered = transactions.filter(t => {
       const d = new Date(t.date);
@@ -373,52 +397,68 @@ export default function Dashboard({
       {/* MONTH COMPARISON */}
       {(() => {
         const now = new Date();
-        const thisMonth = now.toISOString().slice(0, 7);
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
+        const currY = now.getFullYear();
+        const currM = String(now.getMonth() + 1).padStart(2, '0');
+        const thisMonth = `${currY}-${currM}`;
+
+        const lastMonthObj = new Date(currY, now.getMonth() - 1, 1);
+        const lastY = lastMonthObj.getFullYear();
+        const lastM = String(lastMonthObj.getMonth() + 1).padStart(2, '0');
+        const lastMonth = `${lastY}-${lastM}`;
+
         const monthIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(thisMonth)).reduce((s, t) => s + t.amount, 0);
         const monthExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(thisMonth)).reduce((s, t) => s + t.amount, 0);
         const lastIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
         const lastExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
+
         const incomeChange = lastIncome > 0 ? Math.round((monthIncome - lastIncome) / lastIncome * 100) : 0;
         const expenseChange = lastExpense > 0 ? Math.round((monthExpense - lastExpense) / lastExpense * 100) : 0;
+
+        const formatCompareVal = (num: number) => {
+          if (!num || num === 0) return "0đ";
+          if (Math.abs(num) < 1000) return num + "đ";
+          const valueInK = Math.round(num / 1000);
+          return new Intl.NumberFormat("vi-VN").format(valueInK) + "k";
+        };
 
         return (
           <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[24px] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.02)]">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">So sánh tháng này / tháng trước</h3>
-              <span className="text-[9px] text-slate-400 font-medium">{now.toLocaleDateString('vi-VN', { month: 'long' })}</span>
+              <span className="text-[9px] text-slate-400 font-medium">{now.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-slate-50 rounded-2xl p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase">Thu</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">Thu nhập</span>
                   <span className={`text-[10px] font-black flex items-center gap-0.5 ${incomeChange >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                     <Icon path={incomeChange >= 0 ? mdiTrendingUp : mdiTrendingDown} size={0.667} />
                     {incomeChange >= 0 ? '+' : ''}{incomeChange}%
                   </span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-sm font-black text-slate-800">{formatVND(monthIncome)}</span>
-                  <span className="text-[9px] text-slate-400 font-medium">{formatVND(lastIncome)}</span>
+                  <span className="text-sm font-black text-slate-800">{formatCompareVal(monthIncome)}</span>
+                  <span className="text-[9px] text-slate-400 font-medium">T.trước: {formatCompareVal(lastIncome)}</span>
                 </div>
               </div>
               <div className="bg-slate-50 rounded-2xl p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase">Chi</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">Chi tiêu</span>
                   <span className={`text-[10px] font-black flex items-center gap-0.5 ${expenseChange <= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                     <Icon path={expenseChange <= 0 ? mdiTrendingDown : mdiTrendingUp} size={0.667} />
                     {expenseChange > 0 ? '+' : ''}{expenseChange}%
                   </span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-sm font-black text-slate-800">{formatVND(monthExpense)}</span>
-                  <span className="text-[9px] text-slate-400 font-medium">{formatVND(lastExpense)}</span>
+                  <span className="text-sm font-black text-slate-800">{formatCompareVal(monthExpense)}</span>
+                  <span className="text-[9px] text-slate-400 font-medium">T.trước: {formatCompareVal(lastExpense)}</span>
                 </div>
               </div>
             </div>
           </div>
         );
       })()}
+
 
       <div id="charts-section" className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-between mb-3">

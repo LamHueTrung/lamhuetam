@@ -300,14 +300,20 @@ export default function Ledger({ transactions, onDeleteTransaction, onUpdateTran
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                    setMoreActionTx(null);
+                  }
+                }}
                 onClick={(e) => e.stopPropagation()}
                 className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
               >
+                <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing" />
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold text-slate-800">Tùy chọn</h3>
-                  <button onClick={() => setMoreActionTx(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
-                    <Icon path={mdiClose} size={1} />
-                  </button>
                 </div>
                 <div className="space-y-2">
                   <button
@@ -358,17 +364,23 @@ export default function Ledger({ transactions, onDeleteTransaction, onUpdateTran
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                    setDetailTransaction(null);
+                  }
+                }}
                 onClick={(e) => e.stopPropagation()}
                 className="relative w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
               >
+                <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing" />
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-slate-900 rounded-full" />
                     <h3 className="text-base font-bold text-slate-800">Chi Tiết Giao Dịch</h3>
                   </div>
-                  <button onClick={() => setDetailTransaction(null)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer">
-                    <Icon path={mdiClose} size={1} />
-                  </button>
                 </div>
 
                 {(() => {

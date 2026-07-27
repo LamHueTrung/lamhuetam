@@ -99,19 +99,24 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
             className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
           >
+            {/* Drag handle */}
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing" />
+
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-slate-900 rounded-full" />
                 <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
               </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer transition-colors"
-              >
-                <Icon path={mdiClose} size={1} />
-              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">

@@ -59,20 +59,28 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
           onClick={onClose}>
           <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[85vh] overflow-y-auto overflow-x-hidden z-10">
-            <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 p-5 pb-3 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Icon path={mdiPalette} size={1.25} className="text-slate-700" />
-                <h2 className="text-base font-bold text-slate-800">Quản lý danh mục</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setShowAddForm(!showAddForm)} className="p-2 rounded-full bg-slate-900 text-white hover:bg-slate-800 cursor-pointer transition-all">
-                  <Icon path={showAddForm ? mdiClose : mdiPlus} size={1} />
-                </button>
-                <button onClick={onClose} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer transition-colors">
-                  <Icon path={mdiClose} size={1.25} />
-                </button>
+            <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 p-5 pb-3 border-b border-slate-100 flex flex-col">
+              <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icon path={mdiPalette} size={1.25} className="text-slate-700" />
+                  <h2 className="text-base font-bold text-slate-800">Quản lý danh mục</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowAddForm(!showAddForm)} className="p-2 rounded-full bg-slate-900 text-white hover:bg-slate-800 cursor-pointer transition-all">
+                    <Icon path={showAddForm ? mdiClose : mdiPlus} size={1} />
+                  </button>
+                </div>
               </div>
             </div>
 

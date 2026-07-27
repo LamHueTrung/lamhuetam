@@ -7,6 +7,7 @@ import {
   mdiEmoticonHappyOutline, mdiEmoticonSadOutline, mdiEmoticonNeutralOutline,
   mdiStar, mdiWeatherLightning, mdiHeart, mdiHandsPray, mdiLoading,
   mdiFormatListBulleted, mdiMap, mdiEarth, mdiMagnify, mdiCommentTextOutline,
+  mdiBookOpenVariant,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
@@ -66,12 +67,12 @@ function LeafletMap({ entries, onSelectEntryDetail }: { entries: DiaryEntry[]; o
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
       mapInstanceRef.current = map;
 
-      // Handle custom event from Leaflet popup button
+      // Handle custom event from Leaflet popup button (support multiple buttons per popup)
       map.on('popupopen', (evt: any) => {
         const popupEl = evt.popup.getElement();
         if (!popupEl) return;
-        const btn = popupEl.querySelector('.btn-view-diary-detail');
-        if (btn) {
+        const btns = popupEl.querySelectorAll('.btn-view-diary-detail');
+        btns.forEach((btn: any) => {
           btn.onclick = () => {
             const id = btn.getAttribute('data-id');
             const target = entries.find(x => x.id === id);
@@ -79,40 +80,95 @@ function LeafletMap({ entries, onSelectEntryDetail }: { entries: DiaryEntry[]; o
               onSelectEntryDetail(target);
             }
           };
-        }
+        });
       });
 
-      validEntries.forEach(e => {
-        const mood = MOOD_CONFIG[e.mood] || MOOD_CONFIG.neutral;
-        const hex = mood.hex;
-        const emoji = mood.emoji || '😐';
+      // ── Group entries by coordinate key (~11m precision) to handle multiple stories at same location ──
+      interface LocationGroup {
+        lat: number;
+        lng: number;
+        entries: (DiaryEntry & { lat: number; lng: number })[];
+      }
+      const groupMap: Record<string, LocationGroup> = {};
+      const locationGroups: LocationGroup[] = [];
 
-        const marker = L.circleMarker([e.lat, e.lng], {
-          radius: 10,
+      validEntries.forEach(e => {
+        const key = `${e.lat.toFixed(4)}_${e.lng.toFixed(4)}`;
+        if (!groupMap[key]) {
+          groupMap[key] = { lat: e.lat, lng: e.lng, entries: [] };
+          locationGroups.push(groupMap[key]);
+        }
+        groupMap[key].entries.push(e);
+      });
+
+      locationGroups.forEach(group => {
+        const isMulti = group.entries.length > 1;
+        const firstEntry = group.entries[0];
+        const mood = MOOD_CONFIG[firstEntry.mood] || MOOD_CONFIG.neutral;
+        const hex = isMulti ? '#06b6d4' : mood.hex;
+
+        const marker = L.circleMarker([group.lat, group.lng], {
+          radius: isMulti ? 13 : 10,
           fillColor: hex,
           color: '#ffffff',
-          weight: 2.5,
+          weight: isMulti ? 3.5 : 2.5,
           opacity: 1,
           fillOpacity: 0.95,
         }).addTo(map);
 
-        const snippet = e.content.length > 50 ? e.content.slice(0, 50) + '...' : e.content;
+        if (!isMulti) {
+          const e = firstEntry;
+          const emoji = mood.emoji || '😐';
+          const snippet = e.content.length > 50 ? e.content.slice(0, 50) + '...' : e.content;
 
-        marker.bindPopup(`
-          <div style="font-family:sans-serif;padding:4px;min-width:175px;max-width:220px">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px">
-              <span style="font-size:11px;font-weight:800;color:${hex};background:${hex}18;padding:3px 10px;border-radius:14px;border:1.5px solid ${hex}40;display:inline-flex;align-items:center;gap:4px">
-                ${emoji} ${mood.label}
-              </span>
-              <span style="font-size:10px;color:#94a3b8;font-weight:600">${e.date}</span>
+          marker.bindPopup(`
+            <div style="font-family:sans-serif;padding:4px;min-width:175px;max-width:220px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px">
+                <span style="font-size:11px;font-weight:800;color:${hex};background:${hex}18;padding:3px 10px;border-radius:14px;border:1.5px solid ${hex}40;display:inline-flex;align-items:center;gap:4px">
+                  ${emoji} ${mood.label}
+                </span>
+                <span style="font-size:10px;color:#94a3b8;font-weight:600">${e.date}</span>
+              </div>
+              ${e.location ? `<div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px">📍 ${e.location}</div>` : ''}
+              <p style="font-size:11px;color:#334155;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${snippet}</p>
+              <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;padding:7px 0;background:linear-gradient(to right, #06b6d4, #3b82f6);color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(6,182,212,0.25)">
+                Xem chi tiết
+              </button>
             </div>
-            ${e.location ? `<div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px">📍 ${e.location}</div>` : ''}
-            <p style="font-size:11px;color:#334155;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${snippet}</p>
-            <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;padding:7px 0;background:linear-gradient(to right, #06b6d4, #3b82f6);color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(6,182,212,0.25)">
-              Xem chi tiết
-            </button>
-          </div>
-        `);
+          `);
+        } else {
+          // Multiple stories at exact same location
+          const locName = firstEntry.location || 'Vị trí này';
+          const storiesHtml = group.entries.map(e => {
+            const eMood = MOOD_CONFIG[e.mood] || MOOD_CONFIG.neutral;
+            const eSnippet = e.content.length > 45 ? e.content.slice(0, 45) + '...' : e.content;
+            return `
+              <div style="background:#f8fafc;padding:8px;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:6px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px">
+                  <span style="font-size:10px;font-weight:800;color:${eMood.hex};background:${eMood.hex}15;padding:2px 7px;border-radius:10px">
+                    ${eMood.emoji} ${eMood.label}
+                  </span>
+                  <span style="font-size:9px;color:#94a3b8;font-weight:600">${e.date}</span>
+                </div>
+                <p style="font-size:10.5px;color:#334155;margin:0 0 6px 0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${eSnippet}</p>
+                <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;padding:5px 0;background:linear-gradient(to right, #06b6d4, #3b82f6);color:#fff;border:none;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer">
+                  Xem nhật ký này
+                </button>
+              </div>
+            `;
+          }).join('');
+
+          marker.bindPopup(`
+            <div style="font-family:sans-serif;padding:4px;min-width:210px;max-width:260px;max-height:260px;overflow-y:auto">
+              <div style="font-size:11px;font-weight:800;color:#0f172a;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+                <span>📍 ${locName}</span>
+                <span style="font-size:9.5px;background:#06b6d4;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${group.entries.length} nhật ký</span>
+              </div>
+              <div>${storiesHtml}</div>
+            </div>
+          `);
+        }
+
         markersRef.current.push(marker);
       });
 
@@ -122,6 +178,7 @@ function LeafletMap({ entries, onSelectEntryDetail }: { entries: DiaryEntry[]; o
         map.fitBounds(latLngs as any, { padding: [24, 24] });
       }
     };
+
 
     if ((window as any).L) {
       initMap();
@@ -530,11 +587,22 @@ export default function DiaryView() {
         <AnimatePresence>
           {detailEntry && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
               onClick={() => { setDetailEntry(null); setReplyText(''); }}>
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 26, stiffness: 220 }}
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                    setDetailEntry(null);
+                    setReplyText('');
+                  }
+                }}
                 onClick={e => e.stopPropagation()}
-                className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[28px] p-6 max-h-[85vh] overflow-y-auto overflow-x-hidden shadow-2xl space-y-4 min-w-0">
+                className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[32px] p-6 max-h-[85vh] overflow-y-auto overflow-x-hidden shadow-2xl space-y-4 min-w-0">
+                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing" />
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${MOOD_CONFIG[detailEntry.mood]?.bg} ${MOOD_CONFIG[detailEntry.mood]?.color}`}>
@@ -543,7 +611,6 @@ export default function DiaryView() {
                     </div>
                     <span className="text-xs font-bold text-slate-400">{formatDate(detailEntry.date)}</span>
                   </div>
-                  <button onClick={() => { setDetailEntry(null); setReplyText(''); }} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 cursor-pointer"><Icon path={mdiClose} size={1} /></button>
                 </div>
 
                 {detailEntry.location && (
@@ -631,15 +698,22 @@ export default function DiaryView() {
               onClick={() => setShowForm(false)}>
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 26, stiffness: 220 }}
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                    setShowForm(false);
+                  }
+                }}
                 onClick={e => e.stopPropagation()}
                 className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-6 pb-10 max-h-[90vh] overflow-y-auto overflow-x-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.15)] z-10 min-w-0">
 
                 {/* Handle */}
-                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-5" />
+                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-5 cursor-grab active:cursor-grabbing" />
 
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-base font-extrabold text-slate-800 dark:text-white">{editId ? 'Sửa nhật ký' : 'Viết nhật ký'}</h2>
-                  <button onClick={() => setShowForm(false)} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 cursor-pointer"><Icon path={mdiClose} size={1} /></button>
                 </div>
 
                 <div className="space-y-4 min-w-0">

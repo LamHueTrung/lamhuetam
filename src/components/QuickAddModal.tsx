@@ -30,7 +30,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
   const [category, setCategory] = useState("Ăn uống");
   const [wallet, setWallet] = useState("Ngân hàng");
   const [aiSuggesting, setAiSuggesting] = useState(false);
-  const suggestTimer = useRef<ReturnType<typeof setTimeout>>();
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (suggestTimer.current) clearTimeout(suggestTimer.current);
@@ -122,20 +122,25 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
             className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
           >
-            {/* Grab handle top header */}
+            {/* Drag handle */}
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing" />
+
+            {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-slate-900 rounded-full" />
                 <h2 className="text-base font-bold text-slate-800">Ghi Chép Một Chạm</h2>
               </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer transition-colors"
-              >
-                <Icon path={mdiClose} size={1} />
-              </button>
             </div>
 
             {/* Income / Expense Switch Pill */}
