@@ -105,7 +105,9 @@ export default function UserProfileView({
   // AI Configuration states
   const [aiModel, setAiModel] = useState("gemini-2.5-flash");
   const [aiApiKey, setAiApiKey] = useState("");
-  const [aiBaseUrl, setAiBaseUrl] = useState("https://openrouter.ai/api/v1");
+  const [aiBaseUrl, setAiBaseUrl] = useState(
+    "https://trungsaas-beta.onrender.com/v1",
+  );
   const [hasApiKey, setHasApiKey] = useState(false);
   const [testStatus, setTestStatus] = useState<
     | "connected"
@@ -1349,7 +1351,7 @@ export default function UserProfileView({
                   type="text"
                   value={aiBaseUrl}
                   onChange={(e) => setAiBaseUrl(e.target.value)}
-                  placeholder="https://openrouter.ai/api/v1"
+                  placeholder="https://trungsaas-beta.onrender.com/v1"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-mono"
                 />
               </div>
