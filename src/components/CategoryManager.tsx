@@ -64,19 +64,21 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
             dragControls={dragControlsCat}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.6 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 80 || info.velocity.y > 300) {
+              if (info.offset.y > 60 || info.velocity.y > 200) {
                 onClose();
               }
             }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[85vh] overflow-y-auto overflow-x-hidden z-10">
-            <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 p-5 pb-3 border-b border-slate-100 flex flex-col">
-              <div
-                onPointerDown={(e) => { e.stopPropagation(); dragControlsCat.start(e); }}
-                className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing touch-none select-none"
-              />
+            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[85vh] flex flex-col overflow-hidden z-10">
+            <div 
+              onPointerDown={(e) => { e.stopPropagation(); dragControlsCat.start(e); }}
+              onTouchStart={(e) => { e.stopPropagation(); }}
+              style={{ touchAction: "none" }}
+              className="sticky top-0 bg-white/90 backdrop-blur-md z-10 p-5 pb-3 border-b border-slate-100 flex flex-col shrink-0 cursor-grab active:cursor-grabbing select-none"
+            >
+              <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3" />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon path={mdiPalette} size={1.25} className="text-slate-700" />
@@ -90,66 +92,58 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
               </div>
             </div>
 
-            <div className="p-5 space-y-3">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-5">
               {showAddForm && (
-                <div className="bg-slate-50 rounded-[20px] p-4 space-y-3 border border-slate-100">
-                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Tên danh mục"
-                    className="w-full px-3 py-2.5 bg-white border border-slate-100 rounded-[14px] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                    {iconNames.map(iconKey => {
-                      const IconComp = iconMap[iconKey];
-                      const isSelected = newIcon === iconKey;
-                      return (
-                        <button key={iconKey} onClick={() => setNewIcon(iconKey)}
-                          className={`p-2 rounded-xl shrink-0 transition-all cursor-pointer ${isSelected ? 'bg-slate-900 text-white shadow-sm scale-110' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-100'}`}>
-                          {IconComp && <IconComp className="w-5 h-5" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className="mb-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                  <span className="text-xs font-bold text-slate-700 block">Thêm danh mục mới</span>
+                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Tên danh mục..." className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 font-medium" />
                   <div className="flex items-center gap-2">
-                    {colorOptions.map(c => (
-                      <button key={c.name} onClick={() => setNewColor(c.name)}
-                        className={`w-7 h-7 rounded-full ${c.bg} transition-all cursor-pointer ${newColor === c.name ? `ring-2 ${c.ring} scale-110` : ''}`} />
-                    ))}
+                    <button onClick={() => setNewType("expense")} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${newType === "expense" ? "bg-rose-500 text-white" : "bg-white text-slate-500 border border-slate-200"}`}>Khoản chi</button>
+                    <button onClick={() => setNewType("income")} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${newType === "income" ? "bg-emerald-600 text-white" : "bg-white text-slate-500 border border-slate-200"}`}>Khoản thu</button>
                   </div>
-                  <button onClick={() => { if (!newName.trim()) { toast.error("Nhập tên danh mục"); return; } onAdd(newName.trim(), newIcon, newColor); setNewName(""); setShowAddForm(false); toast.success("Đã thêm danh mục!"); }}
-                    className="w-full bg-slate-900 text-white font-bold text-xs py-2.5 rounded-[14px] hover:bg-slate-800 cursor-pointer transition-all">Thêm danh mục</button>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 block mb-1">Màu sắc:</span>
+                    <div className="flex items-center gap-1.5">
+                      {COLORS.map((c) => (
+                        <button key={c} onClick={() => setNewColor(c)} className={`w-6 h-6 rounded-full border-2 transition-all ${newColor === c ? "border-slate-900 scale-110" : "border-transparent"}`} style={{ backgroundColor: c === "red" ? "#ef4444" : c === "amber" ? "#f59e0b" : c === "blue" ? "#3b82f6" : c === "emerald" ? "#10b981" : c === "purple" ? "#8b5cf6" : c === "rose" ? "#f43f5e" : "#64748b" }} />
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={handleAddCategory} className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 cursor-pointer transition-all">Lưu danh mục</button>
                 </div>
               )}
 
-              <Reorder.Group axis="y" values={categoryList} onReorder={handleReorder} className="space-y-2">
-                {categoryList.map(cat => {
-                  const IconComp = iconMap[cat.icon] || iconMap['Tag'];
+              <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="space-y-2">
+                {items.map((cat) => {
+                  const IconComp = iconMap[cat.icon || "Tag"];
                   const isEditing = editingId === cat._id;
+
                   return (
-                    <Reorder.Item key={cat._id} value={cat} className="bg-white border border-slate-100 rounded-[16px] p-3 flex items-center gap-3 cursor-grab active:cursor-grabbing touch-none">
-                      <Icon path={mdiDragVertical} size={1} className="text-slate-300 shrink-0" />
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0`} style={{ backgroundColor: cat.color === 'slate' ? '#f1f5f9' : undefined }}>
-                        <span className={`px-2 py-1 rounded-lg ${cat.color === 'red' ? 'bg-red-100 text-red-700' : cat.color === 'amber' ? 'bg-amber-100 text-amber-700' : cat.color === 'blue' ? 'bg-blue-100 text-blue-700' : cat.color === 'teal' ? 'bg-teal-100 text-teal-700' : cat.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : cat.color === 'indigo' ? 'bg-indigo-100 text-indigo-700' : cat.color === 'rose' ? 'bg-rose-100 text-rose-700' : cat.color === 'purple' ? 'bg-purple-100 text-purple-700' : cat.color === 'orange' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-700'}`}>
-                          <IconComp className="w-4 h-4" />
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
+                    <Reorder.Item key={cat._id} value={cat} className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-2xl cursor-grab active:cursor-grabbing">
+                      <div className="flex items-center gap-3 flex-1">
+                        <Icon path={mdiDragVertical} size={0.875} className="text-slate-300 shrink-0" />
+                        <div className="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                          {IconComp ? <IconComp className="w-4 h-4" /> : <Icon path={mdiPalette} size={0.75} />}
+                        </div>
                         {isEditing ? (
-                          <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus
-                            className="w-full px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold focus:outline-none" />
+                          <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold flex-1" />
                         ) : (
-                          <span className="text-sm font-bold text-slate-800 block truncate" onClick={() => { setEditingId(cat._id); setEditName(cat.name); setEditIcon(cat.icon); setEditColor(cat.color); }}>{cat.name}</span>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-800">{cat.name}</span>
+                            <span className="text-[9px] font-semibold text-slate-400">{cat.type === "income" ? "Khoản thu" : "Khoản chi"}</span>
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
                         {isEditing ? (
                           <button onClick={() => { if (!editName.trim()) { toast.error("Tên không được để trống"); return; } onUpdate({ ...cat, name: editName.trim(), icon: editIcon, color: editColor }); setEditingId(null); toast.success("Đã cập nhật!"); }}
-                            className="p-1.5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 cursor-pointer transition-all">
-                            <Icon path={mdiCheck} size={0.875} />
+                            className="p-1.5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 cursor-pointer">
+                            <Icon path={mdiCheck} size={0.75} />
                           </button>
                         ) : (
-                          <>
-                            <button onClick={() => onDelete(cat._id)} className="p-1.5 rounded-full hover:bg-rose-50 text-slate-300 hover:text-rose-500 cursor-pointer transition-all">
-                              <Icon path={mdiDeleteOutline} size={0.875} />
-                            </button>
-                          </>
+                          <button onClick={() => onDelete(cat._id)} className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 cursor-pointer">
+                            <Icon path={mdiDeleteOutline} size={0.75} />
+                          </button>
                         )}
                       </div>
                     </Reorder.Item>

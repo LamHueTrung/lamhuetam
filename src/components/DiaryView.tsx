@@ -906,28 +906,35 @@ export default function DiaryView() {
                 dragControls={dragControlsDetail}
                 dragListener={false}
                 dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={{ top: 0, bottom: 0.6 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > 80 || info.velocity.y > 300) {
+                  if (info.offset.y > 60 || info.velocity.y > 200) {
                     setDetailEntry(null);
                     setReplyText("");
                   }
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[32px] p-6 max-h-[85vh] overflow-y-auto overflow-x-hidden shadow-2xl space-y-4 min-w-0"
+                className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[85vh] flex flex-col overflow-hidden shadow-2xl z-10 min-w-0"
               >
                 <div
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     dragControlsDetail.start(e);
                   }}
-                  className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing touch-none select-none"
-                />
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${MOOD_CONFIG[detailEntry.mood]?.bg} ${MOOD_CONFIG[detailEntry.mood]?.color}`}
-                    >
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
+                  style={{ touchAction: "none" }}
+                  className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
+                >
+                  <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto" />
+                </div>
+                <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 space-y-4 min-w-0">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${MOOD_CONFIG[detailEntry.mood]?.bg} ${MOOD_CONFIG[detailEntry.mood]?.color}`}
+                      >
                       <Icon
                         path={
                           MOOD_CONFIG[detailEntry.mood]?.icon ||
@@ -1042,7 +1049,8 @@ export default function DiaryView() {
                     Đóng
                   </button>
                 </div>
-              </motion.div>
+              </div>
+            </motion.div>
             </motion.div>
           )}
         </AnimatePresence>,
@@ -1069,14 +1077,14 @@ export default function DiaryView() {
                 dragControls={dragControlsForm}
                 dragListener={false}
                 dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={{ top: 0, bottom: 0.6 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > 80 || info.velocity.y > 300) {
+                  if (info.offset.y > 60 || info.velocity.y > 200) {
                     setShowForm(false);
                   }
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-6 pb-10 max-h-[90vh] overflow-y-auto overflow-x-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.15)] z-10 min-w-0"
+                className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.15)] z-10 min-w-0"
               >
                 {/* Handle */}
                 <div
@@ -1084,16 +1092,21 @@ export default function DiaryView() {
                     e.stopPropagation();
                     dragControlsForm.start(e);
                   }}
-                  className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-5 cursor-grab active:cursor-grabbing touch-none select-none"
-                />
-
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-base font-extrabold text-slate-800 dark:text-white">
-                    {editId ? "Sửa nhật ký" : "Viết nhật ký"}
-                  </h2>
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
+                  style={{ touchAction: "none" }}
+                  className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
+                >
+                  <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3" />
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-extrabold text-slate-800 dark:text-white">
+                      {editId ? "Sửa nhật ký" : "Viết nhật ký"}
+                    </h2>
+                  </div>
                 </div>
 
-                <div className="space-y-4 min-w-0">
+                <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2 space-y-4 min-w-0">
                   {/* Date */}
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">
@@ -1229,7 +1242,8 @@ export default function DiaryView() {
                       ? "Cập nhật nhật ký"
                       : "Lưu nhật ký"}
                 </button>
-              </motion.div>
+              </div>
+            </motion.div>
             </motion.div>
           )}
         </AnimatePresence>,

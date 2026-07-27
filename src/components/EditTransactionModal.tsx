@@ -118,27 +118,31 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.6 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 80 || info.velocity.y > 300) {
+              if (info.offset.y > 60 || info.velocity.y > 200) {
                 onClose();
               }
             }}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
+            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-hidden z-10"
           >
             {/* Draggable Header Section */}
             <div
               onPointerDown={(e) => { e.stopPropagation(); dragControls.start(e); }}
-              className="w-full pb-5 cursor-grab active:cursor-grabbing touch-none select-none"
+              onTouchStart={(e) => { e.stopPropagation(); }}
+              style={{ touchAction: "none" }}
+              className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
             >
-              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 bg-slate-900 rounded-full animate-pulse" />
                 <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2">
+              <form onSubmit={handleSubmit} className="space-y-6">
               <div className="bg-slate-50 rounded-[24px] p-5 border border-slate-100 text-center space-y-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SỐ TIỀN GIAO DỊCH</label>
                 <div className="flex items-center justify-center gap-1.5">
@@ -290,7 +294,8 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                 <span>Cập Nhật Giao Dịch</span>
               </motion.button>
             </form>
-          </motion.div>
+          </div>
+        </motion.div>
         </div>
       )}
     </AnimatePresence>,

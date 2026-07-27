@@ -2134,32 +2134,40 @@ export default function FinanceBudget({
                     dragControls={dragControlsPayment}
                     dragListener={false}
                     dragConstraints={{ top: 0, bottom: 0 }}
-                    dragElastic={{ top: 0, bottom: 0.6 }}
+                    dragElastic={{ top: 0, bottom: 0.5 }}
                     onDragEnd={(_, info) => {
-                      if (info.offset.y > 80 || info.velocity.y > 300) {
+                      if (info.offset.y > 60 || info.velocity.y > 200) {
                         setPaymentDebtId(null);
                       }
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-6 pb-10 max-h-[80vh] overflow-y-auto shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+                    className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[80vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
                   >
                     <div
                       onPointerDown={(e) => {
                         e.stopPropagation();
                         dragControlsPayment.start(e);
                       }}
-                      className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing touch-none select-none"
-                    />
-                    <div className="flex items-start justify-between gap-2 mb-5">
-                      <div className="min-w-0">
-                        <h3 className="text-base font-bold text-slate-800 dark:text-white">
-                          Thanh toán
-                        </h3>
-                        <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-                          {debt.name} — {formatVND(debt.currentBalance)} còn lại
-                        </p>
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      style={{ touchAction: "none" }}
+                      className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
+                    >
+                      <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                            Thanh toán
+                          </h3>
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                            {debt.name} — {formatVND(debt.currentBalance)} còn lại
+                          </p>
+                        </div>
                       </div>
                     </div>
+
+                    <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2">
                     <div className="space-y-2 mb-5">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         Chọn kỳ thanh toán
@@ -2237,7 +2245,8 @@ export default function FinanceBudget({
                     >
                       Xác nhận thanh toán {selectedInstallments.length} kỳ
                     </button>
-                  </motion.div>
+                  </div>
+                </motion.div>
                 </motion.div>
               );
             })()}

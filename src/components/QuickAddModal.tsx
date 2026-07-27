@@ -149,7 +149,6 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-md cursor-pointer"
           />
 
-          {/* Full-Screen Sheet Pop-up sliding from bottom */}
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -159,93 +158,89 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.6 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 80 || info.velocity.y > 300) {
+              if (info.offset.y > 60 || info.velocity.y > 200) {
                 onClose();
               }
             }}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
+            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-hidden z-10"
           >
-            {/* Draggable Header Section */}
             <div
               onPointerDown={(e) => {
-                // Chỉ bắt đầu drag từ header, không ảnh hưởng scroll bên trong
                 e.stopPropagation();
                 dragControls.start(e);
               }}
-              className="w-full pb-5 cursor-grab active:cursor-grabbing touch-none select-none"
+              onTouchStart={(e) => {
+                e.stopPropagation();
+              }}
+              style={{ touchAction: "none" }}
+              className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
             >
-              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 bg-slate-900 rounded-full animate-pulse" />
                 <h2 className="text-base font-bold text-slate-800">Ghi Chép Một Chạm</h2>
               </div>
             </div>
 
-            {/* Income / Expense Switch Pill */}
-            <div className="bg-slate-100 p-1 rounded-2xl flex items-center mb-6">
-              <motion.button
-                type="button"
-                onClick={() => setType('expense')}
-                whileTap={{ scale: 0.95 }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  type === 'expense'
-                    ? "bg-white text-rose-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Khoản chi
-              </motion.button>
-              <motion.button
-                type="button"
-                onClick={() => setType('income')}
-                whileTap={{ scale: 0.95 }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  type === 'income'
-                    ? "bg-white text-emerald-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Khoản thu
-              </motion.button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* LARGE AMOUNT INPUT CONTAINER */}
-              <div className="bg-slate-50 rounded-[24px] p-5 border border-slate-100 text-center space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SỐ TIỀN GIAO DỊCH</label>
-                <div className="flex items-center justify-center gap-1.5">
-                  <Icon path={mdiCurrencyUsd} size={1.25} className="text-slate-400" />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={amountStr}
-                    onKeyDown={handleAmountKeyDown}
-                    onChange={(e) => handleAmountChange(e.target.value)}
-                    placeholder="0"
-                    className="w-48 text-2xl font-black text-slate-900 focus:outline-none bg-transparent placeholder-slate-300 text-center"
-                  />
-                  <span className="text-lg font-extrabold text-slate-500">₫</span>
-                </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2">
+              <div className="bg-slate-100 p-1 rounded-2xl flex items-center mb-6">
+                <motion.button
+                  type="button"
+                  onClick={() => setType('expense')}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    type === 'expense'
+                      ? "bg-white text-rose-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Khoản chi
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={() => setType('income')}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    type === 'income'
+                      ? "bg-white text-emerald-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Khoản thu
+                </motion.button>
               </div>
 
-              {/* INPUT DESCRIPTION */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ghi chú mô tả</label>
-                <div className="relative">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Số tiền (VNĐ)
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      id="input-quick-add-amount"
+                      value={displayAmount}
+                      onChange={handleAmountChange}
+                      placeholder="0"
+                      className="w-full text-3xl font-extrabold text-slate-900 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder-slate-300 transition-all tracking-tight"
+                    />
+                    <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase">
+                      k (nghìn)
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Ghi chú / Tiêu đề
+                  </label>
                   <input
                     type="text"
+                    id="input-quick-add-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Ví dụ: Đi ăn phở gia đình, mua sắm Tiki..."
-                    className="w-full px-4 py-3 bg-slate-50/80 border border-slate-100 rounded-[20px] text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
-                  />
-                  {aiSuggesting && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400">
-                      <Icon path={mdiAutoFix} size={0.75} className="animate-pulse" />
-                    </div>
-                  )}
                 </div>
                 {aiSuggesting && (
                   <p className="text-[9px] text-indigo-400 font-medium italic">AI đang gợi ý danh mục...</p>

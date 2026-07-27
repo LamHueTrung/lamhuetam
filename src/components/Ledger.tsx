@@ -454,9 +454,9 @@ export default function Ledger({
                 dragControls={dragControlsAction}
                 dragListener={false}
                 dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={{ top: 0, bottom: 0.6 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > 80 || info.velocity.y > 300) {
+                  if (info.offset.y > 60 || info.velocity.y > 200) {
                     setMoreActionTx(null);
                   }
                 }}
@@ -468,6 +468,10 @@ export default function Ledger({
                     e.stopPropagation();
                     dragControlsAction.start(e);
                   }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
+                  style={{ touchAction: "none" }}
                   className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing touch-none select-none"
                 />
                 <div className="flex items-center justify-between mb-4">
@@ -540,9 +544,9 @@ export default function Ledger({
                 dragControls={dragControlsDetail}
                 dragListener={false}
                 dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={{ top: 0, bottom: 0.6 }}
+                dragElastic={{ top: 0, bottom: 0.5 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > 80 || info.velocity.y > 300) {
+                  if (info.offset.y > 60 || info.velocity.y > 200) {
                     setDetailTransaction(null);
                   }
                 }}
@@ -554,6 +558,10 @@ export default function Ledger({
                     e.stopPropagation();
                     dragControlsDetail.start(e);
                   }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
+                  style={{ touchAction: "none" }}
                   className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing touch-none select-none"
                 />
                 <div className="flex items-center justify-between mb-5">
