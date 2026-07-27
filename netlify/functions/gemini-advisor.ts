@@ -3,7 +3,7 @@ import { connectDB, AIConfig } from './_db';
 import fetch from 'node-fetch';
 
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
-const DEFAULT_MODEL = 'google/gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 function formatVND(num: number) {
   if (num >= 1000000) return Math.round(num / 1000000) + 'tr';

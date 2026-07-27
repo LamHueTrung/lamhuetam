@@ -1,7 +1,7 @@
 import { Handler } from '@netlify/functions';
 
 const BASE_URL = () => process.env.GEMINI_API_BASE_URL || 'https://openrouter.ai/api/v1';
-const MODEL = () => process.env.GEMINI_MODEL || 'google/gemini-2.5-flash';
+const MODEL = () => process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const API_KEY = () => process.env.GEMINI_API_KEY || '';
 
 function generateDefaultTimeline(startStr: string, totalInst: number, amtPerInst: number, dueDayNum: number) {

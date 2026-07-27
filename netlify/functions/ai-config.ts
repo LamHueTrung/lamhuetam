@@ -10,7 +10,7 @@ const headers = {
 };
 
 const DEFAULT_CONFIG = {
-  model: 'google/gemini-2.5-flash',
+  model: 'gemini-2.5-flash',
   apiKey: '',
   baseUrl: 'https://openrouter.ai/api/v1',
   lastTestedAt: '',
@@ -72,7 +72,7 @@ export const handler: Handler = async (event) => {
       // Lấy apiKey hiện tại trong DB nếu như FE gửi lên chuỗi rỗng (không đổi key)
       let finalKey = apiKey;
       let finalBaseUrl = baseUrl || 'https://openrouter.ai/api/v1';
-      let finalModel = model || 'google/gemini-2.5-flash';
+      let finalModel = model || 'gemini-2.5-flash';
 
       if (!finalKey) {
         const currentConfig = await AIConfig.findOne();
