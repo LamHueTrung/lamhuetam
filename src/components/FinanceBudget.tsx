@@ -50,9 +50,11 @@ import {
   mdiEyeOff,
   mdiTrashCanOutline,
   mdiSwapHorizontal,
+  mdiChevronDown,
+  mdiChevronRight,
 } from "@mdi/js";
 import toast from "react-hot-toast";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useDragControls } from "motion/react";
 import {
   DebtAccount,
   Transaction,
@@ -208,7 +210,19 @@ function numFmt(val: string) {
 
 function handleAmountKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
   if (
-    ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Escape", "Home", "End", "Unidentified", "Process"].includes(e.key) ||
+    [
+      "Backspace",
+      "Delete",
+      "ArrowLeft",
+      "ArrowRight",
+      "Tab",
+      "Enter",
+      "Escape",
+      "Home",
+      "End",
+      "Unidentified",
+      "Process",
+    ].includes(e.key) ||
     e.ctrlKey ||
     e.metaKey ||
     e.key.length > 1
@@ -270,10 +284,12 @@ export default function FinanceBudget({
   );
   const [notes, setNotes] = useState("");
   const [paymentDebtId, setPaymentDebtId] = useState<string | null>(null);
+  const [openDebtId, setOpenDebtId] = useState<string | null>(null);
   const [selectedInstallments, setSelectedInstallments] = useState<number[]>(
     [],
   );
   const [paymentNote, setPaymentNote] = useState("");
+  const dragControlsPayment = useDragControls();
 
   // ── Cashflow states ───────────────────────────────────────────────────────
   const [cashflowMonth, setCashflowMonth] = useState(currentMonth);
@@ -658,9 +674,9 @@ export default function FinanceBudget({
           <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
             QUẢN LÝ NỢ
           </span>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          {/* <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
             Hồ Sơ Nợ
-          </h1>
+          </h1> */}
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -904,140 +920,164 @@ export default function FinanceBudget({
               return (
                 <div
                   key={debt.id}
-                  className="bg-white/95 dark:bg-slate-800/95 border border-slate-100 dark:border-slate-700 rounded-[24px] shadow-sm"
+                  className="bg-white/95 dark:bg-slate-800/95 border border-slate-100 dark:border-slate-700 rounded-[24px] shadow-sm overflow-hidden"
                 >
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0">
-                          <Icon path={meta.icon} size={1} />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-extrabold text-slate-800 dark:text-white truncate">
-                            {debt.name}
-                          </h3>
-                          <span
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.color}`}
-                          >
+                  {/* Collapsible Header */}
+                  <div 
+                    onClick={() => setOpenDebtId(openDebtId === debt.id ? null : debt.id)}
+                    className="p-4 flex items-center justify-between cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0">
+                        <Icon path={meta.icon} size={1} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white truncate">
+                          {debt.name}
+                        </h3>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.color}`}>
                             {meta.label}
                           </span>
-                          {debt.interestRate > 0 && (
-                            <span className="text-[9px] font-bold text-amber-600 ml-1">
-                              {debt.interestRate}%/th
-                            </span>
-                          )}
+                          <span className="text-[10px] font-black text-slate-800 dark:text-white">
+                            {formatVND(debt.currentBalance)}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {overdue > 0 && (
-                          <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full animate-pulse whitespace-nowrap">
-                            Quá hạn {overdue}
-                          </span>
-                        )}
-                        <button
-                          onClick={() => onDeleteDebt(debt.id)}
-                          className="p-1.5 rounded-full hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all cursor-pointer"
-                        >
-                          <Icon path={mdiDeleteOutline} size={0.75} />
-                        </button>
-                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-2 min-w-0">
-                      <div className="min-w-0">
-                        <span className="text-sm font-black text-slate-800 dark:text-white truncate block">
-                          {formatVND(debt.currentBalance)}
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {overdue > 0 && (
+                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full animate-pulse whitespace-nowrap">
+                          Quá hạn {overdue}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-medium truncate block">
-                          / {formatVND(debt.originalAmount)}
-                        </span>
-                      </div>
-                      <div className="text-right min-w-0">
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate block">
-                          {formatVND(debt.monthlyPayment)}
-                          <span className="text-[9px] text-slate-400 font-medium">
-                            /kỳ
-                          </span>
-                        </span>
-                        <span className="block text-[9px] text-slate-400 font-medium">
-                          {debt.paidInstallments}/{debt.totalInstallments} kỳ
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-slate-900 dark:bg-slate-200 rounded-full transition-all"
-                        style={{ width: `${paidPct}%` }}
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteDebt(debt.id);
+                        }}
+                        className="p-1.5 rounded-full hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition-all cursor-pointer"
+                        title="Xóa khoản nợ"
+                      >
+                        <Icon path={mdiDeleteOutline} size={0.75} />
+                      </button>
+                      <Icon 
+                        path={openDebtId === debt.id ? mdiChevronDown : mdiChevronRight} 
+                        size={0.875} 
+                        className="text-slate-400"
                       />
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-50 dark:border-slate-700">
-                      <div className="flex items-center gap-1.5">
-                        {nextInst ? (
-                          <>
-                            <Icon
-                              path={mdiCalendarMonth}
-                              size={0.75}
-                              className="text-slate-400"
-                            />
-                            <span className="text-[10px] text-slate-500 font-medium">
-                              Kỳ {nextInst.index + 1}:{" "}
-                              {new Date(
-                                nextInst.dueDate + "T00:00:00",
-                              ).toLocaleDateString("vi-VN", {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                            <Icon path={mdiCheckCircleOutline} size={0.75} /> Đã
-                            trả xong
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handlePayOpen(debt)}
-                        className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[9px] px-3 py-1.5 rounded-lg hover:opacity-80 transition-all cursor-pointer flex items-center gap-1"
+                  </div>
+
+                  {/* Collapsible Body */}
+                  <AnimatePresence>
+                    {openDebtId === debt.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden border-t border-slate-50 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-900/10 p-4 pt-3 space-y-3"
                       >
-                        <Icon path={mdiCurrencyUsd} size={0.667} />
-                        Thanh toán
-                      </button>
-                    </div>
-                    {debt.installments.filter(
-                      (i) => i.status === "pending" || i.status === "partial",
-                    ).length > 0 && (
-                      <div className="pt-2 border-t border-slate-50 dark:border-slate-700">
-                        <div className="flex flex-wrap gap-1.5">
-                          {debt.installments
-                            .filter(
-                              (i) =>
-                                i.status === "pending" ||
-                                i.status === "partial",
-                            )
-                            .slice(0, 8)
-                            .map((inst) => {
-                              const isOverdue =
-                                new Date(inst.dueDate + "T00:00:00") <
-                                new Date();
-                              return (
-                                <span
-                                  key={inst.index}
-                                  className={`text-[9px] font-bold px-2 py-1 rounded-lg border ${isOverdue ? "bg-rose-50 border-rose-100 text-rose-600" : "bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-500"}`}
-                                >
-                                  Kỳ {inst.index + 1}:{" "}
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <div className="min-w-0">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Dư nợ / Gốc</span>
+                            <span className="text-sm font-black text-slate-800 dark:text-white truncate block">
+                              {formatVND(debt.currentBalance)} <span className="text-[10px] text-slate-400 font-medium font-normal">/ {formatVND(debt.originalAmount)}</span>
+                            </span>
+                          </div>
+                          <div className="text-right min-w-0">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Trả mỗi kỳ</span>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate block">
+                              {formatVND(debt.monthlyPayment)}
+                              <span className="text-[9px] text-slate-400 font-medium">
+                                /kỳ ({debt.paidInstallments}/{debt.totalInstallments} kỳ)
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-slate-900 dark:bg-slate-200 rounded-full transition-all"
+                            style={{ width: `${paidPct}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <div className="flex items-center gap-1.5">
+                            {nextInst ? (
+                              <>
+                                <Icon
+                                  path={mdiCalendarMonth}
+                                  size={0.75}
+                                  className="text-slate-400"
+                                />
+                                <span className="text-[10px] text-slate-500 font-medium">
+                                  Kỳ {nextInst.index + 1}:{" "}
                                   {new Date(
-                                    inst.dueDate + "T00:00:00",
+                                    nextInst.dueDate + "T00:00:00",
                                   ).toLocaleDateString("vi-VN", {
-                                    day: "numeric",
                                     month: "short",
+                                    day: "numeric",
                                   })}
                                 </span>
-                              );
-                            })}
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                                <Icon path={mdiCheckCircleOutline} size={0.75} /> Đã
+                                trả xong
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handlePayOpen(debt)}
+                            className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[9px] px-3 py-1.5 rounded-lg hover:opacity-80 transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                          >
+                            <Icon path={mdiCurrencyUsd} size={0.667} />
+                            Thanh toán
+                          </button>
                         </div>
-                      </div>
+
+                        {debt.installments.filter(
+                          (i) => i.status === "pending" || i.status === "partial",
+                        ).length > 0 && (
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase mb-1.5">Các kỳ hạn tiếp theo</span>
+                            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                              {debt.installments
+                                .filter(
+                                  (i) =>
+                                    i.status === "pending" ||
+                                    i.status === "partial",
+                                )
+                                .slice(0, 8)
+                                .map((inst) => {
+                                  const isOverdue =
+                                    new Date(inst.dueDate + "T00:00:00") <
+                                    new Date();
+                                  return (
+                                    <span
+                                      key={inst.index}
+                                      className={`text-[9px] font-bold px-2 py-1 rounded-lg border ${isOverdue ? "bg-rose-50 border-rose-100 text-rose-600" : "bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-500"}`}
+                                    >
+                                      Kỳ {inst.index + 1}:{" "}
+                                      {new Date(
+                                        inst.dueDate + "T00:00:00",
+                                      ).toLocaleDateString("vi-VN", {
+                                        day: "numeric",
+                                        month: "short",
+                                      })}
+                                    </span>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
                     )}
-                  </div>
+                  </AnimatePresence>
                 </div>
               );
             })}
@@ -1077,9 +1117,9 @@ export default function FinanceBudget({
         <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
           KẾ HOẠCH TÀI CHÍNH
         </span>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+        {/* <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
           Dòng Tiền Tháng
-        </h1>
+        </h1> */}
       </div>
       <div className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[24px] p-4 shadow-sm">
         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
@@ -1265,9 +1305,9 @@ export default function FinanceBudget({
           <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
             DÒNG TIỀN
           </span>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          {/* <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
             Quản Lý Lương
-          </h1>
+          </h1> */}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -1293,7 +1333,7 @@ export default function FinanceBudget({
       {!salaryEdit && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-[#06b6d4] to-[#3b82f6] rounded-[24px] p-4 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-[24px] p-4 text-white shadow-lg shadow-purple-200/60">
               <span className="text-[9px] font-bold uppercase opacity-80 block">
                 Lương thực nhận
               </span>
@@ -1305,7 +1345,7 @@ export default function FinanceBudget({
                 {showSalary ? formatVND(salaryConfig.grossSalary) : "••••••"}
               </span>
             </div>
-            <div className="bg-gradient-to-br from-[#0891b2] to-[#0284c7] rounded-[24px] p-4 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 rounded-[24px] p-4 text-white shadow-lg shadow-orange-200/60">
               <span className="text-[9px] font-bold uppercase opacity-80 block">
                 Ngày nhận lương
               </span>
@@ -1639,7 +1679,7 @@ export default function FinanceBudget({
       </div>
 
       {/* Total summary */}
-      <div className="bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] rounded-[24px] p-4 text-white flex items-center justify-between shadow-lg">
+      <div className="bg-gradient-to-r from-rose-500 via-pink-600 to-fuchsia-600 rounded-[24px] p-4 text-white flex items-center justify-between shadow-lg shadow-rose-200/60">
         <div>
           <span className="text-[9px] font-bold uppercase opacity-80 block">
             Tổng chi cố định
@@ -1924,16 +1964,16 @@ export default function FinanceBudget({
             label: "Nợ",
             icon: mdiChartTimelineVariant,
           },
-          {
-            key: "cashflow" as ViewTab,
-            label: "Dòng tiền",
-            icon: mdiCashMultiple,
-          },
           { key: "salary" as ViewTab, label: "Lương", icon: mdiCalendarCheck },
           {
             key: "fixed" as ViewTab,
             label: "Cố định",
             icon: mdiFormatListBulletedSquare,
+          },
+          {
+            key: "cashflow" as ViewTab,
+            label: "Dòng tiền",
+            icon: mdiCashMultiple,
           },
         ].map((tab) => (
           <button
@@ -1986,17 +2026,25 @@ export default function FinanceBudget({
                     exit={{ y: "100%" }}
                     transition={{ type: "spring", damping: 25, stiffness: 220 }}
                     drag="y"
-                    dragConstraints={{ top: 0 }}
-                    dragElastic={{ top: 0, bottom: 0.5 }}
+                    dragControls={dragControlsPayment}
+                    dragListener={false}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0, bottom: 0.6 }}
                     onDragEnd={(_, info) => {
-                      if (info.offset.y > 100 || info.velocity.y > 500) {
+                      if (info.offset.y > 80 || info.velocity.y > 300) {
                         setPaymentDebtId(null);
                       }
                     }}
                     onClick={(e) => e.stopPropagation()}
                     className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-6 pb-10 max-h-[80vh] overflow-y-auto shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
                   >
-                    <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing" />
+                    <div
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        dragControlsPayment.start(e);
+                      }}
+                      className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing touch-none select-none"
+                    />
                     <div className="flex items-start justify-between gap-2 mb-5">
                       <div className="min-w-0">
                         <h3 className="text-base font-bold text-slate-800 dark:text-white">

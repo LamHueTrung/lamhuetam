@@ -95,9 +95,13 @@ export default function Navbar({
       <motion.button
         id="btn-diary"
         onClick={() => setCurrentTab(6)}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className={`fixed bottom-24 right-5 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer pointer-events-auto z-50 ${currentTab === 6 ? "bg-gradient-to-br from-[#06b6d4] to-[#3b82f6] text-white ring-2 ring-cyan-300" : "bg-white dark:bg-slate-800 text-cyan-600 border border-cyan-100 dark:border-cyan-900"}`}
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.88 }}
+        className={`fixed bottom-24 right-5 w-13 h-13 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 ${
+          currentTab === 6
+            ? "bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 text-white ring-2 ring-violet-300 ring-offset-1 shadow-[0_8px_24px_rgba(139,92,246,0.5)]"
+            : "bg-gradient-to-br from-violet-50 to-purple-50 text-violet-600 border border-violet-200 shadow-[0_4px_16px_rgba(139,92,246,0.2)]"
+        }`}
         title="Nhật ký Đời Tôi"
       >
         <Icon path={mdiBookOpenVariant} size={1.25} />

@@ -4,7 +4,8 @@ import {
   mdiWallet, mdiTrendingUp, mdiTrendingDown, mdiArrowDownBold, mdiArrowUpBold,
   mdiAlertCircleOutline, mdiChartTimelineVariant, mdiChevronRight, mdiShieldAlertOutline,
   mdiCheckCircleOutline, mdiChartLine, mdiChartAreaspline, mdiChartBar, mdiAutoFix,
-  mdiLoading, mdiRefresh, mdiAccountCircle, mdiBriefcaseOutline, mdiMapMarkerOutline
+  mdiLoading, mdiRefresh, mdiAccountCircle, mdiBriefcaseOutline, mdiMapMarkerOutline,
+  mdiEyeOutline, mdiEyeOffOutline
 } from "@mdi/js";
 import { Transaction, DebtAccount, Category, Budget, SavingsGoal, UserProfile } from "../types";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -162,6 +163,7 @@ export default function Dashboard({
 
   const [trendRange, setTrendRange] = useState<'7d' | '30d' | '12m'>('30d');
   const [chartView, setChartView] = useState<'trend' | 'networth'>('trend');
+  const [showAmounts, setShowAmounts] = useState(false);
 
   const trendData = useMemo(() => {
     const filtered = transactions.filter(t => {
@@ -339,17 +341,26 @@ export default function Dashboard({
             </div>
             <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">Khả Dụng</span>
           </div>
-          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
-            isPositiveTrend ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-          }`}>
-            {isPositiveTrend ? <Icon path={mdiTrendingUp} size={0.75} /> : <Icon path={mdiTrendingDown} size={0.75} />}
-            <span>{isPositiveTrend ? `+${trendPercentage}%` : `-${trendPercentage}%`}</span>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+              isPositiveTrend ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+            }`}>
+              {isPositiveTrend ? <Icon path={mdiTrendingUp} size={0.75} /> : <Icon path={mdiTrendingDown} size={0.75} />}
+              <span>{isPositiveTrend ? `+${trendPercentage}%` : `-${trendPercentage}%`}</span>
+            </div>
+            <button
+              onClick={() => setShowAmounts(v => !v)}
+              className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+              title={showAmounts ? "Ẩn số tiền" : "Hiện số tiền"}
+            >
+              <Icon path={showAmounts ? mdiEyeOutline : mdiEyeOffOutline} size={0.75} />
+            </button>
           </div>
         </div>
 
         <div className="mt-3">
           <h2 className={`text-2xl font-extrabold tracking-tight ${availableCashflow >= 0 ? "text-slate-900" : "text-rose-600"}`}>
-            {formatVND(availableCashflow)}
+            {showAmounts ? formatVND(availableCashflow) : <span className="tracking-widest text-slate-300">••••••</span>}
           </h2>
           <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tight">Đã đồng bộ công nợ & thu chi</p>
         </div>
@@ -360,14 +371,18 @@ export default function Dashboard({
               <Icon path={mdiArrowDownBold} size={0.75} className="text-emerald-500" />
               Nợ thu (+)
             </span>
-            <span className="text-xs font-extrabold text-emerald-600 block mt-0.5">{formatVND(totalReceivables)}</span>
+            <span className="text-xs font-extrabold text-emerald-600 block mt-0.5">
+              {showAmounts ? formatVND(totalReceivables) : "••••"}
+            </span>
           </div>
           <div>
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
               <Icon path={mdiArrowUpBold} size={0.75} className="text-rose-500" />
               Trả nợ tháng (-)
             </span>
-            <span className="text-xs font-extrabold text-rose-500 block mt-0.5">{formatVND(totalPayablesMonthly)}</span>
+            <span className="text-xs font-extrabold text-rose-500 block mt-0.5">
+              {showAmounts ? formatVND(totalPayablesMonthly) : "••••"}
+            </span>
           </div>
         </div>
       </div>
@@ -379,7 +394,9 @@ export default function Dashboard({
           </div>
           <div className="min-w-0">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block truncate">Thu nhập</span>
-            <span className="text-xs font-extrabold text-emerald-700 block mt-0.5 truncate">{formatVND(totalIncome)}</span>
+            <span className="text-xs font-extrabold text-emerald-700 block mt-0.5 truncate">
+              {showAmounts ? formatVND(totalIncome) : "••••"}
+            </span>
           </div>
         </div>
 
@@ -389,7 +406,9 @@ export default function Dashboard({
           </div>
           <div className="min-w-0">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block truncate">Chi tiêu</span>
-            <span className="text-xs font-extrabold text-rose-700 block mt-0.5 truncate">{formatVND(totalExpense)}</span>
+            <span className="text-xs font-extrabold text-rose-700 block mt-0.5 truncate">
+              {showAmounts ? formatVND(totalExpense) : "••••"}
+            </span>
           </div>
         </div>
       </div>

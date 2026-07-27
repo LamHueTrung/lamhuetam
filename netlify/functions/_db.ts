@@ -172,3 +172,14 @@ export const FixedExpenseTask = mongoose.models.FixedExpenseTask || mongoose.mod
 export const DiaryEntry = mongoose.models.DiaryEntry || mongoose.model('DiaryEntry', DiaryEntrySchema);
 export const UserProfile = mongoose.models.UserProfile || mongoose.model('UserProfile', UserProfileSchema);
 
+const AIConfigSchema = new mongoose.Schema({
+  model: { type: String, default: 'google/gemini-2.5-flash' },
+  apiKey: { type: String, default: '' },
+  baseUrl: { type: String, default: 'https://openrouter.ai/api/v1' },
+  lastTestedAt: { type: String, default: '' },
+  testStatus: { type: String, default: 'not_tested' },
+  testMessage: { type: String, default: '' }
+}, { versionKey: false });
+
+export const AIConfig = mongoose.models.AIConfig || mongoose.model('AIConfig', AIConfigSchema);
+

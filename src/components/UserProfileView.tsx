@@ -25,6 +25,13 @@ import {
   mdiDomain,
   mdiLaptop,
   mdiLayersOutline,
+  mdiChevronDown,
+  mdiChevronRight,
+  mdiRobot,
+  mdiKey,
+  mdiServer,
+  mdiCheck,
+  mdiAlert,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
@@ -91,6 +98,40 @@ export default function UserProfileView({
   const [newFieldValue, setNewFieldValue] = useState("");
   const [newFieldCategory, setNewFieldCategory] = useState("Sự nghiệp");
 
+  // Collapse sections states
+  const [openSection, setOpenSection] = useState<number | null>(null);
+
+  // AI Configuration states
+  const [aiModel, setAiModel] = useState("google/gemini-2.5-flash");
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [aiBaseUrl, setAiBaseUrl] = useState("https://openrouter.ai/api/v1");
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [testStatus, setTestStatus] = useState<'connected' | 'invalid_key' | 'quota_exceeded' | 'model_error' | 'network_error' | 'not_tested'>("not_tested");
+  const [testMessage, setTestMessage] = useState("");
+  const [lastTestedAt, setLastTestedAt] = useState("");
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [savingAiConfig, setSavingAiConfig] = useState(false);
+
+  // Lấy cấu hình AI từ database khi render
+  const fetchAiConfig = async () => {
+    try {
+      const res = await fetch('/.netlify/functions/ai-config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          if (data.model) setAiModel(data.model);
+          if (data.baseUrl) setAiBaseUrl(data.baseUrl);
+          setHasApiKey(!!data.hasKey);
+          if (data.testStatus) setTestStatus(data.testStatus);
+          if (data.testMessage) setTestMessage(data.testMessage);
+          if (data.lastTestedAt) setLastTestedAt(data.lastTestedAt);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi khi load cấu hình AI:", err);
+    }
+  };
+
   useEffect(() => {
     setFullName(profile.fullName || "");
     setDob(profile.dob || "");
@@ -112,7 +153,69 @@ export default function UserProfileView({
     setPhone(profile.phone || "");
     setEmails(profile.emails || []);
     setCustomFields(profile.customFields || []);
+
+    fetchAiConfig();
   }, [profile]);
+
+  const handleTestAiConnection = async () => {
+    try {
+      setTestingConnection(true);
+      const res = await fetch('/.netlify/functions/ai-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: aiModel,
+          apiKey: aiApiKey,
+          baseUrl: aiBaseUrl,
+        }),
+      });
+      const data = await res.json();
+      setTestStatus(data.testStatus);
+      setTestMessage(data.testMessage);
+      if (data.lastTestedAt) setLastTestedAt(data.lastTestedAt);
+
+      if (data.testStatus === 'connected') {
+        toast.success("Kết nối đến mô hình AI thành công!");
+      } else {
+        toast.error(`Kết nối thất bại: ${data.testMessage}`);
+      }
+    } catch (err: any) {
+      setTestStatus('network_error');
+      setTestMessage(err.message);
+      toast.error(`Lỗi mạng: ${err.message}`);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSaveAiConfig = async () => {
+    try {
+      setSavingAiConfig(true);
+      const res = await fetch('/.netlify/functions/ai-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: aiModel,
+          apiKey: aiApiKey,
+          baseUrl: aiBaseUrl,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHasApiKey(data.hasKey);
+        // Sau khi lưu xong thì tự động test connection luôn
+        await handleTestAiConnection();
+        toast.success("Đã lưu cấu hình AI!");
+        setAiApiKey(""); // reset input field vì đã lưu vào DB
+      } else {
+        throw new Error("Không thể lưu cấu hình");
+      }
+    } catch (err: any) {
+      toast.error(`Lỗi khi lưu: ${err.message}`);
+    } finally {
+      setSavingAiConfig(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -332,7 +435,10 @@ export default function UserProfileView({
 
       {/* SECTION 1: Hồ sơ nhân vật của tôi */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div 
+          onClick={() => !isEditing && setOpenSection(openSection === 1 ? null : 1)}
+          className={`flex items-center justify-between pb-3 ${(!isEditing && openSection !== 1) ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
+        >
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
               <Icon path={mdiAccountBadgeOutline} size={0.9} />
@@ -347,7 +453,24 @@ export default function UserProfileView({
               </p>
             </div>
           </div>
+          {!isEditing && (
+            <Icon 
+              path={openSection === 1 ? mdiChevronDown : mdiChevronRight} 
+              size={0.9} 
+              className="text-slate-400"
+            />
+          )}
         </div>
+
+        <AnimatePresence>
+          {(isEditing || openSection === 1) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
 
         {isEditing ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
@@ -465,11 +588,17 @@ export default function UserProfileView({
             </div>
           </div>
         )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* SECTION 2: Kỹ năng chuyên môn & Nỗi lo */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div 
+          onClick={() => !isEditing && setOpenSection(openSection === 2 ? null : 2)}
+          className={`flex items-center justify-between pb-3 ${(!isEditing && openSection !== 2) ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
+        >
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
               <Icon path={mdiCodeBraces} size={0.9} />
@@ -483,7 +612,24 @@ export default function UserProfileView({
               </p>
             </div>
           </div>
+          {!isEditing && (
+            <Icon 
+              path={openSection === 2 ? mdiChevronDown : mdiChevronRight} 
+              size={0.9} 
+              className="text-slate-400"
+            />
+          )}
         </div>
+
+        <AnimatePresence>
+          {(isEditing || openSection === 2) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-4"
+            >
 
         {/* Strongly highlight Node.js & Foundation */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -647,23 +793,48 @@ export default function UserProfileView({
             </p>
           )}
         </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* SECTION 3: Học vấn */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
-            <Icon path={mdiSchoolOutline} size={0.9} />
+        <div 
+          onClick={() => !isEditing && setOpenSection(openSection === 3 ? null : 3)}
+          className={`flex items-center justify-between pb-3 ${(!isEditing && openSection !== 3) ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+              <Icon path={mdiSchoolOutline} size={0.9} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                3. Trình độ Học vấn
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Trường học, khóa học và trạng thái bằng cấp
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-              3. Trình độ Học vấn
-            </h2>
-            <p className="text-[11px] text-slate-400">
-              Trường học, khóa học và trạng thái bằng cấp
-            </p>
-          </div>
+          {!isEditing && (
+            <Icon 
+              path={openSection === 3 ? mdiChevronDown : mdiChevronRight} 
+              size={0.9} 
+              className="text-slate-400"
+            />
+          )}
         </div>
+
+        <AnimatePresence>
+          {(isEditing || openSection === 3) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-3"
+            >
 
         {isEditing ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -711,23 +882,48 @@ export default function UserProfileView({
             </div>
           </div>
         )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* SECTION 4: Avatar, Số điện thoại & Nhiều Email */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
-            <Icon path={mdiPhone} size={0.9} />
+        <div 
+          onClick={() => !isEditing && setOpenSection(openSection === 4 ? null : 4)}
+          className={`flex items-center justify-between pb-3 ${(!isEditing && openSection !== 4) ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
+              <Icon path={mdiPhone} size={0.9} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                4. Avatar & Thông tin liên hệ
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Quản lý số điện thoại và danh sách nhiều địa chỉ Email
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-              4. Avatar & Thông tin liên hệ
-            </h2>
-            <p className="text-[11px] text-slate-400">
-              Quản lý số điện thoại và danh sách nhiều địa chỉ Email
-            </p>
-          </div>
+          {!isEditing && (
+            <Icon 
+              path={openSection === 4 ? mdiChevronDown : mdiChevronRight} 
+              size={0.9} 
+              className="text-slate-400"
+            />
+          )}
         </div>
+
+        <AnimatePresence>
+          {(isEditing || openSection === 4) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-4"
+            >
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           {/* Avatar URL / Image */}
@@ -828,11 +1024,17 @@ export default function UserProfileView({
             </div>
           </div>
         </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* SECTION 5: Tự gợi ý & Quản lý thông tin cá nhân khác */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div 
+          onClick={() => !isEditing && setOpenSection(openSection === 5 ? null : 5)}
+          className={`flex items-center justify-between pb-3 ${(!isEditing && openSection !== 5) ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
+        >
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
               <Icon path={mdiLightbulbOutline} size={0.9} />
@@ -846,7 +1048,24 @@ export default function UserProfileView({
               </p>
             </div>
           </div>
+          {!isEditing && (
+            <Icon 
+              path={openSection === 5 ? mdiChevronDown : mdiChevronRight} 
+              size={0.9} 
+              className="text-slate-400"
+            />
+          )}
         </div>
+
+        <AnimatePresence>
+          {(isEditing || openSection === 5) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-4"
+            >
 
         {/* Auto-suggest buttons */}
         <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
@@ -958,6 +1177,189 @@ export default function UserProfileView({
             </button>
           </div>
         </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+</div>
+
+      {/* SECTION 6: Cấu hình AI Model & API Key */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div 
+          onClick={() => setOpenSection(openSection === 6 ? null : 6)}
+          className={`flex items-center justify-between pb-3 ${openSection !== 6 ? "" : "border-b border-slate-100 dark:border-slate-800"} cursor-pointer select-none`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400">
+              <Icon path={mdiRobot} size={0.9} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                6. Cấu hình Cố vấn AI
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Chọn mô hình AI và cung cấp API Key cá nhân của bạn
+              </p>
+            </div>
+          </div>
+          <Icon 
+            path={openSection === 6 ? mdiChevronDown : mdiChevronRight} 
+            size={0.9} 
+            className="text-slate-400"
+          />
+        </div>
+
+        <AnimatePresence>
+          {openSection === 6 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-4 pt-1"
+            >
+              {/* Chọn mô hình AI */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <Icon path={mdiRobot} size={0.6} className="text-violet-500" />
+                  Mô hình AI:
+                </label>
+                <select
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-semibold"
+                >
+                  <option value="google/gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng)</option>
+                  <option value="google/gemini-2.5-flash-lite-preview-06-17">Gemini 2.5 Flash Lite</option>
+                  <option value="google/gemini-flash-1.5">Gemini 1.5 Flash</option>
+                  <option value="google/gemini-flash-1.5-8b">Gemini 1.5 Flash Lite</option>
+                  <option value="google/gemma-3-27b-it">Gemma 3 27B IT</option>
+                </select>
+              </div>
+
+              {/* API Key */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Icon path={mdiKey} size={0.6} className="text-amber-500" />
+                    API Key (OpenRouter hoặc Gemini API Key):
+                  </span>
+                  {hasApiKey && (
+                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/50">
+                      ✓ Đã cấu hình
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={aiApiKey}
+                  onChange={(e) => setAiApiKey(e.target.value)}
+                  placeholder={hasApiKey ? "•••••••••••••••••••• (Nhập key mới để thay đổi)" : "Nhập API Key của bạn (VD: sk-or-...)"}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-mono"
+                />
+                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                  * Note: API Key được lưu trên DB riêng của bạn. Để trống nếu bạn muốn sử dụng API key mặc định từ hệ thống (env).
+                </p>
+              </div>
+
+              {/* Base URL */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <Icon path={mdiServer} size={0.6} className="text-blue-500" />
+                  Base API URL (Mặc định là OpenRouter):
+                </label>
+                <input
+                  type="text"
+                  value={aiBaseUrl}
+                  onChange={(e) => setAiBaseUrl(e.target.value)}
+                  placeholder="https://openrouter.ai/api/v1"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-mono"
+                />
+              </div>
+
+              {/* Status Badge */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-2xl space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Trạng thái kết nối AI</span>
+                
+                {testStatus === 'connected' && (
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-600">
+                    <div className="p-1 rounded-full bg-emerald-100 text-emerald-600">
+                      <Icon path={mdiCheck} size={0.5} />
+                    </div>
+                    <span>Kết nối thành công!</span>
+                  </div>
+                )}
+                {testStatus === 'invalid_key' && (
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-rose-600">
+                    <div className="p-1 rounded-full bg-rose-100 text-rose-600">
+                      <Icon path={mdiAlert} size={0.5} />
+                    </div>
+                    <span>API Key không hợp lệ (401)</span>
+                  </div>
+                )}
+                {testStatus === 'quota_exceeded' && (
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-amber-600">
+                    <div className="p-1 rounded-full bg-amber-100 text-amber-600">
+                      <Icon path={mdiAlert} size={0.5} />
+                    </div>
+                    <span>Hết quota hoặc quá tải (429)</span>
+                  </div>
+                )}
+                {testStatus === 'model_error' && (
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-orange-600">
+                    <div className="p-1 rounded-full bg-orange-100 text-orange-600">
+                      <Icon path={mdiAlert} size={0.5} />
+                    </div>
+                    <span>Model không tồn tại hoặc lỗi API (404)</span>
+                  </div>
+                )}
+                {testStatus === 'network_error' && (
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 dark:text-slate-300">
+                    <div className="p-1 rounded-full bg-slate-200 text-slate-600">
+                      <Icon path={mdiAlert} size={0.5} />
+                    </div>
+                    <span>Lỗi kết nối / Mạng</span>
+                  </div>
+                )}
+                {testStatus === 'not_tested' && (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                    <span>Chưa kiểm tra kết nối</span>
+                  </div>
+                )}
+
+                {testMessage && (
+                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-1">
+                    Chi tiết: {testMessage}
+                  </p>
+                )}
+                {lastTestedAt && (
+                  <span className="block text-[9px] text-slate-400 font-medium mt-1">
+                    Kiểm tra gần nhất: {lastTestedAt}
+                  </span>
+                )}
+              </div>
+
+              {/* AI Config Actions */}
+              <div className="flex gap-2 pt-1.5">
+                <button
+                  type="button"
+                  onClick={handleTestAiConnection}
+                  disabled={testingConnection}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {testingConnection ? "Đang thử..." : "Thử kết nối"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAiConfig}
+                  disabled={savingAiConfig}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-violet-200/50"
+                >
+                  {savingAiConfig ? "Đang lưu..." : "Lưu cấu hình"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Action Footer */}

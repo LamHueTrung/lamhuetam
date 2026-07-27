@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
-  mdiClose, mdiCurrencyUsd, mdiCheck, mdiCogOutline, mdiBank, mdiCash, mdiWalletOutline, mdiCalendar
+  mdiCurrencyUsd, mdiCheck, mdiCogOutline, mdiBank, mdiCash, mdiWalletOutline, mdiCalendar
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
@@ -117,10 +117,10 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             drag="y"
             dragControls={dragControls}
             dragListener={false}
-            dragConstraints={{ top: 0 }}
-            dragElastic={{ top: 0, bottom: 0.8 }}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 60 || info.velocity.y > 250) {
+              if (info.offset.y > 80 || info.velocity.y > 300) {
                 onClose();
               }
             }}
@@ -128,23 +128,13 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
           >
             {/* Draggable Header Section */}
             <div
-              onPointerDown={(e) => dragControls.start(e)}
+              onPointerDown={(e) => { e.stopPropagation(); dragControls.start(e); }}
               className="w-full pb-5 cursor-grab active:cursor-grabbing touch-none select-none"
             >
               <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4" />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-slate-900 rounded-full animate-pulse" />
-                  <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
-                  title="Đóng"
-                >
-                  <Icon path={mdiClose} size={0.875} />
-                </button>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 bg-slate-900 rounded-full animate-pulse" />
+                <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
               </div>
             </div>
 
@@ -156,8 +146,6 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                   <input
                     type="text"
                     inputMode="numeric"
-                    pattern="[0-9]*"
-                    required
                     value={amountStr}
                     onKeyDown={handleAmountKeyDown}
                     onChange={(e) => handleAmountChange(e.target.value)}

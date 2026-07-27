@@ -184,3 +184,14 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
+export interface AIConfig {
+  _id?: string;
+  model: string;
+  apiKey?: string;
+  hasKey?: boolean;
+  baseUrl: string;
+  lastTestedAt?: string;
+  testStatus: 'connected' | 'invalid_key' | 'quota_exceeded' | 'model_error' | 'network_error' | 'not_tested';
+  testMessage?: string;
+}
+

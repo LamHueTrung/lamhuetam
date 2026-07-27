@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Icon } from "@mdi/react";
 import { mdiClose, mdiPlus, mdiDeleteOutline, mdiDragVertical, mdiChevronUp, mdiChevronDown, mdiCheck, mdiPalette } from "@mdi/js";
 import toast from "react-hot-toast";
-import { motion, AnimatePresence, Reorder } from "motion/react";
+import { motion, AnimatePresence, Reorder, useDragControls } from "motion/react";
 import { Category } from "../types";
 import { iconMap, iconNames } from "../lib/iconMap";
 
@@ -41,6 +41,7 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
   const [newColor, setNewColor] = useState("slate");
 
   const [categoryList, setCategoryList] = useState(categories);
+  const dragControlsCat = useDragControls();
 
   React.useEffect(() => {
     setCategoryList(categories);
@@ -60,17 +61,22 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
           <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
             drag="y"
-            dragConstraints={{ top: 0 }}
-            dragElastic={{ top: 0, bottom: 0.5 }}
+            dragControls={dragControlsCat}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 100 || info.velocity.y > 500) {
+              if (info.offset.y > 80 || info.velocity.y > 300) {
                 onClose();
               }
             }}
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[85vh] overflow-y-auto overflow-x-hidden z-10">
             <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 p-5 pb-3 border-b border-slate-100 flex flex-col">
-              <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing" />
+              <div
+                onPointerDown={(e) => { e.stopPropagation(); dragControlsCat.start(e); }}
+                className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing touch-none select-none"
+              />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon path={mdiPalette} size={1.25} className="text-slate-700" />

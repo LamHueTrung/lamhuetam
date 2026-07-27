@@ -9,7 +9,7 @@ import {
   mdiFormatListBulleted, mdiMap, mdiEarth, mdiMagnify, mdiCommentTextOutline,
   mdiBookOpenVariant,
 } from "@mdi/js";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useDragControls } from "motion/react";
 import toast from "react-hot-toast";
 import { DiaryEntry, DiaryMood, DiaryReply } from "../types";
 import { useDiary } from "../hooks/useDiary";
@@ -247,6 +247,8 @@ export default function DiaryView() {
   // Reply state for Detail Modal
   const [replyText, setReplyText] = useState('');
   const [isSavingReply, setIsSavingReply] = useState(false);
+  const dragControlsDetail = useDragControls();
+  const dragControlsForm = useDragControls();
 
   // Tree expanded months
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set([new Date().toISOString().slice(0, 7)]));
@@ -592,17 +594,22 @@ export default function DiaryView() {
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 26, stiffness: 220 }}
                 drag="y"
-                dragConstraints={{ top: 0 }}
-                dragElastic={{ top: 0, bottom: 0.5 }}
+                dragControls={dragControlsDetail}
+                dragListener={false}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.6 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                  if (info.offset.y > 80 || info.velocity.y > 300) {
                     setDetailEntry(null);
                     setReplyText('');
                   }
                 }}
                 onClick={e => e.stopPropagation()}
                 className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[32px] p-6 max-h-[85vh] overflow-y-auto overflow-x-hidden shadow-2xl space-y-4 min-w-0">
-                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing" />
+                <div
+                  onPointerDown={(e) => { e.stopPropagation(); dragControlsDetail.start(e); }}
+                  className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing touch-none select-none"
+                />
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${MOOD_CONFIG[detailEntry.mood]?.bg} ${MOOD_CONFIG[detailEntry.mood]?.color}`}>
@@ -699,10 +706,12 @@ export default function DiaryView() {
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 26, stiffness: 220 }}
                 drag="y"
-                dragConstraints={{ top: 0 }}
-                dragElastic={{ top: 0, bottom: 0.5 }}
+                dragControls={dragControlsForm}
+                dragListener={false}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.6 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                  if (info.offset.y > 80 || info.velocity.y > 300) {
                     setShowForm(false);
                   }
                 }}
@@ -710,7 +719,10 @@ export default function DiaryView() {
                 className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-6 pb-10 max-h-[90vh] overflow-y-auto overflow-x-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.15)] z-10 min-w-0">
 
                 {/* Handle */}
-                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-5 cursor-grab active:cursor-grabbing" />
+                <div
+                  onPointerDown={(e) => { e.stopPropagation(); dragControlsForm.start(e); }}
+                  className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-5 cursor-grab active:cursor-grabbing touch-none select-none"
+                />
 
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-base font-extrabold text-slate-800 dark:text-white">{editId ? 'Sửa nhật ký' : 'Viết nhật ký'}</h2>

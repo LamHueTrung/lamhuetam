@@ -1,8 +1,9 @@
 import { Handler } from '@netlify/functions';
+import { connectDB, AIConfig } from './_db';
+import fetch from 'node-fetch';
 
-const BASE_URL = () => process.env.GEMINI_API_BASE_URL || 'https://openrouter.ai/api/v1';
-const MODEL = () => process.env.GEMINI_MODEL || 'google/gemini-2.5-flash';
-const API_KEY = () => process.env.GEMINI_API_KEY || '';
+const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
+const DEFAULT_MODEL = 'google/gemini-2.5-flash';
 
 function formatVND(num: number) {
   if (num >= 1000000) return Math.round(num / 1000000) + 'tr';
@@ -22,11 +23,20 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 
   try {
-    const apiKey = API_KEY();
+    await connectDB();
+
+    // Load AIConfig từ Database
+    let config = await AIConfig.findOne().lean();
+    
+    // Ưu tiên: Config DB -> Env Var -> Default
+    const apiKey = config?.apiKey || process.env.GEMINI_API_KEY || '';
+    const model = config?.model || process.env.GEMINI_MODEL || DEFAULT_MODEL;
+    const baseUrl = config?.baseUrl || process.env.GEMINI_API_BASE_URL || DEFAULT_BASE_URL;
+
     if (!apiKey) {
       return { statusCode: 400, headers, body: JSON.stringify({
         error: 'Missing API Key',
-        message: 'Thiếu GEMINI_API_KEY. Thêm vào biến môi trường Netlify.'
+        message: 'Thiếu API Key. Hãy cấu hình API Key trong trang Thông tin cá nhân hoặc biến môi trường Netlify.'
       })};
     }
 
@@ -91,8 +101,7 @@ export const handler: Handler = async (event) => {
       userPrompt = `${profileContext}\nHãy trả lời câu hỏi của Lâm Huệ Trung:\n\nCâu hỏi: "${customMessage}"\n\nBối cảnh tài chính hiện tại:\n- Thu nhập: ${totalIncome} VNĐ\n- Chi tiêu: ${totalExpense} VNĐ\n- Nợ: ${JSON.stringify(debts || [])}\n- Tiết kiệm: ${JSON.stringify(savings || [])}\n- Dữ liệu dòng tiền: ${JSON.stringify(cashflowData || {})}\n\nTrả lời bằng tiếng Việt thấu hiểu bối cảnh cá nhân (Node.js developer, làm việc xa nhà tại Rynan Tech, áp lực tiền bạc & gia đình), dùng số liệu cụ thể, có tính ứng dụng cao.`;
     }
 
-    const model = MODEL();
-    const response = await fetch(`${BASE_URL()}/chat/completions`, {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,7 +118,7 @@ export const handler: Handler = async (event) => {
     });
 
 
-    const data = await response.json();
+    const data: any = await response.json();
     if (!response.ok) {
       const errMsg = data.error?.message || data.error || `HTTP ${response.status}`;
       throw new Error(errMsg);
@@ -124,9 +133,9 @@ export const handler: Handler = async (event) => {
     const errMsg = error.message || '';
     let message: string;
     if (errMsg.includes('API_KEY') || errMsg.includes('401') || errMsg.includes('Unauthorized')) {
-      message = 'GEMINI_API_KEY không hợp lệ. Kiểm tra lại key hoặc dùng OpenRouter key (sk-or-...).';
+      message = 'API_KEY không hợp lệ. Kiểm tra lại key hoặc dùng OpenRouter key (sk-or-...).';
     } else if (errMsg.includes('quota') || errMsg.includes('rate') || errMsg.includes('429')) {
-      message = `Đã hết quota (model: ${MODEL()}). Đổi model qua env var GEMINI_MODEL hoặc đợi làm mới quota.`;
+      message = 'Đã hết quota. Vui lòng kiểm tra lại cấu hình hoặc quota tài khoản AI của bạn.';
     } else {
       message = errMsg;
     }
