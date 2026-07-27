@@ -639,6 +639,29 @@ export default function FinanceBudget({
     }
   };
 
+  const calcActualSpendForCategory = useCallback(
+    (catName: string, monthStr: string) => {
+      if (!transactions || transactions.length === 0) return 0;
+      return transactions
+        .filter((t) => {
+          // Lọc các giao dịch chi tiêu trong tháng tương ứng
+          const isExpense = t.type === "expense";
+          const isSameMonth = t.date.startsWith(monthStr);
+          if (!isExpense || !isSameMonth) return false;
+
+          // Thực hiện đối chiếu từ khóa (Mapping)
+          const categoryClean = (t.category || "").trim().toLowerCase();
+          const descClean = (t.description || "").trim().toLowerCase();
+          const searchKey = catName.trim().toLowerCase();
+
+          // Khớp nếu tên danh mục giao dịch hoặc mô tả giao dịch chứa tên danh mục cố định
+          return categoryClean === searchKey || descClean.includes(searchKey);
+        })
+        .reduce((sum, t) => sum + t.amount, 0);
+    },
+    [transactions],
+  );
+
   const handleDeleteTask = async (id: string) => {
     toast(
       (t) => (
@@ -711,11 +734,11 @@ export default function FinanceBudget({
             color: "text-rose-600",
           },
           {
-            label: "Còn lại",
+            label: "Nợ còn lại",
             val: formatVND(
-              Math.max(0, expectedIncomeNum - totalMonthlyPayment),
+              Math.max(0, totalDebt - totalMonthlyPayment),
             ),
-            sub: "Sau trả nợ",
+            sub: "Sau trả kỳ này",
             color: "text-emerald-600",
           },
         ].map((c) => (
@@ -1948,6 +1971,86 @@ export default function FinanceBudget({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* BÁO CÁO ĐỐI CHIẾU CHI TIÊU CỐ ĐỊNH (Dự kiến vs Thực tế) */}
+      {fixedCats.length > 0 && (
+        <div className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[28px] p-5 shadow-sm space-y-4">
+          <div>
+            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+              📊 Đối Chiếu Chi Tiêu Cố Định
+            </h3>
+            <p className="text-[10px] text-slate-400 font-medium">
+              So sánh mức thiết lập cố định định kỳ với Sổ Cái thực tế (Tháng {fixedMonth})
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {fixedCats.map((cat) => {
+              const catTasks = fixedTasks.filter((t) => t.categoryId === cat.id);
+              const projected = catTasks.reduce((s, t) => s + t.amount, 0);
+              const actual = calcActualSpendForCategory(cat.name, fixedMonth);
+
+              if (projected === 0 && actual === 0) return null;
+
+              const diff = actual - projected;
+              const maxVal = Math.max(projected, actual, 1);
+              const projectedPct = (projected / maxVal) * 100;
+              const actualPct = (actual / maxVal) * 100;
+
+              return (
+                <div key={cat.id} className="space-y-1.5 pb-2 border-b border-slate-50 dark:border-slate-700/50 last:border-b-0">
+                  <div className="flex items-center justify-between text-[11px] font-bold">
+                    <span className="text-slate-700 dark:text-slate-200">{cat.name}</span>
+                    <div className="flex items-center gap-1.5">
+                      {diff > 0 ? (
+                        <span className="text-[9px] text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full font-bold">
+                          Vượt chi +{formatVND(diff)}
+                        </span>
+                      ) : diff < 0 ? (
+                        <span className="text-[9px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded-full font-bold">
+                          Tiết kiệm {formatVND(diff)}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-slate-500 bg-slate-50 dark:bg-slate-700 px-1.5 py-0.5 rounded-full font-bold">
+                          Khớp dự kiến
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    {/* Thanh dự kiến */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-slate-400 font-semibold w-12 shrink-0">Dự kiến:</span>
+                      <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-slate-400 dark:bg-slate-500 rounded-full transition-all"
+                          style={{ width: `${projectedPct}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-bold w-12 text-right">{formatVND(projected)}</span>
+                    </div>
+
+                    {/* Thanh thực tế */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-slate-400 font-semibold w-12 shrink-0">Thực tế:</span>
+                      <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${diff > 0 ? "bg-rose-500" : "bg-emerald-500"}`}
+                          style={{ width: `${actualPct}%` }}
+                        />
+                      </div>
+                      <span className={`text-[10px] font-black w-12 text-right ${diff > 0 ? "text-rose-500" : "text-emerald-600"}`}>
+                        {formatVND(actual)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
