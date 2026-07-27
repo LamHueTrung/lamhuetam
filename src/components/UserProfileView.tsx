@@ -1228,11 +1228,11 @@ export default function UserProfileView({
                   onChange={(e) => setAiModel(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-semibold"
                 >
-                  <option value="google/gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng)</option>
-                  <option value="google/gemini-2.5-flash-lite-preview-06-17">Gemini 2.5 Flash Lite</option>
-                  <option value="google/gemini-flash-1.5">Gemini 1.5 Flash</option>
-                  <option value="google/gemini-flash-1.5-8b">Gemini 1.5 Flash Lite</option>
-                  <option value="google/gemma-3-27b-it">Gemma 3 27B IT</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng)</option>
+                  <option value="gemini-2.5-flash-lite-preview-06-17">Gemini 2.5 Flash Lite</option>
+                  <option value="gemini-flash-1.5">Gemini 1.5 Flash</option>
+                  <option value="gemini-flash-1.5-8b">Gemini 1.5 Flash Lite</option>
+                  <option value="gemma-3-27b-it">Gemma 3 27B IT</option>
                 </select>
               </div>
 
