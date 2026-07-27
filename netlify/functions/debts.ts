@@ -82,12 +82,18 @@ export const handler: Handler = async (event) => {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'No payable installments selected' }) };
       }
 
-      debt.currentBalance -= totalPaid;
+      // Tính lại số dư nợ còn lại chính xác dựa trên các kỳ chưa hoàn thành (pending/partial)
+      const remainingBalance = debt.installments
+        .filter((i: any) => i.status !== 'paid')
+        .reduce((s: number, i: any) => s + (i.amount - (i.paidAmount || 0)), 0);
+
+      debt.currentBalance = Math.max(0, remainingBalance);
       debt.paidInstallments = debt.installments.filter((i: any) => i.status === 'paid').length;
 
       if (debt.currentBalance <= 0) {
         debt.status = 'settled';
-        debt.currentBalance = 0;
+      } else {
+        debt.status = 'active';
       }
 
       const desc = note || `Trả nợ ${debt.name}`;

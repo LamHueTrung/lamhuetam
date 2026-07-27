@@ -9,6 +9,7 @@ import {
 } from "@mdi/js";
 import { Transaction, DebtAccount, Category, Budget, SavingsGoal, UserProfile } from "../types";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { calcRemainingBalance, calcPaidPercent } from "../lib/debtUtils";
 type Debt = DebtAccount;
 
 interface DashboardProps {
@@ -43,12 +44,16 @@ export default function Dashboard({
     return new Intl.NumberFormat("vi-VN").format(valueInK) + "k";
   };
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
+  // ── Tính toán tài chính theo tháng hiện tại ──
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const incomeThisMonth = transactions
+    .filter((t) => t.type === "income" && t.date.startsWith(currentMonthStr))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
+  const expenseThisMonth = transactions
+    .filter((t) => t.type === "expense" && t.date.startsWith(currentMonthStr))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalPayablesMonthly = debts
@@ -57,16 +62,25 @@ export default function Dashboard({
 
   const totalDebtBalance = debts
     .filter((d) => d.status === 'active')
-    .reduce((sum, d) => sum + d.currentBalance, 0);
+    .reduce((sum, d) => sum + calcRemainingBalance(d), 0);
 
   const totalReceivables = 0;
 
-  const availableCashflow = (totalReceivables + totalIncome) - (totalPayablesMonthly + totalExpense);
+  // Dòng tiền khả dụng = Thu nhập tháng này - Chi tiêu tháng này - Tiền trả nợ định kỳ tháng này
+  const availableCashflow = (totalReceivables + incomeThisMonth) - (totalPayablesMonthly + expenseThisMonth);
 
   const netDebt = totalDebtBalance - totalReceivables;
 
-  const isPositiveTrend = totalIncome >= totalExpense;
-  const trendPercentage = totalIncome > 0 ? Math.round(((totalIncome - totalExpense) / totalIncome) * 100) : 0;
+  const totalIncomeAllTime = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpenseAllTime = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const isPositiveTrend = totalIncomeAllTime >= totalExpenseAllTime;
+  const trendPercentage = totalIncomeAllTime > 0 ? Math.round(((totalIncomeAllTime - totalExpenseAllTime) / totalIncomeAllTime) * 100) : 0;
 
   // ── 1. Cơ cấu chi tiêu tháng này: lấy Top 5, còn lại gộp thành "Khác" ──
   const now = new Date();
@@ -686,7 +700,7 @@ export default function Dashboard({
           <div className="space-y-3">
             {urgentDebts.slice(0, 2).map((debt) => {
               const typeLabel: Record<string, string> = { installment: 'Trả góp', credit_card: 'Thẻ TD', friend: 'Bạn bè' };
-              const percentPaid = debt.originalAmount > 0 ? Math.round(((debt.originalAmount - debt.currentBalance) / debt.originalAmount) * 100) : 0;
+              const percentPaid = calcPaidPercent(debt);
 
               return (
                 <div key={debt.id} className="bg-white/40 border border-white/60 rounded-2xl p-4 flex items-center justify-between">

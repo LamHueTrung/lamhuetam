@@ -137,14 +137,14 @@ function AppContent() {
     md += `---\n\n`;
 
     // 3. Danh sách nợ & Trả góp
-    const totalDebtsRemaining = debts.reduce((s, d) => s + (d.remainingAmount || 0), 0);
+    const totalDebtsRemaining = debts.reduce((s, d) => s + (d.currentBalance || 0), 0);
     md += `## 3. 💳 DỰ NỢ & TRẢ GÓP\n`;
     md += `**Tổng Dư Nợ Còn Lại:** ${numFmt(totalDebtsRemaining)}\n\n`;
     if (debts.length > 0) {
       debts.forEach((d, i) => {
         const typeLabel = d.type === 'credit_card' ? 'Thẻ tín dụng' : d.type === 'installment' ? 'Trả góp' : 'Vay nợ';
         md += `### ${i + 1}. ${d.name} (${typeLabel})\n`;
-        md += `- **Dư nợ còn lại:** ${numFmt(d.remainingAmount || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
+        md += `- **Dư nợ còn lại:** ${numFmt(d.currentBalance || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
         if (d.type === 'installment') {
           md += `- **Tiến độ trả góp:** Đã trả ${d.paidInstallments || 0}/${d.totalInstallments || 0} kỳ\n`;
           md += `- **Số tiền trả hàng tháng:** ${numFmt(d.monthlyPayment || 0)} (Hạn trả: Ngày ${d.payDay || '—'})\n`;

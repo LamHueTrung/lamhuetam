@@ -67,6 +67,7 @@ import {
 } from "../types";
 import { useSalary } from "../hooks/useSalary";
 import { useFixedExpenses } from "../hooks/useFixedExpenses";
+import { calcRemainingBalance, calcInstallmentAmount, calcPaidPercent } from "../lib/debtUtils";
 
 interface FinanceBudgetProps {
   debts: DebtAccount[];
@@ -326,18 +327,17 @@ export default function FinanceBudget({
   // ── Debt helpers ──────────────────────────────────────────────────────────
   const totalDebt = debts
     .filter((d) => d.status === "active")
-    .reduce((s, d) => s + d.currentBalance, 0);
+    .reduce((s, d) => s + calcRemainingBalance(d), 0);
   const totalMonthlyPayment = debts
     .filter((d) => d.status === "active")
     .reduce((s, d) => s + d.monthlyPayment, 0);
   const activeDebtCount = debts.filter((d) => d.status === "active").length;
 
-  const generateInstallments = (): Omit<DebtInstallment, "status">[] => {
+  const generateInstallments = (eachPeriodAmt: number): Omit<DebtInstallment, "status">[] => {
     const total = parseInt(totalInstallments) || 1;
     const paid = parseInt(paidInstallments) || 0;
     const day = parseInt(paymentDay) || 5;
     const start = new Date(startDate);
-    const amt = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
     return Array.from({ length: total }, (_, i) => {
       const m = start.getMonth() + i;
       const y = start.getFullYear() + Math.floor(m / 12);
@@ -350,8 +350,8 @@ export default function FinanceBudget({
       return {
         index: i,
         dueDate,
-        amount: amt,
-        paidAmount: i < paid ? amt : 0,
+        amount: eachPeriodAmt,
+        paidAmount: i < paid ? eachPeriodAmt : 0,
         paidDate: i < paid ? dueDate : undefined,
       };
     });
@@ -360,24 +360,33 @@ export default function FinanceBudget({
   const handleCreateDebt = (e: React.FormEvent) => {
     e.preventDefault();
     const rawAmount = parseInt(originalAmount.replace(/\D/g, "")) || 0;
-    const monthlyAmt = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
     const totalInst = parseInt(totalInstallments) || 1;
     const paidInst = parseInt(paidInstallments) || 0;
+    const rate = parseFloat(interestRate) || 0;
+
     if (!debtName.trim() || rawAmount <= 0) {
       toast.error("Nhập tên khoản nợ và số tiền!");
       return;
     }
-    const instData = generateInstallments();
-    const balance = rawAmount - monthlyAmt * paidInst;
+
+    // Tự động tính số tiền phải trả mỗi kỳ đã bao gồm lãi suất phẳng (flat rate)
+    const calculatedMonthlyPayment = calcInstallmentAmount(rawAmount, rate, totalInst);
+    const instData = generateInstallments(calculatedMonthlyPayment);
+    
+    // Tính số dư nợ dựa trên các kỳ chưa trả
+    const unpaidInstallments = instData.slice(paidInst);
+    const balance = unpaidInstallments.reduce((s, i) => s + i.amount, 0);
+    
     const maturityDate =
       instData.length > 0 ? instData[instData.length - 1].dueDate : startDate;
+
     onAddDebt({
       type: debtType,
       name: debtName.trim(),
       originalAmount: rawAmount,
       currentBalance: Math.max(0, balance),
-      monthlyPayment: monthlyAmt,
-      interestRate: parseFloat(interestRate) || 0,
+      monthlyPayment: calculatedMonthlyPayment,
+      interestRate: rate,
       paymentDay: parseInt(paymentDay) || 5,
       startDate,
       maturityDate,
@@ -909,14 +918,7 @@ export default function FinanceBudget({
               const meta = debtTypeMeta[debt.type] || debtTypeMeta.installment;
               const nextInst = getNextInstallment(debt.installments);
               const overdue = getOverdueCount(debt.installments);
-              const paidPct =
-                debt.originalAmount > 0
-                  ? Math.round(
-                      ((debt.originalAmount - debt.currentBalance) /
-                        debt.originalAmount) *
-                        100,
-                    )
-                  : 0;
+              const paidPct = calcPaidPercent(debt);
               return (
                 <div
                   key={debt.id}
