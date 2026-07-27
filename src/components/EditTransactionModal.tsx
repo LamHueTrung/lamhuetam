@@ -34,9 +34,10 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
 
   const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (
-      ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Escape", "Home", "End"].includes(e.key) ||
+      ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Escape", "Home", "End", "Unidentified", "Process"].includes(e.key) ||
       e.ctrlKey ||
-      e.metaKey
+      e.metaKey ||
+      e.key.length > 1
     ) {
       return;
     }
@@ -112,31 +113,38 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            transition={{ type: "spring", damping: 28, stiffness: 260 }}
             drag="y"
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0 }}
-            dragElastic={{ top: 0, bottom: 0.5 }}
+            dragElastic={{ top: 0, bottom: 0.8 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 100 || info.velocity.y > 500) {
+              if (info.offset.y > 60 || info.velocity.y > 250) {
                 onClose();
               }
             }}
             className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
           >
-            {/* Drag handle */}
+            {/* Draggable Header Section */}
             <div
               onPointerDown={(e) => dragControls.start(e)}
-              className="w-full pb-4 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+              className="w-full pb-5 cursor-grab active:cursor-grabbing touch-none select-none"
             >
-              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
-            </div>
-
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-slate-900 rounded-full" />
-                <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
+              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-slate-900 rounded-full animate-pulse" />
+                  <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Đóng"
+                >
+                  <Icon path={mdiClose} size={0.875} />
+                </button>
               </div>
             </div>
 

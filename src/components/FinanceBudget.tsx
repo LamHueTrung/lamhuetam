@@ -208,9 +208,10 @@ function numFmt(val: string) {
 
 function handleAmountKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
   if (
-    ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Escape", "Home", "End"].includes(e.key) ||
+    ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Escape", "Home", "End", "Unidentified", "Process"].includes(e.key) ||
     e.ctrlKey ||
-    e.metaKey
+    e.metaKey ||
+    e.key.length > 1
   ) {
     return;
   }
