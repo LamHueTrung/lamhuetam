@@ -125,16 +125,16 @@ User → Discord → POST /.netlify/functions/discord ← Netlify Function
 
 ### 3.2 Slash Commands
 
-| Command | Logic |
-|---------|-------|
-| `/balance` | Tổng thu/chi tháng này, số dư hiện tại |
-| `/spending [category]` | Chi tiết chi tiêu. Nếu có category → lọc; không → top 5 |
-| `/debts` | Danh sách nợ active + tổng dư + khoản đến hạn trong 7 ngày |
-| `/add [amount] [category] [note]` | Parse text → insert transaction → trả về confirmation |
-| `/advice [question]` | Gửi lên Gemini advisor → trả về Markdown |
-| `/report [month]` | Báo cáo tổng quan tháng (hoặc mặc định tháng này) |
-| `/budget` | Budget các category + % đã chi |
-| `/help` | Danh sách commands |
+| Command                           | Logic                                                      |
+| --------------------------------- | ---------------------------------------------------------- |
+| `/balance`                        | Tổng thu/chi tháng này, số dư hiện tại                     |
+| `/spending [category]`            | Chi tiết chi tiêu. Nếu có category → lọc; không → top 5    |
+| `/debts`                          | Danh sách nợ active + tổng dư + khoản đến hạn trong 7 ngày |
+| `/add [amount] [category] [note]` | Parse text → insert transaction → trả về confirmation      |
+| `/advice [question]`              | Gửi lên Gemini advisor → trả về Markdown                   |
+| `/report [month]`                 | Báo cáo tổng quan tháng (hoặc mặc định tháng này)          |
+| `/budget`                         | Budget các category + % đã chi                             |
+| `/help`                           | Danh sách commands                                         |
 
 ### 3.3 Proactive Notifications (Scheduled)
 
@@ -184,24 +184,24 @@ SỬA ĐỔI:
 
 ## 📦 Thư viện cần thêm
 
-| Package | Version | Dùng cho |
-|---------|---------|----------|
-| `recharts` | ^2.x | Biểu đồ tương tác |
-| `jspdf` | ^2.x | Export PDF |
-| `jspdf-autotable` | ^3.x | Bảng trong PDF |
-| `discord-interactions` | ^4.x | Xử lý Discord webhook |
-| `tweetnacl` | ^1.x | Verify Ed25519 signature |
+| Package                | Version | Dùng cho                 |
+| ---------------------- | ------- | ------------------------ |
+| `recharts`             | ^2.x    | Biểu đồ tương tác        |
+| `jspdf`                | ^2.x    | Export PDF               |
+| `jspdf-autotable`      | ^3.x    | Bảng trong PDF           |
+| `discord-interactions` | ^4.x    | Xử lý Discord webhook    |
+| `tweetnacl`            | ^1.x    | Verify Ed25519 signature |
 
 ---
 
 ## 🔧 Cấu hình mới (Netlify Environment Variables)
 
-| Variable | Mô tả | Lấy từ đâu |
-|----------|-------|-----------|
-| `DISCORD_PUBLIC_KEY` | Public key của Discord App | Discord Developer Portal |
-| `DISCORD_APP_ID` | Application ID | Discord Developer Portal |
-| `DISCORD_BOT_TOKEN` | Bot token | Discord Developer Portal |
-| `DISCORD_USER_ID` | Discord User ID của bạn | Discord UI → Settings → Advanced |
+| Variable             | Mô tả                      | Lấy từ đâu                       |
+| -------------------- | -------------------------- | -------------------------------- |
+| `DISCORD_PUBLIC_KEY` | Public key của Discord App | Discord Developer Portal         |
+| `DISCORD_APP_ID`     | Application ID             | Discord Developer Portal         |
+| `DISCORD_BOT_TOKEN`  | Bot token                  | Discord Developer Portal         |
+| `DISCORD_USER_ID`    | Discord User ID của bạn    | Discord UI → Settings → Advanced |
 
 ---
 
