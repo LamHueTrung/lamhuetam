@@ -1222,7 +1222,6 @@ export default function DiaryView() {
                       />
                     </div>
                   </div>
-                </div>
 
                 <button
                   onClick={handleSubmit}
