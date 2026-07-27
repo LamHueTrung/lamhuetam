@@ -5,7 +5,7 @@ import {
   mdiClose, mdiCurrencyUsd, mdiCheck, mdiCogOutline, mdiBank, mdiCash, mdiWalletOutline, mdiCalendar
 } from "@mdi/js";
 import toast from "react-hot-toast";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
 
@@ -30,6 +30,20 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [wallet, setWallet] = useState("Ngân hàng");
+  const dragControls = useDragControls();
+
+  const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Escape", "Home", "End"].includes(e.key) ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+    if (!/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
 
   useEffect(() => {
     if (transaction) {
@@ -100,6 +114,8 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
             drag="y"
+            dragControls={dragControls}
+            dragListener={false}
             dragConstraints={{ top: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={(_, info) => {
@@ -110,7 +126,12 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] p-6 max-h-[92vh] overflow-y-auto overflow-x-hidden z-10"
           >
             {/* Drag handle */}
-            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing" />
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              className="w-full pb-4 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+            >
+              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
+            </div>
 
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
@@ -126,8 +147,11 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                   <Icon path={mdiCurrencyUsd} size={1.25} className="text-slate-400" />
                   <input
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     required
                     value={amountStr}
+                    onKeyDown={handleAmountKeyDown}
                     onChange={(e) => handleAmountChange(e.target.value)}
                     placeholder="0"
                     className="w-48 text-2xl font-black text-slate-900 focus:outline-none bg-transparent placeholder-slate-300 text-center"

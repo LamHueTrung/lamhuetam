@@ -206,6 +206,19 @@ function numFmt(val: string) {
   return new Intl.NumberFormat("vi-VN").format(parseInt(clean));
 }
 
+function handleAmountKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (
+    ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Escape", "Home", "End"].includes(e.key) ||
+    e.ctrlKey ||
+    e.metaKey
+  ) {
+    return;
+  }
+  if (!/^[0-9]$/.test(e.key)) {
+    e.preventDefault();
+  }
+}
+
 export default function FinanceBudget({
   debts,
   transactions,
@@ -741,8 +754,11 @@ export default function FinanceBudget({
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 required
                 value={originalAmount}
+                onKeyDown={handleAmountKeyDown}
                 onChange={(e) => setOriginalAmount(numFmt(e.target.value))}
                 placeholder="30,000,000"
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
@@ -754,8 +770,11 @@ export default function FinanceBudget({
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 required
                 value={monthlyPayment}
+                onKeyDown={handleAmountKeyDown}
                 onChange={(e) => setMonthlyPayment(numFmt(e.target.value))}
                 placeholder="2,000,000"
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
@@ -1084,7 +1103,10 @@ export default function FinanceBudget({
           />
           <input
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={expectedIncome}
+            onKeyDown={handleAmountKeyDown}
             onChange={(e) => setExpectedIncome(numFmt(e.target.value))}
             placeholder="VD: 15,000,000"
             className="w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-[16px] text-sm font-bold outline-none dark:text-white"
@@ -1127,7 +1149,10 @@ export default function FinanceBudget({
             />
             <input
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={fe.amount}
+              onKeyDown={handleAmountKeyDown}
               onChange={(e) => {
                 const c = [...cfFixedExpenses];
                 c[idx].amount = numFmt(e.target.value);
@@ -1405,7 +1430,10 @@ export default function FinanceBudget({
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={grossSalary}
+                onKeyDown={handleAmountKeyDown}
                 onChange={(e) => setGrossSalary(numFmt(e.target.value))}
                 placeholder="VD: 18,000,000"
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
@@ -1417,7 +1445,10 @@ export default function FinanceBudget({
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={netSalary}
+                onKeyDown={handleAmountKeyDown}
                 onChange={(e) => setNetSalary(numFmt(e.target.value))}
                 placeholder="VD: 15,000,000"
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
@@ -1819,7 +1850,10 @@ export default function FinanceBudget({
                       />
                       <input
                         type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={taskAmount}
+                        onKeyDown={handleAmountKeyDown}
                         onChange={(e) => setTaskAmount(numFmt(e.target.value))}
                         placeholder="Số tiền"
                         className="w-full bg-white dark:bg-slate-600 border border-slate-100 dark:border-slate-500 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none dark:text-white"
