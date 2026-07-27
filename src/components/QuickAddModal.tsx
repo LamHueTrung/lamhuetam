@@ -221,8 +221,9 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                     <input
                       type="text"
                       id="input-quick-add-amount"
-                      value={displayAmount}
-                      onChange={handleAmountChange}
+                      value={amountStr}
+                      onKeyDown={handleAmountKeyDown}
+                      onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="0"
                       className="w-full text-3xl font-extrabold text-slate-900 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder-slate-300 transition-all tracking-tight"
                     />
@@ -241,11 +242,13 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                     id="input-quick-add-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Ví dụ: Đi ăn phở gia đình, mua sắm Tiki..."
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder-slate-400 transition-all"
+                  />
                 </div>
                 {aiSuggesting && (
                   <p className="text-[9px] text-indigo-400 font-medium italic">AI đang gợi ý danh mục...</p>
                 )}
-              </div>
 
               {/* DATE PICKER */}
               <div className="space-y-1.5">
@@ -350,7 +353,8 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                 <span>Lưu Giao Dịch</span>
               </motion.button>
             </form>
-          </motion.div>
+          </div>
+        </motion.div>
         </div>
       )}
     </AnimatePresence>
