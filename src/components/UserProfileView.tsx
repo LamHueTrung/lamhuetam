@@ -473,10 +473,10 @@ export default function UserProfileView({
 
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                1. Hồ sơ nhân vật của tôi
+                Hồ sơ nhân vật của tôi
               </h2>
               <p className="text-[11px] text-slate-400">
-                Thông tin lý lịch cá nhân và bối cảnh sống thực tế
+                Thông tin lý lịch cá nhân
               </p>
             </div>
           </div>
@@ -623,6 +623,160 @@ export default function UserProfileView({
         </AnimatePresence>
       </div>
 
+      {/* SECTION 4: Avatar, Số điện thoại & Nhiều Email */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div
+          onClick={() =>
+            !isEditing && setOpenSection(openSection === 4 ? null : 4)
+          }
+          className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== 4 ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
+              <Icon path={mdiPhone} size={0.9} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Avatar & Thông tin liên hệ
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Quản lý thông tin liên lạc
+              </p>
+            </div>
+          </div>
+          {!isEditing && (
+            <Icon
+              path={openSection === 4 ? mdiChevronDown : mdiChevronRight}
+              size={0.9}
+              className="text-slate-400"
+            />
+          )}
+        </div>
+
+        <AnimatePresence>
+          {(isEditing || openSection === 4) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-4"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                {/* Avatar URL / Image */}
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-slate-700 dark:text-slate-300">
+                    Link Ảnh Avatar
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={avatar}
+                      onChange={(e) => setAvatar(e.target.value)}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                    />
+                  ) : (
+                    <p className="text-slate-600 dark:text-slate-400 font-mono text-[11px] truncate">
+                      {avatar || "(Chưa đặt link avatar)"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Số điện thoại */}
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-slate-700 dark:text-slate-300">
+                    Số điện thoại
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="0399123456"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                    />
+                  ) : (
+                    <p className="text-slate-900 dark:text-white font-bold text-sm flex items-center gap-1.5">
+                      <Icon
+                        path={mdiPhone}
+                        size={0.7}
+                        className="text-cyan-500"
+                      />
+                      {phone || "Chưa cập nhật SĐT"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Danh sách nhiều Email */}
+                <div className="sm:col-span-2 space-y-2">
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>✉️ Danh sách địa chỉ Email ({emails.length}):</span>
+                  </label>
+                  <div className="space-y-1.5">
+                    {emails.map((email, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon
+                            path={mdiEmailOutline}
+                            size={0.7}
+                            className="text-indigo-500"
+                          />
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
+                            {email}
+                          </span>
+                          {idx === 0 && (
+                            <span className="text-[9px] bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-md">
+                              Chính
+                            </span>
+                          )}
+                        </div>
+                        {isEditing && (
+                          <button
+                            onClick={() => handleRemoveEmail(email)}
+                            className="text-rose-400 hover:text-rose-600 cursor-pointer p-1"
+                            title="Xóa email này"
+                          >
+                            <Icon path={mdiTrashCanOutline} size={0.7} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {isEditing && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="email"
+                          value={newEmailInput}
+                          onChange={(e) => setNewEmailInput(e.target.value)}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" &&
+                            (e.preventDefault(), handleAddEmail())
+                          }
+                          placeholder="Nhập email mới..."
+                          className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddEmail}
+                          className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1"
+                        >
+                          <Icon path={mdiPlus} size={0.7} />
+                          <span>Thêm Email</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* SECTION 2: Kỹ năng chuyên môn & Nỗi lo */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
         <div
@@ -637,10 +791,10 @@ export default function UserProfileView({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                2. Kỹ năng chuyên môn & Nỗi lo hiện tại
+                Kỹ năng chuyên môn
               </h2>
               <p className="text-[11px] text-slate-400">
-                Công nghệ làm chủ, kinh nghiệm và trăn trở sự nghiệp
+                Công nghệ làm chủ, kinh nghiệm
               </p>
             </div>
           </div>
@@ -849,7 +1003,7 @@ export default function UserProfileView({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                3. Trình độ Học vấn
+                Trình độ Học vấn
               </h2>
               <p className="text-[11px] text-slate-400">
                 Trường học, khóa học và trạng thái bằng cấp
@@ -929,324 +1083,6 @@ export default function UserProfileView({
         </AnimatePresence>
       </div>
 
-      {/* SECTION 4: Avatar, Số điện thoại & Nhiều Email */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div
-          onClick={() =>
-            !isEditing && setOpenSection(openSection === 4 ? null : 4)
-          }
-          className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== 4 ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
-        >
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
-              <Icon path={mdiPhone} size={0.9} />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                4. Avatar & Thông tin liên hệ
-              </h2>
-              <p className="text-[11px] text-slate-400">
-                Quản lý số điện thoại và danh sách nhiều địa chỉ Email
-              </p>
-            </div>
-          </div>
-          {!isEditing && (
-            <Icon
-              path={openSection === 4 ? mdiChevronDown : mdiChevronRight}
-              size={0.9}
-              className="text-slate-400"
-            />
-          )}
-        </div>
-
-        <AnimatePresence>
-          {(isEditing || openSection === 4) && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden space-y-4"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                {/* Avatar URL / Image */}
-                <div className="space-y-1.5">
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">
-                    Link Ảnh Avatar
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={avatar}
-                      onChange={(e) => setAvatar(e.target.value)}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
-                    />
-                  ) : (
-                    <p className="text-slate-600 dark:text-slate-400 font-mono text-[11px] truncate">
-                      {avatar || "(Chưa đặt link avatar)"}
-                    </p>
-                  )}
-                </div>
-
-                {/* Số điện thoại */}
-                <div className="space-y-1.5">
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">
-                    Số điện thoại
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="0399123456"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
-                    />
-                  ) : (
-                    <p className="text-slate-900 dark:text-white font-bold text-sm flex items-center gap-1.5">
-                      <Icon
-                        path={mdiPhone}
-                        size={0.7}
-                        className="text-cyan-500"
-                      />
-                      {phone || "Chưa cập nhật SĐT"}
-                    </p>
-                  )}
-                </div>
-
-                {/* Danh sách nhiều Email */}
-                <div className="sm:col-span-2 space-y-2">
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                    <span>✉️ Danh sách địa chỉ Email ({emails.length}):</span>
-                  </label>
-                  <div className="space-y-1.5">
-                    {emails.map((email, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Icon
-                            path={mdiEmailOutline}
-                            size={0.7}
-                            className="text-indigo-500"
-                          />
-                          <span className="font-medium text-slate-800 dark:text-slate-200">
-                            {email}
-                          </span>
-                          {idx === 0 && (
-                            <span className="text-[9px] bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-md">
-                              Chính
-                            </span>
-                          )}
-                        </div>
-                        {isEditing && (
-                          <button
-                            onClick={() => handleRemoveEmail(email)}
-                            className="text-rose-400 hover:text-rose-600 cursor-pointer p-1"
-                            title="Xóa email này"
-                          >
-                            <Icon path={mdiTrashCanOutline} size={0.7} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-
-                    {isEditing && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <input
-                          type="email"
-                          value={newEmailInput}
-                          onChange={(e) => setNewEmailInput(e.target.value)}
-                          onKeyDown={(e) =>
-                            e.key === "Enter" &&
-                            (e.preventDefault(), handleAddEmail())
-                          }
-                          placeholder="Nhập email mới..."
-                          className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddEmail}
-                          className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1"
-                        >
-                          <Icon path={mdiPlus} size={0.7} />
-                          <span>Thêm Email</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* SECTION 5: Tự gợi ý & Quản lý thông tin cá nhân khác */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div
-          onClick={() =>
-            !isEditing && setOpenSection(openSection === 5 ? null : 5)
-          }
-          className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== 5 ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
-        >
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-              <Icon path={mdiLightbulbOutline} size={0.9} />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                5. Thông tin cá nhân mở rộng & Định hướng
-              </h2>
-              <p className="text-[11px] text-slate-400">
-                Tùy chỉnh thông tin bổ sung để Cố Vấn AI hiểu bạn sâu sắc hơn
-              </p>
-            </div>
-          </div>
-          {!isEditing && (
-            <Icon
-              path={openSection === 5 ? mdiChevronDown : mdiChevronRight}
-              size={0.9}
-              className="text-slate-400"
-            />
-          )}
-        </div>
-
-        <AnimatePresence>
-          {(isEditing || openSection === 5) && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden space-y-4"
-            >
-              {/* Auto-suggest buttons */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
-                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                  <Icon
-                    path={mdiAutoFix}
-                    size={0.65}
-                    className="text-amber-500"
-                  />
-                  Gợi ý thông tin nên bổ sung cho Cố vấn AI:
-                </span>
-
-                <div className="flex flex-wrap gap-2">
-                  {autoSuggestSuggestions.map((sug, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleApplySuggestion(sug)}
-                      className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all"
-                    >
-                      <Icon
-                        path={mdiPlus}
-                        size={0.65}
-                        className="text-cyan-600"
-                      />
-                      <span>+ {sug.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Existing Custom Fields */}
-              <div className="space-y-3">
-                {customFields.map((field) => (
-                  <div
-                    key={field.id}
-                    className="p-3.5 bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1 relative group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
-                        {field.label}
-                        {field.category && (
-                          <span className="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-semibold">
-                            {field.category}
-                          </span>
-                        )}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveCustomField(field.id)}
-                        className="text-slate-400 hover:text-rose-500 cursor-pointer p-1 transition-colors"
-                        title="Xóa trường này"
-                      >
-                        <Icon path={mdiTrashCanOutline} size={0.7} />
-                      </button>
-                    </div>
-
-                    {isEditing ? (
-                      <textarea
-                        rows={2}
-                        value={field.value}
-                        onChange={(e) => {
-                          const updated = customFields.map((f) =>
-                            f.id === field.id
-                              ? { ...f, value: e.target.value }
-                              : f,
-                          );
-                          setCustomFields(updated);
-                        }}
-                        className="w-full mt-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
-                      />
-                    ) : (
-                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium pt-0.5">
-                        {field.value}
-                      </p>
-                    )}
-                  </div>
-                ))}
-
-                {/* Add custom field form */}
-                <div className="p-3.5 bg-slate-100/70 dark:bg-slate-800/80 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 space-y-2.5">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    ➕ Thêm trường thông tin tự định nghĩa:
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input
-                      type="text"
-                      value={newFieldLabel}
-                      onChange={(e) => setNewFieldLabel(e.target.value)}
-                      placeholder="Tên thông tin (VD: Mức lương kỳ vọng)..."
-                      className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white sm:col-span-2"
-                    />
-                    <select
-                      value={newFieldCategory}
-                      onChange={(e) => setNewFieldCategory(e.target.value)}
-                      className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
-                    >
-                      <option value="Sự nghiệp">Sự nghiệp</option>
-                      <option value="Tài chính">Tài chính</option>
-                      <option value="Cá nhân">Cá nhân</option>
-                      <option value="Gia đình">Gia đình</option>
-                      <option value="Khác">Khác</option>
-                    </select>
-                  </div>
-                  <textarea
-                    rows={2}
-                    value={newFieldValue}
-                    onChange={(e) => setNewFieldValue(e.target.value)}
-                    placeholder="Nội dung chi tiết..."
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomField}
-                    className="w-full py-2 bg-gradient-to-r from-slate-900 to-indigo-900 hover:from-slate-800 hover:to-indigo-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-all shadow-sm flex items-center justify-center gap-1.5"
-                  >
-                    <Icon path={mdiPlus} size={0.7} />
-                    <span>Xác nhận thêm thông tin này</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* SECTION 6: Cấu hình AI Model & API Key */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
         <div
@@ -1259,7 +1095,7 @@ export default function UserProfileView({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                6. Cấu hình Cố vấn AI
+                Cấu hình AI
               </h2>
               <p className="text-[11px] text-slate-400">
                 Chọn mô hình AI và cung cấp API Key cá nhân của bạn
@@ -1441,6 +1277,170 @@ export default function UserProfileView({
                 >
                   {savingAiConfig ? "Đang lưu..." : "Lưu cấu hình"}
                 </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* SECTION 5: Tự gợi ý & Quản lý thông tin cá nhân khác */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div
+          onClick={() =>
+            !isEditing && setOpenSection(openSection === 5 ? null : 5)
+          }
+          className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== 5 ? "" : "border-b border-slate-100 dark:border-slate-800"} ${!isEditing ? "cursor-pointer select-none" : ""}`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+              <Icon path={mdiLightbulbOutline} size={0.9} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Định hướng
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Tùy chỉnh thông tin bổ sung để AI hiểu bạn sâu sắc hơn
+              </p>
+            </div>
+          </div>
+          {!isEditing && (
+            <Icon
+              path={openSection === 5 ? mdiChevronDown : mdiChevronRight}
+              size={0.9}
+              className="text-slate-400"
+            />
+          )}
+        </div>
+
+        <AnimatePresence>
+          {(isEditing || openSection === 5) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-4"
+            >
+              {/* Auto-suggest buttons */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                  <Icon
+                    path={mdiAutoFix}
+                    size={0.65}
+                    className="text-amber-500"
+                  />
+                  Gợi ý thông tin nên bổ sung cho Cố vấn AI:
+                </span>
+
+                <div className="flex flex-wrap gap-2">
+                  {autoSuggestSuggestions.map((sug, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleApplySuggestion(sug)}
+                      className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+                    >
+                      <Icon
+                        path={mdiPlus}
+                        size={0.65}
+                        className="text-cyan-600"
+                      />
+                      <span>+ {sug.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Existing Custom Fields */}
+              <div className="space-y-3">
+                {customFields.map((field) => (
+                  <div
+                    key={field.id}
+                    className="p-3.5 bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1 relative group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                        {field.label}
+                        {field.category && (
+                          <span className="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-semibold">
+                            {field.category}
+                          </span>
+                        )}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveCustomField(field.id)}
+                        className="text-slate-400 hover:text-rose-500 cursor-pointer p-1 transition-colors"
+                        title="Xóa trường này"
+                      >
+                        <Icon path={mdiTrashCanOutline} size={0.7} />
+                      </button>
+                    </div>
+
+                    {isEditing ? (
+                      <textarea
+                        rows={2}
+                        value={field.value}
+                        onChange={(e) => {
+                          const updated = customFields.map((f) =>
+                            f.id === field.id
+                              ? { ...f, value: e.target.value }
+                              : f,
+                          );
+                          setCustomFields(updated);
+                        }}
+                        className="w-full mt-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                      />
+                    ) : (
+                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium pt-0.5">
+                        {field.value}
+                      </p>
+                    )}
+                  </div>
+                ))}
+
+                {/* Add custom field form */}
+                <div className="p-3.5 bg-slate-100/70 dark:bg-slate-800/80 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 space-y-2.5">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    ➕ Thêm trường thông tin tự định nghĩa:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      value={newFieldLabel}
+                      onChange={(e) => setNewFieldLabel(e.target.value)}
+                      placeholder="Tên thông tin (VD: Mức lương kỳ vọng)..."
+                      className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white sm:col-span-2"
+                    />
+                    <select
+                      value={newFieldCategory}
+                      onChange={(e) => setNewFieldCategory(e.target.value)}
+                      className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                    >
+                      <option value="Sự nghiệp">Sự nghiệp</option>
+                      <option value="Tài chính">Tài chính</option>
+                      <option value="Cá nhân">Cá nhân</option>
+                      <option value="Gia đình">Gia đình</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={newFieldValue}
+                    onChange={(e) => setNewFieldValue(e.target.value)}
+                    placeholder="Nội dung chi tiết..."
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomField}
+                    className="w-full py-2 bg-gradient-to-r from-slate-900 to-indigo-900 hover:from-slate-800 hover:to-indigo-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <Icon path={mdiPlus} size={0.7} />
+                    <span>Xác nhận thêm thông tin này</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
