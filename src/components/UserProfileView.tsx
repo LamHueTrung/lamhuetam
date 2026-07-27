@@ -1300,6 +1300,9 @@ export default function UserProfileView({
                   <option value="gemini-2.5-flash">
                     Gemini 2.5 Flash (Khuyên dùng)
                   </option>
+                  <option value="gemini-3.5-flash">
+                    Gemini 3.5 Flash (Khuyên dùng)
+                  </option>
                   <option value="gemini-2.5-flash-lite-preview-06-17">
                     Gemini 2.5 Flash Lite
                   </option>
@@ -1307,7 +1310,7 @@ export default function UserProfileView({
                   <option value="gemini-flash-1.5-8b">
                     Gemini 1.5 Flash Lite
                   </option>
-                  <option value="gemma-3-27b-it">Gemma 3 27B IT</option>
+                  <option value="gemma-4-31b-it">Gemma 4 31B IT</option>
                 </select>
               </div>
 
