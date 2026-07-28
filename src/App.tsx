@@ -22,6 +22,9 @@ import DiaryView from "./components/DiaryView";
 import UserProfileView from "./components/UserProfileView";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
+import SyncStatus from "./components/SyncStatus";
+import { useOnlineStatus } from "./hooks/useOnlineStatus";
+import { scheduleSync } from "./services/syncService";
 import { useTransactions } from "./hooks/useTransactions";
 import { useBudgets } from "./hooks/useBudgets";
 import { useDebts } from "./hooks/useDebts";
@@ -65,6 +68,8 @@ function AppContent() {
     deleteCategory,
     reorderCategories,
   } = useCategories();
+
+  const isOnline = useOnlineStatus();
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const { categories: fixedCats, tasks: fixedTasks, totalFixed } = useFixedExpenses(currentMonth);
@@ -223,6 +228,10 @@ function AppContent() {
     if (!isInitialLoading) checkAiAlerts();
   }, [isInitialLoading, checkAiAlerts]);
 
+  useEffect(() => {
+    if (isOnline) scheduleSync();
+  }, [isOnline]);
+
   const handleAddTransaction = async (newTx: Omit<Transaction, "id">) => {
     try {
       await addTransaction(newTx);
@@ -363,7 +372,8 @@ function AppContent() {
           <Icon path={mdiContentCopy} size={0.7} />
           <span>Copy MD</span>
         </button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <SyncStatus />
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md hover:bg-slate-200 transition-colors text-[10px] font-black cursor-pointer"
