@@ -21,6 +21,7 @@ export default defineConfig(() => {
           background_color: '#F2F2F7',
           theme_color: '#1E293B',
           orientation: 'portrait',
+          scope: '/',
           lang: 'vi-VN',
           icons: [
             {
