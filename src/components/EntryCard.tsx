@@ -11,7 +11,7 @@ import {
   mdiContentCopy,
   mdiShareVariant,
 } from "@mdi/js";
-import { motion, useDragControls, AnimatePresence } from "motion/react";
+import { motion, useDragControls, AnimatePresence, useMotionValue, useTransform } from "motion/react";
 import type { DiaryEntry } from "../types";
 import { MOOD_CONFIG } from "./DiaryMoodConfig";
 
@@ -58,10 +58,16 @@ export default function EntryCard({ entry, index, onEdit, onDelete, onPin, onVie
     navigator.clipboard.writeText(entry.content);
   };
 
+  const dragX = useMotionValue(0);
+  const actionsOpacity = useTransform(dragX, [-80, 0], [1, 0]);
+
   return (
     <div className="relative min-w-0 overflow-hidden">
       {/* Swipe-reveal actions */}
-      <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-3">
+      <motion.div
+        style={{ opacity: actionsOpacity }}
+        className="absolute inset-y-0 right-0 flex items-center gap-1 pr-3"
+      >
         <button
           onClick={() => onEdit(entry)}
           className="w-11 h-11 rounded-xl bg-cyan-500 text-white flex items-center justify-center shadow-lg cursor-pointer"
@@ -82,7 +88,7 @@ export default function EntryCard({ entry, index, onEdit, onDelete, onPin, onVie
         >
           <Icon path={entry.pinned ? mdiPinOff : mdiPin} size={0.7} />
         </button>
-      </div>
+      </motion.div>
 
       {/* Main card */}
       <motion.div
@@ -95,6 +101,7 @@ export default function EntryCard({ entry, index, onEdit, onDelete, onPin, onVie
           if (info.offset.x < -60) setSwiped(true);
           else setSwiped(false);
         }}
+        style={{ x: dragX }}
         initial={{ opacity: 0, y: 24, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{
