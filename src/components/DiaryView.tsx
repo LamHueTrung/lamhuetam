@@ -21,7 +21,12 @@ import {
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import toast from "react-hot-toast";
-import type { DiaryEntry, DiaryMood, DiaryReply, DiaryViewMode } from "../types";
+import type {
+  DiaryEntry,
+  DiaryMood,
+  DiaryReply,
+  DiaryViewMode,
+} from "../types";
 import { useDiary } from "../hooks/useDiary";
 import { MOOD_CONFIG } from "./DiaryMoodConfig";
 import DiaryHeader from "./DiaryHeader";
@@ -29,7 +34,11 @@ import SearchFilterBar from "./SearchFilterBar";
 import MoodAnalyticsCard from "./MoodAnalyticsCard";
 import EntryCard from "./EntryCard";
 import CalendarView from "./CalendarView";
-import { DiarySkeletonTimeline, DiarySkeletonTree, DiarySkeletonCalendar } from "./DiarySkeleton";
+import {
+  DiarySkeletonTimeline,
+  DiarySkeletonTree,
+  DiarySkeletonCalendar,
+} from "./DiarySkeleton";
 
 function groupByMonth(entries: DiaryEntry[]): Record<string, DiaryEntry[]> {
   return entries.reduce(
@@ -247,8 +256,12 @@ function LeafletMap({
     return (
       <div className="bg-white/60 dark:bg-slate-800/60 border border-dashed border-slate-200 dark:border-slate-600 rounded-[24px] p-8 text-center space-y-2 min-w-0">
         <Icon path={mdiEarth} size={2} className="mx-auto text-slate-300" />
-        <p className="text-sm font-semibold text-slate-400">Chưa có nhật ký có tọa độ</p>
-        <p className="text-[10px] text-slate-400">Khi thêm nhật ký, ứng dụng tự động gắn vị trí vào bản đồ</p>
+        <p className="text-sm font-semibold text-slate-400">
+          Chưa có nhật ký có tọa độ
+        </p>
+        <p className="text-[10px] text-slate-400">
+          Khi thêm nhật ký, ứng dụng tự động gắn vị trí vào bản đồ
+        </p>
       </div>
     );
   }
@@ -279,7 +292,17 @@ function LeafletMap({
 }
 
 export default function DiaryView() {
-  const { entries, loading, addEntry, updateEntry, deleteEntry, pinEntry, getFilteredEntries, streakData, moodStats } = useDiary();
+  const {
+    entries,
+    loading,
+    addEntry,
+    updateEntry,
+    deleteEntry,
+    pinEntry,
+    getFilteredEntries,
+    streakData,
+    moodStats,
+  } = useDiary();
   const [viewMode, setViewMode] = useState<DiaryViewMode>("timeline");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -289,7 +312,9 @@ export default function DiaryView() {
   const [search, setSearch] = useState("");
   const [selectedMood, setSelectedMood] = useState<DiaryMood | "all">("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
-  const [calendarMonth, setCalendarMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [calendarMonth, setCalendarMonth] = useState(
+    new Date().toISOString().slice(0, 7),
+  );
 
   // Form state
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -313,7 +338,13 @@ export default function DiaryView() {
     new Set([new Date().toISOString().slice(0, 7)]),
   );
 
-  const filteredEntries = getFilteredEntries(search, selectedMood, "", null, sort);
+  const filteredEntries = getFilteredEntries(
+    search,
+    selectedMood,
+    "",
+    null,
+    sort,
+  );
   const grouped = groupByMonth(filteredEntries);
   const months = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
@@ -337,14 +368,22 @@ export default function DiaryView() {
             if (data && data.address) {
               const a = data.address;
               const parts = [];
-              const place = a.amenity || a.shop || a.building || a.tourism || a.road;
-              const area = a.suburb || a.quarter || a.neighbourhood || a.ward || a.city_district;
+              const place =
+                a.amenity || a.shop || a.building || a.tourism || a.road;
+              const area =
+                a.suburb ||
+                a.quarter ||
+                a.neighbourhood ||
+                a.ward ||
+                a.city_district;
               const city = a.city || a.town || a.county || a.state;
               if (place) parts.push(place);
               if (area) parts.push(area);
               if (city) parts.push(city);
-              const addrStr = parts.length > 0 ? parts.join(", ") : data.display_name || "";
-              if (addrStr) setLocation((prev) => (prev.trim() ? prev : addrStr));
+              const addrStr =
+                parts.length > 0 ? parts.join(", ") : data.display_name || "";
+              if (addrStr)
+                setLocation((prev) => (prev.trim() ? prev : addrStr));
             }
           } catch (e) {}
         }
@@ -354,7 +393,9 @@ export default function DiaryView() {
     );
   }, []);
 
-  useEffect(() => { fetchCurrentLocation(true); }, [fetchCurrentLocation]);
+  useEffect(() => {
+    fetchCurrentLocation(true);
+  }, [fetchCurrentLocation]);
 
   const resetForm = () => {
     setDate(new Date().toISOString().split("T")[0]);
@@ -374,17 +415,27 @@ export default function DiaryView() {
     setContent(entry.content);
     setMood(entry.mood);
     setLocation(entry.location || "");
-    setLat(entry.lat !== null && entry.lat !== undefined ? String(entry.lat) : "");
-    setLng(entry.lng !== null && entry.lng !== undefined ? String(entry.lng) : "");
+    setLat(
+      entry.lat !== null && entry.lat !== undefined ? String(entry.lat) : "",
+    );
+    setLng(
+      entry.lng !== null && entry.lng !== undefined ? String(entry.lng) : "",
+    );
     setTags((entry.tags || []).join(", "));
     setShowForm(true);
   };
 
   const handleSubmit = async () => {
-    if (!content.trim()) { toast.error("Nhập nội dung nhật ký!"); return; }
+    if (!content.trim()) {
+      toast.error("Nhập nội dung nhật ký!");
+      return;
+    }
     setIsSaving(true);
     try {
-      const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+      const tagList = tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
       const payload = {
         date,
         content: content.trim(),
@@ -415,9 +466,17 @@ export default function DiaryView() {
     setIsSavingReply(true);
     try {
       const nowStr = new Date().toLocaleString("vi-VN", {
-        hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
       });
-      const newReply: DiaryReply = { id: Date.now().toString(), time: nowStr, content: replyText.trim() };
+      const newReply: DiaryReply = {
+        id: Date.now().toString(),
+        time: nowStr,
+        content: replyText.trim(),
+      };
       const updatedReplies = [...(detailEntry.replies || []), newReply];
       await updateEntry(detailEntry.id, { replies: updatedReplies });
       setDetailEntry({ ...detailEntry, replies: updatedReplies });
@@ -435,13 +494,30 @@ export default function DiaryView() {
       (t) => (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-bold text-slate-800">Xóa nhật ký này?</p>
-          <p className="text-xs text-slate-500">Không thể khôi phục sau khi xóa.</p>
+          <p className="text-xs text-slate-500">
+            Không thể khôi phục sau khi xóa.
+          </p>
           <div className="flex gap-2 justify-end">
-            <button onClick={() => toast.dismiss(t.id)} className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold cursor-pointer">Hủy</button>
-            <button onClick={async () => {
-              toast.dismiss(t.id);
-              try { await deleteEntry(id); toast.success("Đã xóa!"); } catch (e: any) { toast.error(e.message); }
-            }} className="text-xs px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold cursor-pointer">Xóa</button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold cursor-pointer"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                try {
+                  await deleteEntry(id);
+                  toast.success("Đã xóa!");
+                } catch (e: any) {
+                  toast.error(e.message);
+                }
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold cursor-pointer"
+            >
+              Xóa
+            </button>
           </div>
         </div>
       ),
@@ -455,19 +531,29 @@ export default function DiaryView() {
   };
 
   const currentTimeStr = new Date().toLocaleString("vi-VN", {
-    hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 
   const renderTimeline = () => (
     <div className="space-y-3 min-w-0">
       {filteredEntries.length === 0 ? (
         <div className="bg-white/60 dark:bg-slate-800/60 border border-dashed border-slate-200 dark:border-slate-600 rounded-[24px] p-8 text-center space-y-2">
-          <Icon path={mdiBookOpenVariant} size={2} className="mx-auto text-slate-300" />
+          <Icon
+            path={mdiBookOpenVariant}
+            size={2}
+            className="mx-auto text-slate-300"
+          />
           <p className="text-sm font-semibold text-slate-400">
             {search ? "Không tìm thấy nhật ký nào" : "Chưa có nhật ký nào"}
           </p>
           <p className="text-[10px] text-slate-400">
-            {search ? "Thử thay đổi từ khóa hoặc bộ lọc" : 'Nhấn "Viết nhật ký" để viết nhật ký đầu tiên'}
+            {search
+              ? "Thử thay đổi từ khóa hoặc bộ lọc"
+              : 'Nhấn "Viết nhật ký" để viết nhật ký đầu tiên'}
           </p>
         </div>
       ) : (
@@ -490,27 +576,45 @@ export default function DiaryView() {
     <div className="space-y-3 min-w-0">
       {months.length === 0 ? (
         <div className="bg-white/60 dark:bg-slate-800/60 border border-dashed border-slate-200 dark:border-slate-600 rounded-[24px] p-8 text-center space-y-2">
-          <Icon path={mdiBookOpenVariant} size={2} className="mx-auto text-slate-300" />
-          <p className="text-sm font-semibold text-slate-400">Chưa có nhật ký</p>
+          <Icon
+            path={mdiBookOpenVariant}
+            size={2}
+            className="mx-auto text-slate-300"
+          />
+          <p className="text-sm font-semibold text-slate-400">
+            Chưa có nhật ký
+          </p>
         </div>
       ) : (
         months.map((month) => {
           const isExp = expandedMonths.has(month);
           const list = grouped[month];
           return (
-            <div key={month} className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[20px] overflow-hidden shadow-sm min-w-0">
+            <div
+              key={month}
+              className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[20px] overflow-hidden shadow-sm min-w-0"
+            >
               <button
                 onClick={() => {
                   const n = new Set(expandedMonths);
-                  if (n.has(month)) n.delete(month); else n.add(month);
+                  if (n.has(month)) n.delete(month);
+                  else n.add(month);
                   setExpandedMonths(n);
                 }}
                 className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <Icon path={isExp ? mdiChevronDown : mdiChevronRight} size={0.875} className="text-slate-400" />
-                  <span className="text-xs font-black text-slate-800 dark:text-white uppercase">{formatMonth(month)}</span>
-                  <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">{list.length} bài</span>
+                  <Icon
+                    path={isExp ? mdiChevronDown : mdiChevronRight}
+                    size={0.875}
+                    className="text-slate-400"
+                  />
+                  <span className="text-xs font-black text-slate-800 dark:text-white uppercase">
+                    {formatMonth(month)}
+                  </span>
+                  <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">
+                    {list.length} bài
+                  </span>
                 </div>
               </button>
               <AnimatePresence>
@@ -523,27 +627,41 @@ export default function DiaryView() {
                   >
                     <div className="space-y-2">
                       {list.map((entry) => {
-                        const m = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.neutral;
+                        const m =
+                          MOOD_CONFIG[entry.mood] || MOOD_CONFIG.neutral;
                         return (
-                          <div key={entry.id} className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 hover:border-slate-200">
+                          <div
+                            key={entry.id}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 hover:border-slate-200"
+                          >
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className={`p-1 rounded-lg ${m.bg} ${m.color}`}>
+                              <span
+                                className={`p-1 rounded-lg ${m.bg} ${m.color}`}
+                              >
                                 <Icon path={m.icon} size={0.667} />
                               </span>
                               <div className="min-w-0">
                                 <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 truncate block">
-                                  {entry.content.slice(0, 40)}{entry.content.length > 40 ? "..." : ""}
+                                  {entry.content.slice(0, 40)}
+                                  {entry.content.length > 40 ? "..." : ""}
                                 </span>
                                 <span className="text-[9px] text-slate-400 font-semibold">
-                                  {entry.date} {entry.location ? `• ${entry.location}` : ""}
+                                  {entry.date}{" "}
+                                  {entry.location ? `• ${entry.location}` : ""}
                                 </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              <button onClick={() => openEdit(entry)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
+                              <button
+                                onClick={() => openEdit(entry)}
+                                className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                              >
                                 <Icon path={mdiPencil} size={0.6} />
                               </button>
-                              <button onClick={() => handleDelete(entry.id)} className="p-1 text-slate-300 hover:text-rose-500 cursor-pointer">
+                              <button
+                                onClick={() => handleDelete(entry.id)}
+                                className="p-1 text-slate-300 hover:text-rose-500 cursor-pointer"
+                              >
                                 <Icon path={mdiDeleteOutline} size={0.6} />
                               </button>
                             </div>
@@ -563,10 +681,14 @@ export default function DiaryView() {
 
   const renderSkeleton = () => {
     switch (viewMode) {
-      case "timeline": return <DiarySkeletonTimeline />;
-      case "tree": return <DiarySkeletonTree />;
-      case "calendar": return <DiarySkeletonCalendar />;
-      default: return null;
+      case "timeline":
+        return <DiarySkeletonTimeline />;
+      case "tree":
+        return <DiarySkeletonTree />;
+      case "calendar":
+        return <DiarySkeletonCalendar />;
+      default:
+        return null;
     }
   };
 
@@ -579,7 +701,10 @@ export default function DiaryView() {
       case "map":
         return (
           <div className="space-y-3 min-w-0">
-            <LeafletMap entries={filteredEntries} onSelectEntryDetail={setDetailEntry} />
+            <LeafletMap
+              entries={filteredEntries}
+              onSelectEntryDetail={setDetailEntry}
+            />
           </div>
         );
       case "calendar":
@@ -617,7 +742,11 @@ export default function DiaryView() {
       {/* View mode switcher */}
       <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[20px] p-1 shadow-sm min-w-0">
         {[
-          { key: "timeline", label: "Dòng thời gian", icon: mdiFormatListBulleted },
+          {
+            key: "timeline",
+            label: "Dòng thời gian",
+            icon: mdiFormatListBulleted,
+          },
           { key: "tree", label: "Cây thư mục", icon: mdiChevronRight },
           { key: "map", label: "Bản đồ", icon: mdiMap },
           { key: "calendar", label: "Lịch", icon: mdiCalendarMonth },
@@ -641,7 +770,10 @@ export default function DiaryView() {
       <motion.button
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.92, rotate: 15 }}
-        onClick={() => { resetForm(); setShowForm(true); }}
+        onClick={() => {
+          resetForm();
+          setShowForm(true);
+        }}
         className="fixed bottom-[120px] right-5 md:right-[calc(50%-12.75rem)] z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#06b6d4] to-[#3b82f6] text-white shadow-[0_8px_24px_rgba(6,182,212,0.4)] flex items-center justify-center cursor-pointer"
       >
         <Icon path={mdiPlus} size={1.25} />
@@ -658,8 +790,11 @@ export default function DiaryView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
-              onClick={() => { setDetailEntry(null); setReplyText(""); }}
+              className="fixed inset-0 overflow-hidden z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
+              onClick={() => {
+                setDetailEntry(null);
+                setReplyText("");
+              }}
             >
               <motion.div
                 initial={{ y: "100%" }}
@@ -672,13 +807,19 @@ export default function DiaryView() {
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={{ top: 0, bottom: 0.5 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > 60 || info.velocity.y > 200) { setDetailEntry(null); setReplyText(""); }
+                  if (info.offset.y > 60 || info.velocity.y > 200) {
+                    setDetailEntry(null);
+                    setReplyText("");
+                  }
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[85vh] flex flex-col overflow-hidden shadow-2xl z-10 min-w-0"
+                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[85vh] flex flex-col overflow-hidden shadow-2xl z-10 min-w-0"
               >
                 <div
-                  onPointerDown={(e) => { e.stopPropagation(); dragControlsDetail.start(e); }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    dragControlsDetail.start(e);
+                  }}
                   onTouchStart={(e) => e.stopPropagation()}
                   style={{ touchAction: "none" }}
                   className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
@@ -687,11 +828,21 @@ export default function DiaryView() {
                 </div>
                 <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 space-y-4 min-w-0">
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${MOOD_CONFIG[detailEntry.mood]?.bg} ${MOOD_CONFIG[detailEntry.mood]?.color}`}>
-                      <Icon path={MOOD_CONFIG[detailEntry.mood]?.icon || mdiBookOpenVariant} size={0.7} />
+                    <div
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${MOOD_CONFIG[detailEntry.mood]?.bg} ${MOOD_CONFIG[detailEntry.mood]?.color}`}
+                    >
+                      <Icon
+                        path={
+                          MOOD_CONFIG[detailEntry.mood]?.icon ||
+                          mdiBookOpenVariant
+                        }
+                        size={0.7}
+                      />
                       <span>{MOOD_CONFIG[detailEntry.mood]?.label}</span>
                     </div>
-                    <span className="text-xs font-bold text-slate-400">{formatDate(detailEntry.date)}</span>
+                    <span className="text-xs font-bold text-slate-400">
+                      {formatDate(detailEntry.date)}
+                    </span>
                   </div>
                   {detailEntry.location && (
                     <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400">
@@ -705,7 +856,10 @@ export default function DiaryView() {
                   {(detailEntry.tags || []).length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {detailEntry.tags.map((t, i) => (
-                        <span key={i} className="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <span
+                          key={i}
+                          className="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full flex items-center gap-1"
+                        >
                           <Icon path={mdiTag} size={0.5} />#{t}
                         </span>
                       ))}
@@ -718,12 +872,19 @@ export default function DiaryView() {
                       </span>
                       <div className="space-y-2">
                         {detailEntry.replies?.map((r) => (
-                          <div key={r.id} className="bg-cyan-50/60 dark:bg-slate-800/80 border border-cyan-100 dark:border-slate-700 p-3 rounded-2xl space-y-1">
+                          <div
+                            key={r.id}
+                            className="bg-cyan-50/60 dark:bg-slate-800/80 border border-cyan-100 dark:border-slate-700 p-3 rounded-2xl space-y-1"
+                          >
                             <div className="flex items-center justify-between text-[10px] text-cyan-700 dark:text-cyan-400 font-bold">
                               <span>💬 Trả lời</span>
-                              <span className="text-slate-400 font-normal">{r.time}</span>
+                              <span className="text-slate-400 font-normal">
+                                {r.time}
+                              </span>
                             </div>
-                            <p className="text-xs text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap leading-relaxed">{r.content}</p>
+                            <p className="text-xs text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap leading-relaxed">
+                              {r.content}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -731,8 +892,12 @@ export default function DiaryView() {
                   )}
                   <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trả lời nhật ký</span>
-                      <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">⏱ {currentTimeStr}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Trả lời nhật ký
+                      </span>
+                      <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">
+                        ⏱ {currentTimeStr}
+                      </span>
                     </div>
                     <textarea
                       value={replyText}
@@ -747,13 +912,27 @@ export default function DiaryView() {
                         disabled={isSavingReply || !replyText.trim()}
                         className="bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
                       >
-                        {isSavingReply ? <Icon path={mdiLoading} size={0.6} className="animate-spin" /> : <Icon path={mdiPlus} size={0.6} />}
+                        {isSavingReply ? (
+                          <Icon
+                            path={mdiLoading}
+                            size={0.6}
+                            className="animate-spin"
+                          />
+                        ) : (
+                          <Icon path={mdiPlus} size={0.6} />
+                        )}
                         {isSavingReply ? "Đang lưu..." : "Lưu trả lời"}
                       </button>
                     </div>
                   </div>
                   <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button onClick={() => { setDetailEntry(null); setReplyText(""); }} className="px-5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 cursor-pointer">
+                    <button
+                      onClick={() => {
+                        setDetailEntry(null);
+                        setReplyText("");
+                      }}
+                      className="px-5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 cursor-pointer"
+                    >
                       Đóng
                     </button>
                   </div>
@@ -773,7 +952,7 @@ export default function DiaryView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
+              className="fixed inset-0 overflow-hidden z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
               onClick={() => setShowForm(false)}
             >
               <motion.div
@@ -786,12 +965,18 @@ export default function DiaryView() {
                 dragListener={false}
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={{ top: 0, bottom: 0.5 }}
-                onDragEnd={(_, info) => { if (info.offset.y > 60 || info.velocity.y > 200) setShowForm(false); }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 60 || info.velocity.y > 200)
+                    setShowForm(false);
+                }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.15)] z-10 min-w-0"
+                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[90vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.15)] z-10 min-w-0"
               >
                 <div
-                  onPointerDown={(e) => { e.stopPropagation(); dragControlsForm.start(e); }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    dragControlsForm.start(e);
+                  }}
                   onTouchStart={(e) => e.stopPropagation()}
                   style={{ touchAction: "none" }}
                   className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
@@ -801,67 +986,140 @@ export default function DiaryView() {
                     <h2 className="text-base font-extrabold text-slate-800 dark:text-white">
                       {editId ? "Sửa nhật ký" : "Viết nhật ký"}
                     </h2>
-                    <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+                    <button
+                      onClick={() => setShowForm(false)}
+                      className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer"
+                    >
                       <Icon path={mdiClose} size={0.875} />
                     </button>
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 pt-2 space-y-4 min-w-0">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Ngày</label>
-                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-2.5 text-sm font-semibold outline-none dark:text-white min-w-0" />
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">
+                      Ngày
+                    </label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-2.5 text-sm font-semibold outline-none dark:text-white min-w-0"
+                    />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Tâm trạng</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">
+                      Tâm trạng
+                    </label>
                     <div className="grid grid-cols-4 gap-1.5 sm:gap-2 min-w-0">
-                      {(Object.entries(MOOD_CONFIG) as [DiaryMood, typeof MOOD_CONFIG[DiaryMood]][]).map(([k, v]) => (
-                        <button key={k} type="button" onClick={() => setMood(k)}
+                      {(
+                        Object.entries(MOOD_CONFIG) as [
+                          DiaryMood,
+                          (typeof MOOD_CONFIG)[DiaryMood],
+                        ][]
+                      ).map(([k, v]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setMood(k)}
                           className={`flex flex-col items-center gap-1 py-2 px-1 rounded-2xl border-2 transition-all cursor-pointer min-w-0 ${
-                            mood === k ? `border-current ${v.bg} ${v.color}` : "border-slate-100 dark:border-slate-700 text-slate-400 hover:border-slate-200"
-                          }`}>
+                            mood === k
+                              ? `border-current ${v.bg} ${v.color}`
+                              : "border-slate-100 dark:border-slate-700 text-slate-400 hover:border-slate-200"
+                          }`}
+                        >
                           <Icon path={v.icon} size={0.9} />
-                          <span className="text-[9px] font-bold truncate w-full text-center">{v.label}</span>
+                          <span className="text-[9px] font-bold truncate w-full text-center">
+                            {v.label}
+                          </span>
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Nội dung *</label>
-                    <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5}
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">
+                      Nội dung *
+                    </label>
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      rows={5}
                       placeholder="Hôm nay tôi cảm thấy..."
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-3 text-sm font-medium outline-none resize-none dark:text-white leading-relaxed min-w-0" />
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-3 text-sm font-medium outline-none resize-none dark:text-white leading-relaxed min-w-0"
+                    />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Địa điểm</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">
+                      Địa điểm
+                    </label>
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1 min-w-0">
-                        <Icon path={mdiMapMarker} size={0.875} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)}
+                        <Icon
+                          path={mdiMapMarker}
+                          size={0.875}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        />
+                        <input
+                          type="text"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
                           placeholder="Tự động điền địa chỉ hoặc nhập thủ công..."
-                          className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] text-sm font-medium outline-none dark:text-white min-w-0" />
+                          className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] text-sm font-medium outline-none dark:text-white min-w-0"
+                        />
                       </div>
-                      <button type="button" onClick={() => { fetchCurrentLocation(true); toast.success("Đang định vị..."); }}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fetchCurrentLocation(true);
+                          toast.success("Đang định vị...");
+                        }}
                         disabled={isGettingLocation}
-                        className="shrink-0 text-[10px] font-bold px-3 py-2.5 bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] text-white rounded-[16px] cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center gap-1">
-                        <Icon path={isGettingLocation ? mdiLoading : mdiMapMarker} size={0.6} className={isGettingLocation ? "animate-spin" : ""} />
+                        className="shrink-0 text-[10px] font-bold px-3 py-2.5 bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] text-white rounded-[16px] cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center gap-1"
+                      >
+                        <Icon
+                          path={isGettingLocation ? mdiLoading : mdiMapMarker}
+                          size={0.6}
+                          className={isGettingLocation ? "animate-spin" : ""}
+                        />
                         {isGettingLocation ? "Đang lấy..." : "Vị trí"}
                       </button>
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Tags (phân cách bằng dấu phẩy)</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">
+                      Tags (phân cách bằng dấu phẩy)
+                    </label>
                     <div className="relative">
-                      <Icon path={mdiTag} size={0.875} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input type="text" value={tags} onChange={(e) => setTags(e.target.value)}
+                      <Icon
+                        path={mdiTag}
+                        size={0.875}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                      <input
+                        type="text"
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
                         placeholder="VD: du lịch, gia đình, công việc"
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] text-sm font-medium outline-none dark:text-white min-w-0" />
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] text-sm font-medium outline-none dark:text-white min-w-0"
+                      />
                     </div>
                   </div>
-                  <button onClick={handleSubmit} disabled={isSaving}
-                    className="w-full mt-6 bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] text-white font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-50 cursor-pointer transition-all shadow-lg flex items-center justify-center gap-2">
-                    {isSaving ? <Icon path={mdiLoading} size={0.875} className="animate-spin" /> : null}
-                    {isSaving ? "Đang lưu..." : editId ? "Cập nhật nhật ký" : "Lưu nhật ký"}
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isSaving}
+                    className="w-full mt-6 bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] text-white font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-50 cursor-pointer transition-all shadow-lg flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? (
+                      <Icon
+                        path={mdiLoading}
+                        size={0.875}
+                        className="animate-spin"
+                      />
+                    ) : null}
+                    {isSaving
+                      ? "Đang lưu..."
+                      : editId
+                        ? "Cập nhật nhật ký"
+                        : "Lưu nhật ký"}
                   </button>
                 </div>
               </motion.div>

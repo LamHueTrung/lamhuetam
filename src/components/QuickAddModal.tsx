@@ -139,7 +139,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 overflow-hidden z-50 flex items-end justify-center">
           {/* Backdrop Blur */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -164,7 +164,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                 onClose();
               }
             }}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-hidden z-10"
+            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-hidden z-10"
           >
             <div
               onPointerDown={(e) => {

@@ -2122,7 +2122,7 @@ export default function FinanceBudget({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
+                  className="fixed inset-0 overflow-hidden z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
                   onClick={() => setPaymentDebtId(null)}
                 >
                   <motion.div
@@ -2141,7 +2141,7 @@ export default function FinanceBudget({
                       }
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[80vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+                    className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[80vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
                   >
                     <div
                       onPointerDown={(e) => {
