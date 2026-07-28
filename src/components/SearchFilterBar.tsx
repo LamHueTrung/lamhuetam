@@ -75,7 +75,7 @@ export default function SearchFilterBar({
         </button>
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none min-w-0">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none min-w-0 no-swipe">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => onMoodChange("all")}
