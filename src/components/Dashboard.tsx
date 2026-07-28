@@ -369,6 +369,9 @@ export default function Dashboard({
                 <img
                   src={userProfile.avatar}
                   alt={userProfile.fullName}
+                  onError={(e) => {
+                    e.currentTarget.src = "/avatar.jpg";
+                  }}
                   className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
                 />
               ) : (

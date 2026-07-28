@@ -685,7 +685,7 @@ export default function DiaryView() {
                 >
                   <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto" />
                 </div>
-                <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 space-y-4 min-w-0">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 space-y-4 min-w-0">
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${MOOD_CONFIG[detailEntry.mood]?.bg} ${MOOD_CONFIG[detailEntry.mood]?.color}`}>
                       <Icon path={MOOD_CONFIG[detailEntry.mood]?.icon || mdiBookOpenVariant} size={0.7} />
@@ -806,7 +806,7 @@ export default function DiaryView() {
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2 space-y-4 min-w-0">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 pt-2 space-y-4 min-w-0">
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Ngày</label>
                     <input type="date" value={date} onChange={(e) => setDate(e.target.value)}

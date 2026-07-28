@@ -383,6 +383,9 @@ export default function UserProfileView({
                 <img
                   src={avatar}
                   alt={fullName}
+                  onError={(e) => {
+                    e.currentTarget.src = "/avatar.jpg";
+                  }}
                   className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-md"
                 />
               ) : (

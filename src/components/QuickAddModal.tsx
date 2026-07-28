@@ -184,7 +184,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 pt-2">
               <div className="bg-slate-100 p-1 rounded-2xl flex items-center mb-6">
                 <motion.button
                   type="button"
@@ -225,9 +225,9 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
                       onKeyDown={handleAmountKeyDown}
                       onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="0"
-                      className="w-full text-3xl font-extrabold text-slate-900 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder-slate-300 transition-all tracking-tight"
+                      className="w-full text-3xl font-extrabold text-slate-900 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 pr-16 focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder-slate-300 transition-all tracking-tight"
                     />
-                    <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase">
+                    <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase pointer-events-none">
                       k (nghìn)
                     </span>
                   </div>
