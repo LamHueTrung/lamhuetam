@@ -39,6 +39,7 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("Tag");
   const [newColor, setNewColor] = useState("slate");
+  const [newType, setNewType] = useState<"expense" | "income">("expense");
 
   const [categoryList, setCategoryList] = useState(categories);
   const dragControlsCat = useDragControls();
@@ -50,6 +51,20 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
   const handleReorder = (reordered: Category[]) => {
     setCategoryList(reordered);
     onReorder(reordered.map(c => c._id));
+  };
+
+  const handleAddCategory = () => {
+    if (!newName.trim()) {
+      toast.error("Vui lòng nhập tên danh mục");
+      return;
+    }
+    onAdd(newName.trim(), newIcon, newColor);
+    setNewName("");
+    setNewColor("slate");
+    setNewIcon("Tag");
+    setNewType("expense");
+    setShowAddForm(false);
+    toast.success("Đã thêm danh mục!");
   };
 
   return (
@@ -104,8 +119,8 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block mb-1">Màu sắc:</span>
                     <div className="flex items-center gap-1.5">
-                      {COLORS.map((c) => (
-                        <button key={c} onClick={() => setNewColor(c)} className={`w-6 h-6 rounded-full border-2 transition-all ${newColor === c ? "border-slate-900 scale-110" : "border-transparent"}`} style={{ backgroundColor: c === "red" ? "#ef4444" : c === "amber" ? "#f59e0b" : c === "blue" ? "#3b82f6" : c === "emerald" ? "#10b981" : c === "purple" ? "#8b5cf6" : c === "rose" ? "#f43f5e" : "#64748b" }} />
+                      {colorOptions.map((c) => (
+                        <button key={c.name} onClick={() => setNewColor(c.name)} className={`w-6 h-6 rounded-full border-2 transition-all ${newColor === c.name ? "border-slate-900 scale-110" : "border-transparent"}`} style={{ backgroundColor: c.name === "red" ? "#ef4444" : c.name === "amber" ? "#f59e0b" : c.name === "blue" ? "#3b82f6" : c.name === "emerald" ? "#10b981" : c.name === "purple" ? "#8b5cf6" : c.name === "rose" ? "#f43f5e" : c.name === "indigo" ? "#6366f1" : c.name === "teal" ? "#14b8a6" : c.name === "orange" ? "#f97316" : "#64748b" }} />
                       ))}
                     </div>
                   </div>
@@ -113,8 +128,8 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
                 </div>
               )}
 
-              <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="space-y-2">
-                {items.map((cat) => {
+              <Reorder.Group axis="y" values={categoryList} onReorder={handleReorder} className="space-y-2">
+                {categoryList.map((cat) => {
                   const IconComp = iconMap[cat.icon || "Tag"];
                   const isEditing = editingId === cat._id;
 

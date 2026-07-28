@@ -79,6 +79,7 @@ export interface Category {
   icon: string;
   color: string;
   order: number;
+  type?: 'income' | 'expense';
 }
 
 export interface Message {
@@ -148,6 +149,29 @@ export interface DiaryEntry {
   tags: string[];
   replies?: DiaryReply[];
   createdAt?: string;
+  pinned?: boolean;
+}
+
+export type DiaryViewMode = 'timeline' | 'tree' | 'map' | 'calendar';
+
+export interface DiaryFilterState {
+  search: string;
+  mood: DiaryMood | 'all';
+  tag: string;
+  month: string | null;
+  sort: 'newest' | 'oldest';
+}
+
+export interface DiaryStreakData {
+  current: number;
+  longest: number;
+  todayWritten: boolean;
+}
+
+export interface DiaryMoodStat {
+  mood: DiaryMood;
+  count: number;
+  percentage: number;
 }
 
 // ── NEW: User Profile (Hồ sơ nhân vật) ───────────────────

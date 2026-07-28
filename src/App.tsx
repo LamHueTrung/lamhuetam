@@ -147,9 +147,9 @@ function AppContent() {
         md += `- **Dư nợ còn lại:** ${numFmt(d.currentBalance || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
         if (d.type === 'installment') {
           md += `- **Tiến độ trả góp:** Đã trả ${d.paidInstallments || 0}/${d.totalInstallments || 0} kỳ\n`;
-          md += `- **Số tiền trả hàng tháng:** ${numFmt(d.monthlyPayment || 0)} (Hạn trả: Ngày ${d.payDay || '—'})\n`;
+          md += `- **Số tiền trả hàng tháng:** ${numFmt(d.monthlyPayment || 0)} (Hạn trả: Ngày ${d.paymentDay || '—'})\n`;
         } else if (d.type === 'credit_card') {
-          md += `- **Hạn mức:** ${numFmt(d.creditLimit || 0)} (Hạn thanh toán: Ngày ${d.payDay || '—'})\n`;
+          md += `- **Hạn mức:** ${numFmt(d.currentBalance || 0)} (Hạn thanh toán: Ngày ${d.paymentDay || '—'})\n`;
         }
         if (d.notes) md += `- **Ghi chú:** ${d.notes}\n`;
         md += `\n`;

@@ -122,6 +122,13 @@ export default function UserProfileView({
   const [testingConnection, setTestingConnection] = useState(false);
   const [savingAiConfig, setSavingAiConfig] = useState(false);
 
+  // Helper: lấy URL đăng ký API Key dựa trên provider hiện tại
+  const getApiKeyUrl = () => {
+    if (aiBaseUrl.includes("openrouter")) return "https://openrouter.ai/keys";
+    if (aiBaseUrl.includes("nvidia.com")) return "https://build.nvidia.com/deepseek-ai/deepseek-v4-flash";
+    return "";
+  };
+
   // Lấy cấu hình AI từ database khi render
   const fetchAiConfig = async () => {
     try {
@@ -1147,7 +1154,40 @@ export default function UserProfileView({
                     Gemini 1.5 Flash Lite
                   </option>
                   <option value="gemma-4-31b-it">Gemma 4 31B IT</option>
+                  <option value="deepseek/deepseek-v4-flash:free" className="border-t border-slate-200 dark:border-slate-700">
+                    DeepSeek V4 Flash (Free - OpenRouter)
+                  </option>
+                  <option value="deepseek-ai/deepseek-v4-flash">
+                    DeepSeek V4 Flash (NVIDIA NIM)
+                  </option>
                 </select>
+
+                {/* Provider Presets */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider self-center mr-1">
+                    Preset:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiBaseUrl("https://openrouter.ai/api/v1");
+                      setAiModel("deepseek/deepseek-v4-flash:free");
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-gradient-to-r from-orange-500/10 to-orange-600/10 dark:from-orange-500/20 dark:to-orange-600/20 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700 rounded-lg hover:bg-orange-500/20 transition-all cursor-pointer"
+                  >
+                    OpenRouter Free
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiBaseUrl("https://integrate.api.nvidia.com/v1");
+                      setAiModel("deepseek-ai/deepseek-v4-flash");
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-gradient-to-r from-green-500/10 to-green-600/10 dark:from-green-500/20 dark:to-green-600/20 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700 rounded-lg hover:bg-green-500/20 transition-all cursor-pointer"
+                  >
+                    NVIDIA NIM
+                  </button>
+                </div>
               </div>
 
               {/* API Key */}
@@ -1155,7 +1195,18 @@ export default function UserProfileView({
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span className="flex items-center gap-1">
                     <Icon path={mdiKey} size={0.6} className="text-amber-500" />
-                    API Key (OpenRouter hoặc Gemini API Key):
+                    API Key:
+                    {getApiKeyUrl() && (
+                      <a
+                        href={getApiKeyUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] font-bold text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 underline inline-flex items-center gap-0.5 ml-1"
+                      >
+                        <Icon path={mdiOpenInNew} size={0.45} />
+                        Lấy key tại đây
+                      </a>
+                    )}
                   </span>
                   {hasApiKey && (
                     <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/50">

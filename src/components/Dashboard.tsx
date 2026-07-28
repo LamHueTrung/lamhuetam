@@ -38,6 +38,9 @@ import {
   Area,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -118,16 +121,7 @@ export default function Dashboard({
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const isPositiveTrend = totalIncomeAllTime >= totalExpenseAllTime;
-  const trendPercentage =
-    totalIncomeAllTime > 0
-      ? Math.round(
-          ((totalIncomeAllTime - totalExpenseAllTime) / totalIncomeAllTime) *
-            100,
-        )
-      : 0;
-
-  // ── 1. Cơ cấu chi tiêu tháng này: lấy Top 5, còn lại gộp thành "Khác" ──
+  // ── Cơ cấu chi tiêu tháng này: lấy Top 5, còn lại gộp thành "Khác" ──
   const thisMonthExpenses = transactions.filter(
     (t) => t.type === "expense" && t.date.startsWith(currentMonthStr),
   );
@@ -199,43 +193,9 @@ export default function Dashboard({
     0,
   );
 
-  let cumulativePercent = 0;
-  const donutSlices = categoriesData
-    .filter((c) => c.value > 0)
-    .map((c) => {
-      const percent = (c.value / (totalExpenseComputed || 1)) * 100;
-      const startPercent = cumulativePercent;
-      cumulativePercent += percent;
-
-      const getCoordinatesForPercent = (percentValue: number) => {
-        const x = Math.cos(2 * Math.PI * percentValue);
-        const y = Math.sin(2 * Math.PI * percentValue);
-        return [x, y];
-      };
-
-      const [startX, startY] = getCoordinatesForPercent(startPercent / 100);
-      const [endX, endY] = getCoordinatesForPercent(cumulativePercent / 100);
-
-      const largeArcFlag = percent > 50 ? 1 : 0;
-
-      const pathData = [
-        `M ${startX} ${startY}`,
-        `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-        `L 0 0`,
-      ].join(" ");
-
-      return {
-        name: c.name,
-        color: c.color,
-        pathData,
-        value: c.value,
-        percent: Math.round(percent),
-      };
-    });
-
   const [trendRange, setTrendRange] = useState<"7d" | "30d" | "12m">("30d");
-  const [chartView, setChartView] = useState<"trend" | "networth">("trend");
   const [showAmounts, setShowAmounts] = useState(false);
+  const [spendingTab, setSpendingTab] = useState<"expense" | "income">("expense");
 
   const trendData = useMemo(() => {
     const filtered = transactions.filter((t) => {
@@ -247,16 +207,23 @@ export default function Dashboard({
       return d >= yearAgo;
     });
 
+    const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date));
+
     const daysAgo = trendRange === "7d" ? 7 : trendRange === "30d" ? 30 : 365;
     const map: Record<
       string,
-      { date: string; income: number; expense: number }
+      { date: string; income: number; expense: number; balance: number }
     > = {};
+    let runningBalance = 0;
     for (let i = daysAgo - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
       const key = d.toISOString().split("T")[0];
-      map[key] = { date: key, income: 0, expense: 0 };
+      // Get all transactions up to this date to calculate running balance
+      const upToDate = sorted.filter((t) => t.date <= key);
+      runningBalance = upToDate.reduce((s, t) => s + (t.type === "income" ? t.amount : -t.amount), 0);
+      map[key] = { date: key, income: 0, expense: 0, balance: runningBalance };
     }
+    // Reset per-day sums
     filtered.forEach((t) => {
       if (map[t.date]) {
         if (t.type === "income") map[t.date].income += t.amount;
@@ -450,569 +417,196 @@ export default function Dashboard({
         </div>
       </div>
 
-      <div
-        id="net-balance-card"
-        className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.04)]"
-      >
-        <div className="flex items-center justify-between">
+      {/* ── 1. Account Overview ── */}
+      <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5">
             <div className="p-2 rounded-2xl bg-slate-100 text-slate-700">
               <Icon path={mdiWallet} size={1} />
             </div>
             <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">
-              Khả Dụng
+              Tài Khoản
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <div
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
-                isPositiveTrend
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-rose-50 text-rose-600"
-              }`}
-            >
-              {isPositiveTrend ? (
-                <Icon path={mdiTrendingUp} size={0.75} />
-              ) : (
-                <Icon path={mdiTrendingDown} size={0.75} />
-              )}
-              <span>
-                {isPositiveTrend
-                  ? `+${trendPercentage}%`
-                  : `-${trendPercentage}%`}
-              </span>
-            </div>
-            <button
-              onClick={() => setShowAmounts((v) => !v)}
-              className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
-              title={showAmounts ? "Ẩn số tiền" : "Hiện số tiền"}
-            >
-              <Icon
-                path={showAmounts ? mdiEyeOutline : mdiEyeOffOutline}
-                size={0.75}
-              />
-            </button>
-          </div>
+          <button
+            onClick={() => setShowAmounts((v) => !v)}
+            className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+            title={showAmounts ? "Ẩn số tiền" : "Hiện số tiền"}
+          >
+            <Icon
+              path={showAmounts ? mdiEyeOutline : mdiEyeOffOutline}
+              size={0.75}
+            />
+          </button>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Số dư tích lũy
+          </span>
           <h2
-            className={`text-2xl font-extrabold tracking-tight ${availableCashflow >= 0 ? "text-slate-900" : "text-rose-600"}`}
+            className={`text-2xl font-extrabold tracking-tight ${totalIncomeAllTime - totalExpenseAllTime >= 0 ? "text-slate-900" : "text-rose-600"}`}
           >
             {showAmounts ? (
-              formatVND(availableCashflow)
+              formatVND(totalIncomeAllTime - totalExpenseAllTime)
             ) : (
               <span className="tracking-widest text-slate-300">••••••</span>
             )}
           </h2>
-          <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tight">
-            Đã đồng bộ công nợ & thu chi
-          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100">
-          <div>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
-              <Icon
-                path={mdiArrowDownBold}
-                size={0.75}
-                className="text-emerald-500"
-              />
-              Nợ thu (+)
-            </span>
-            <span className="text-xs font-extrabold text-emerald-600 block mt-0.5">
-              {showAmounts ? formatVND(totalReceivables) : "••••"}
-            </span>
-          </div>
-          <div>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
-              <Icon
-                path={mdiArrowUpBold}
-                size={0.75}
-                className="text-rose-500"
-              />
-              Trả nợ tháng (-)
-            </span>
-            <span className="text-xs font-extrabold text-rose-500 block mt-0.5">
-              {showAmounts ? formatVND(totalPayablesMonthly) : "••••"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div id="quick-cashflow-split" className="grid grid-cols-2 gap-3">
-        <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[24px] p-3 flex items-center gap-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.02)]">
-          <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600 shrink-0">
-            <Icon path={mdiArrowDownBold} size={1} />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block truncate">
-              Thu nhập
-            </span>
-            <span className="text-xs font-extrabold text-emerald-700 block mt-0.5 truncate">
-              {showAmounts ? formatVND(incomeThisMonth) : "••••"}
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[24px] p-3 flex items-center gap-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.02)]">
-          <div className="p-2 rounded-xl bg-rose-100 text-rose-600 shrink-0">
-            <Icon path={mdiArrowUpBold} size={1} />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block truncate">
-              Chi tiêu
-            </span>
-            <span className="text-xs font-extrabold text-rose-700 block mt-0.5 truncate">
-              {showAmounts ? formatVND(expenseThisMonth) : "••••"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* MONTH COMPARISON */}
-      {(() => {
-        const now = new Date();
-        const currY = now.getFullYear();
-        const currM = String(now.getMonth() + 1).padStart(2, "0");
-        const thisMonth = `${currY}-${currM}`;
-
-        const lastMonthObj = new Date(currY, now.getMonth() - 1, 1);
-        const lastY = lastMonthObj.getFullYear();
-        const lastM = String(lastMonthObj.getMonth() + 1).padStart(2, "0");
-        const lastMonth = `${lastY}-${lastM}`;
-
-        const monthIncome = transactions
-          .filter((t) => t.type === "income" && t.date.startsWith(thisMonth))
-          .reduce((s, t) => s + t.amount, 0);
-        const monthExpense = transactions
-          .filter((t) => t.type === "expense" && t.date.startsWith(thisMonth))
-          .reduce((s, t) => s + t.amount, 0);
-        const lastIncome = transactions
-          .filter((t) => t.type === "income" && t.date.startsWith(lastMonth))
-          .reduce((s, t) => s + t.amount, 0);
-        const lastExpense = transactions
-          .filter((t) => t.type === "expense" && t.date.startsWith(lastMonth))
-          .reduce((s, t) => s + t.amount, 0);
-
-        const incomeChange =
-          lastIncome > 0
-            ? Math.round(((monthIncome - lastIncome) / lastIncome) * 100)
-            : 0;
-        const expenseChange =
-          lastExpense > 0
-            ? Math.round(((monthExpense - lastExpense) / lastExpense) * 100)
-            : 0;
-
-        const formatCompareVal = (num: number) => {
-          if (!num || num === 0) return "0đ";
-          if (Math.abs(num) < 1000) return num + "đ";
-          const valueInK = Math.round(num / 1000);
-          return new Intl.NumberFormat("vi-VN").format(valueInK) + "k";
-        };
-
-        return (
-          <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[24px] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                So sánh tháng này / tháng trước
-              </h3>
-              <span className="text-[9px] text-slate-400 font-medium">
-                {now.toLocaleDateString("vi-VN", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-50 rounded-2xl p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase">
-                    Thu nhập
-                  </span>
-                  <span
-                    className={`text-[10px] font-black flex items-center gap-0.5 ${incomeChange >= 0 ? "text-emerald-600" : "text-rose-500"}`}
-                  >
-                    <Icon
-                      path={incomeChange >= 0 ? mdiTrendingUp : mdiTrendingDown}
-                      size={0.667}
-                    />
-                    {incomeChange >= 0 ? "+" : ""}
-                    {incomeChange}%
-                  </span>
-                </div>
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-sm font-black text-slate-800">
-                    {formatCompareVal(monthIncome)}
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-medium">
-                    T.trước: {formatCompareVal(lastIncome)}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-2xl p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase">
-                    Chi tiêu
-                  </span>
-                  <span
-                    className={`text-[10px] font-black flex items-center gap-0.5 ${expenseChange <= 0 ? "text-emerald-600" : "text-rose-500"}`}
-                  >
-                    <Icon
-                      path={
-                        expenseChange <= 0 ? mdiTrendingDown : mdiTrendingUp
-                      }
-                      size={0.667}
-                    />
-                    {expenseChange > 0 ? "+" : ""}
-                    {expenseChange}%
-                  </span>
-                </div>
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-sm font-black text-slate-800">
-                    {formatCompareVal(monthExpense)}
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-medium">
-                    T.trước: {formatCompareVal(lastExpense)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      <div
-        id="charts-section"
-        className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setChartView("trend")}
-              className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
-                chartView === "trend"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              <Icon path={mdiChartLine} size={0.667} />
-              Xu hướng
-            </button>
-            <button
-              onClick={() => setChartView("networth")}
-              className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
-                chartView !== "trend"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              <Icon path={mdiChartAreaspline} size={0.667} />
-              Tài sản
-            </button>
-          </div>
-          {chartView === "trend" && (
-            <div className="flex items-center gap-1 bg-slate-50 rounded-full p-0.5">
-              {(["7d", "30d", "12m"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setTrendRange(r)}
-                  className={`text-[9px] font-bold px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                    trendRange === r
-                      ? "bg-white text-slate-800 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
-                  }`}
-                >
-                  {r === "7d" ? "7 ngày" : r === "30d" ? "30 ngày" : "12 tháng"}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {chartView === "trend" ? (
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={formatChartDate}
-                  tick={{ fontSize: 9, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 9, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => Math.round(v / 1000) + "k"}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 16,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-                    fontSize: 11,
-                  }}
-                  formatter={(value: number, name: string) => [
-                    new Intl.NumberFormat("vi-VN").format(value) + "đ",
-                    name === "income" ? "Thu nhập" : "Chi tiêu",
-                  ]}
-                  labelFormatter={(label: string) =>
-                    new Date(label + "T00:00:00").toLocaleDateString("vi-VN", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    })
-                  }
-                />
-                <Line
-                  type="monotone"
-                  dataKey="income"
-                  stroke="#059669"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#059669" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="expense"
-                  stroke="#e11d48"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#e11d48" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <div className="h-48">
+        {/* Mini net worth sparkline */}
+        {netWorthData.length > 1 && (
+          <div className="h-10 mt-2 -mx-1">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={netWorthData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(val: string) =>
-                    new Date(val + "T00:00:00").toLocaleDateString("vi-VN", {
-                      day: "numeric",
-                      month: "short",
-                    })
-                  }
-                  tick={{ fontSize: 9, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 9, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => Math.round(v / 1000) + "k"}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 16,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-                    fontSize: 11,
-                  }}
-                  formatter={(value: number) => [
-                    new Intl.NumberFormat("vi-VN").format(value) + "đ",
-                    "Tài sản ròng",
-                  ]}
-                  labelFormatter={(label: string) =>
-                    new Date(label + "T00:00:00").toLocaleDateString("vi-VN", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    })
-                  }
-                />
                 <defs>
-                  <linearGradient
-                    id="netWorthGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                  <linearGradient id="nwMiniGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Area
                   type="monotone"
                   dataKey="netWorth"
                   stroke="#0ea5e9"
-                  strokeWidth={2.5}
-                  fill="url(#netWorthGradient)"
+                  strokeWidth={1.5}
+                  fill="url(#nwMiniGrad)"
+                  dot={false}
+                  isAnimationActive={false}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         )}
-      </div>
 
-      <div id="health-diagnostics-bar">
-        {netDebt <= 0 ? (
-          <div className="bg-emerald-50 border border-emerald-100 rounded-[24px] p-4 flex items-start gap-3">
-            <Icon
-              path={mdiCheckCircleOutline}
-              size={1.25}
-              className="text-emerald-600 mt-0.5 shrink-0"
-            />
-            <div>
-              <h3 className="text-sm font-bold text-emerald-800">
-                Dòng tiền an toàn
-              </h3>
-              <p className="text-xs text-emerald-600/90 mt-0.5">
-                Các khoản nợ phải trả nhỏ hơn nợ thu hồi. Sức khỏe tài chính
-                đang ở trạng thái an toàn tuyệt vời. Hãy duy trì tích lũy!
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-amber-50 border border-amber-100 rounded-[24px] p-4 flex items-start gap-3">
-            <Icon
-              path={mdiShieldAlertOutline}
-              size={1.25}
-              className="text-amber-600 mt-0.5 shrink-0"
-            />
-            <div>
-              <h3 className="text-sm font-bold text-amber-800">
-                Cảnh báo dư nợ ròng dương
-              </h3>
-              <p className="text-xs text-amber-600/90 mt-0.5">
-                Bạn đang nợ nhiều hơn số tiền có thể thu hồi (
-                {formatVND(netDebt)} ròng). Hãy cân nhắc sử dụng tính năng **Cố
-                vấn AI Gemini** để nhận giải pháp cơ cấu nợ.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div
-        id="cashflow-forecast-card"
-        className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]"
-      >
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-bold text-slate-800 tracking-tight">
-            Dự Báo Dòng Tiền
-          </h3>
-          <span className="text-[10px] font-bold text-slate-400">
-            {new Date().toLocaleDateString("vi-VN", {
-              month: "long",
-              year: "numeric",
-            })}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-slate-50 rounded-2xl p-3">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">
-              Thu nhập
-            </span>
-            <span className="text-xs font-extrabold text-emerald-600 mt-0.5 block">
-              {formatVND(incomeThisMonth)}
-            </span>
-            <span className="text-[9px] text-slate-400 font-medium">
-              Dự kiến: {formatVND(projectedIncome)}
-            </span>
-          </div>
-          <div className="bg-slate-50 rounded-2xl p-3">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">
-              Đã chi
-            </span>
-            <span className="text-xs font-extrabold text-rose-600 mt-0.5 block">
-              {formatVND(totalExpense)}
-            </span>
-            <span className="text-[9px] text-slate-400 font-medium">
-              Trả nợ: {formatVND(totalPayablesMonthly)}
-            </span>
-          </div>
-          {totalFixed > 0 && (
-            <div className="bg-orange-50 rounded-2xl p-3">
-              <span className="text-[9px] font-bold text-orange-400 uppercase block">
-                Chi cố định
-              </span>
-              <span className="text-xs font-extrabold text-orange-600 mt-0.5 block">
-                {formatVND(totalFixed)}
-              </span>
-              <span className="text-[9px] text-slate-400 font-medium">
-                Tháng này
-              </span>
-            </div>
-          )}
-          <div className="bg-slate-50 rounded-2xl p-3">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">
-              Dự báo cuối tháng
-            </span>
-            <span
-              className={`text-xs font-extrabold mt-0.5 block ${projectedIncome - totalExpense - totalPayablesMonthly - totalFixed >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-            >
-              {formatVND(
-                projectedIncome -
-                  totalExpense -
-                  totalPayablesMonthly -
-                  totalFixed,
-              )}
-            </span>
-            <span className="text-[9px] text-slate-400 font-medium">
-              Sau nợ + cố định
-            </span>
-          </div>
-        </div>
-        {projectedIncome - totalExpense - totalPayablesMonthly - totalFixed <
-          0 && (
-          <div className="bg-rose-50 border border-rose-100 rounded-2xl p-3 flex items-center gap-2">
-            <Icon
-              path={mdiAlertCircleOutline}
-              size={0.75}
-              className="text-rose-500 shrink-0"
-            />
-            <span className="text-[10px] font-bold text-rose-600">
-              Dự báo âm. Cần cắt giảm chi tiêu hoặc tăng thu nhập.
+        {/* Net Debt Badge */}
+        {netDebt > 0 && (
+          <div className="mt-2 px-2.5 py-1 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-1.5">
+            <Icon path={mdiShieldAlertOutline} size={0.6} className="text-amber-500 shrink-0" />
+            <span className="text-[9px] font-bold text-amber-700">
+              Dư nợ ròng: {formatVND(netDebt)}
             </span>
           </div>
         )}
+
+        {/* 4-chip grid */}
+        <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-100">
+          <div className="bg-slate-50 rounded-2xl p-3">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
+              <Icon path={mdiArrowDownBold} size={0.65} className="text-emerald-500" />
+              Thu tháng
+            </span>
+            <span className="text-xs font-extrabold text-emerald-600 block mt-0.5">
+              {showAmounts ? formatVND(incomeThisMonth) : "••••"}
+            </span>
+          </div>
+          <div className="bg-slate-50 rounded-2xl p-3">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
+              <Icon path={mdiArrowUpBold} size={0.65} className="text-rose-500" />
+              Chi tháng
+            </span>
+            <span className="text-xs font-extrabold text-rose-500 block mt-0.5">
+              {showAmounts ? formatVND(expenseThisMonth) : "••••"}
+            </span>
+          </div>
+          <div className="bg-slate-50 rounded-2xl p-3">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
+              <Icon path={mdiArrowUpBold} size={0.65} className="text-blue-500" />
+              Trả nợ tháng
+            </span>
+            <span className="text-xs font-extrabold text-blue-600 block mt-0.5">
+              {showAmounts ? formatVND(totalPayablesMonthly) : "••••"}
+            </span>
+          </div>
+          <div className="bg-slate-50 rounded-2xl p-3">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
+              <Icon path={mdiWallet} size={0.65} className="text-indigo-500" />
+              Còn lại
+            </span>
+            <span className={`text-xs font-extrabold block mt-0.5 ${incomeThisMonth - expenseThisMonth - totalPayablesMonthly >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+              {showAmounts ? formatVND(Math.max(0, incomeThisMonth - expenseThisMonth - totalPayablesMonthly)) : "••••"}
+            </span>
+          </div>
+        </div>
+
+        {/* So sánh tháng trước inline */}
+        {(() => {
+          const lastMonthObj = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const lastMonth = `${lastMonthObj.getFullYear()}-${String(lastMonthObj.getMonth() + 1).padStart(2, "0")}`;
+          const lastIncome = transactions.filter((t) => t.type === "income" && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
+          const lastExpense = transactions.filter((t) => t.type === "expense" && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
+          const incomeChange = lastIncome > 0 ? Math.round(((incomeThisMonth - lastIncome) / lastIncome) * 100) : 0;
+          const expenseChange = lastExpense > 0 ? Math.round(((expenseThisMonth - lastExpense) / lastExpense) * 100) : 0;
+
+          return (
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <span className="text-slate-400 font-medium">Thu:</span>
+                <span className={`font-black flex items-center gap-0.5 ${incomeChange >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                  <Icon path={incomeChange >= 0 ? mdiTrendingUp : mdiTrendingDown} size={0.6} />
+                  {incomeChange >= 0 ? "+" : ""}{incomeChange}%
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <span className="text-slate-400 font-medium">Chi:</span>
+                <span className={`font-black flex items-center gap-0.5 ${expenseChange <= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                  <Icon path={expenseChange <= 0 ? mdiTrendingDown : mdiTrendingUp} size={0.6} />
+                  {expenseChange > 0 ? "+" : ""}{expenseChange}%
+                </span>
+              </div>
+              <span className="text-[9px] text-slate-400 ml-auto">
+                vs tháng trước
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
-      <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-6 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
+      {/* ── 2. Combined Trend Chart ── */}
+      <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-800 tracking-tight">
-            Cơ Cấu Chi Tiêu Tháng Này
-          </h3>
-          <button
-            onClick={() =>
-              setChartView(chartView === "trend" ? "networth" : "trend")
-            }
-            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer"
-          >
-            <Icon path={mdiChartBar} size={0.667} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600">
+              <Icon path={mdiChartTimelineVariant} size={0.875} />
+            </div>
+            <h3 className="text-sm font-bold text-slate-800 tracking-tight">
+              Xu Hướng Thu Chi
+            </h3>
+          </div>
+          <div className="flex items-center gap-1 bg-slate-50 rounded-full p-0.5">
+            {(["7d", "30d", "12m"] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setTrendRange(r)}
+                className={`text-[9px] font-bold px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+                  trendRange === r
+                    ? "bg-white text-slate-800 shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                {r === "7d" ? "7 ngày" : r === "30d" ? "30 ngày" : "12 tháng"}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="h-32 mb-4">
+
+        <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={topCategories} layout="vertical">
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f1f5f9"
-                horizontal={false}
-              />
+            <AreaChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis
-                type="number"
+                dataKey="date"
+                tickFormatter={formatChartDate}
+                tick={{ fontSize: 9, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
                 tick={{ fontSize: 9, fill: "#94a3b8" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v: number) => Math.round(v / 1000) + "k"}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 10, fill: "#475569", fontWeight: 600 }}
-                axisLine={false}
-                tickLine={false}
-                width={70}
               />
               <Tooltip
                 contentStyle={{
@@ -1021,88 +615,247 @@ export default function Dashboard({
                   boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
                   fontSize: 11,
                 }}
-                formatter={(value: number) => [
+                formatter={(value: number, name: string) => [
                   new Intl.NumberFormat("vi-VN").format(value) + "đ",
-                  "Chi tiêu",
+                  name === "income" ? "Thu nhập" : name === "expense" ? "Chi tiêu" : "Chênh lệch",
                 ]}
+                labelFormatter={(label: string) =>
+                  new Date(label + "T00:00:00").toLocaleDateString("vi-VN", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })
+                }
               />
-              <Bar
-                dataKey="value"
-                fill="#0ea5e9"
-                radius={[0, 6, 6, 0]}
-                barSize={16}
+              <defs>
+                <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#059669" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#e11d48" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#e11d48" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area
+                type="monotone"
+                dataKey="income"
+                stroke="#059669"
+                strokeWidth={2}
+                fill="url(#incomeGrad)"
+                dot={false}
+                activeDot={{ r: 4, fill: "#059669" }}
               />
-            </BarChart>
+              <Area
+                type="monotone"
+                dataKey="expense"
+                stroke="#e11d48"
+                strokeWidth={2}
+                fill="url(#expenseGrad)"
+                dot={false}
+                activeDot={{ r: 4, fill: "#e11d48" }}
+              />
+              <Line
+                type="monotone"
+                dataKey="balance"
+                stroke="#0ea5e9"
+                strokeWidth={1.5}
+                strokeDasharray="4 2"
+                dot={false}
+                name="balance"
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
+      </div>
 
-        <div className="flex flex-col items-center gap-6 mt-6">
-          <div className="relative w-36 h-36 shrink-0">
-            {totalExpenseComputed === 0 ? (
-              <div className="w-full h-full rounded-full border-4 border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-xs text-center p-4">
-                Chưa có dữ liệu chi tiêu
-              </div>
-            ) : (
-              <svg
-                className="w-full h-full transform -rotate-90"
-                viewBox="-1.2 -1.2 2.4 2.4"
-              >
-                {donutSlices.map((slice, index) => (
-                  <path
-                    key={index}
-                    d={slice.pathData}
-                    fill={slice.color}
-                    className="hover:opacity-90 transition-opacity cursor-pointer"
-                  />
-                ))}
-                <circle cx="0" cy="0" r="0.65" fill="#ffffff" />
-              </svg>
-            )}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Tổng chi
-              </span>
-              <span className="text-sm font-black text-slate-800 mt-0.5">
-                {formatVND(totalExpenseComputed)}
-              </span>
-            </div>
-          </div>
+      {/* ── 3. Cơ cấu Thu / Chi (2 tabs) ── */}
+      <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center gap-1.5 mb-4">
+          <button
+            onClick={() => setSpendingTab("expense")}
+            className={`text-[10px] font-bold px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+              spendingTab === "expense"
+                ? "bg-rose-500 text-white shadow-sm"
+                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            <Icon path={mdiTrendingDown} size={0.667} />
+            Chi tiêu
+          </button>
+          <button
+            onClick={() => setSpendingTab("income")}
+            className={`text-[10px] font-bold px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+              spendingTab === "income"
+                ? "bg-emerald-500 text-white shadow-sm"
+                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            <Icon path={mdiTrendingUp} size={0.667} />
+            Thu nhập
+          </button>
+        </div>
 
-          <div className="flex-1 w-full space-y-3">
-            {categoriesData
-              .sort((a, b) => b.value - a.value)
-              .map((cat, idx) => {
-                const pct =
-                  totalExpenseComputed > 0
-                    ? Math.round((cat.value / totalExpenseComputed) * 100)
-                    : 0;
-                return (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between text-xs"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full border border-white/60"
-                        style={{ backgroundColor: cat.color }}
+        {spendingTab === "expense" ? (
+          (() => {
+            const data = categoriesData.filter(c => c.value > 0);
+            if (data.length === 0) return <p className="text-xs text-slate-400 text-center py-8">Chưa có dữ liệu chi tiêu</p>;
+            return (
+              <div className="flex flex-col sm:flex-row items-start gap-6">
+                {/* PieChart */}
+                <div className="w-full sm:w-40 h-40 shrink-0 mx-auto sm:mx-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={data}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={70}
+                        dataKey="value"
+                      >
+                        {data.map((entry, i) => (
+                          <Cell key={i} fill={entry.color.replace("bg-", "#").replace("-100", "E8")} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }}
+                        formatter={(value: number) => [new Intl.NumberFormat("vi-VN").format(value) + "đ", "Chi tiêu"]}
                       />
-                      <span className="font-semibold text-slate-600">
-                        {cat.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-400 font-medium">
-                        {formatVND(cat.value)}
-                      </span>
-                      <span className="font-bold text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded-md min-w-[32px] text-center">
-                        {pct}%
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <p className="text-center text-[10px] font-bold text-slate-400 mt-1">
+                    Tổng chi: {formatVND(totalExpenseComputed)}
+                  </p>
+                </div>
+                {/* Danh sách */}
+                <div className="flex-1 w-full space-y-2.5">
+                  {data.sort((a, b) => b.value - a.value).map((cat, idx) => {
+                    const pct = totalExpenseComputed > 0 ? Math.round((cat.value / totalExpenseComputed) * 100) : 0;
+                    return (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                          <span className="font-semibold text-slate-600 truncate">{cat.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className="text-slate-400 font-medium">{formatVND(cat.value)}</span>
+                          <span className="font-bold text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()
+        ) : (
+          (() => {
+            // Income breakdown (top sources)
+            const incomeData = transactions.filter(t => t.type === "income" && t.date.startsWith(currentMonthStr));
+            const incomeMap: Record<string, number> = {};
+            incomeData.forEach(t => {
+              const cat = t.category?.trim() || "Khác";
+              incomeMap[cat] = (incomeMap[cat] || 0) + t.amount;
+            });
+            const sortedIncome = Object.entries(incomeMap).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+            const topIncome = sortedIncome.slice(0, 6);
+            const totalIncomeVal = sortedIncome.reduce((s, [, v]) => s + v, 0);
+
+            if (topIncome.length === 0) return <p className="text-xs text-slate-400 text-center py-8">Chưa có dữ liệu thu nhập</p>;
+            return (
+              <div className="flex flex-col sm:flex-row items-start gap-6">
+                <div className="w-full sm:w-40 h-40 shrink-0 mx-auto sm:mx-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={topIncome.map(([name, value]) => ({ name, value }))}
+                        cx="50%" cy="50%"
+                        innerRadius={45}
+                        outerRadius={70}
+                        dataKey="value"
+                      >
+                        <Cell fill="#059669" />
+                        <Cell fill="#10b981" />
+                        <Cell fill="#34d399" />
+                        <Cell fill="#6ee7b7" />
+                        <Cell fill="#a7f3d0" />
+                        <Cell fill="#d1fae5" />
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }}
+                        formatter={(value: number) => [new Intl.NumberFormat("vi-VN").format(value) + "đ", "Thu nhập"]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <p className="text-center text-[10px] font-bold text-slate-400 mt-1">
+                    Tổng thu: {formatVND(totalIncomeVal)}
+                  </p>
+                </div>
+                <div className="flex-1 w-full space-y-2.5">
+                  {topIncome.map(([name, value], idx) => {
+                    const pct = totalIncomeVal > 0 ? Math.round((value / totalIncomeVal) * 100) : 0;
+                    return (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-emerald-400" />
+                          <span className="font-semibold text-slate-600 truncate">{name}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className="text-slate-400 font-medium">{formatVND(value)}</span>
+                          <span className="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()
+        )}
+      </div>
+
+      {/* ── 4. Dự Báo Dòng Tiền ── */}
+      <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600">
+              <Icon path={mdiChartTimelineVariant} size={0.8} />
+            </div>
+            <h3 className="text-xs font-bold text-slate-800 tracking-tight">
+              Dự Báo Dòng Tiền
+            </h3>
+          </div>
+          <span className="text-[9px] font-bold text-slate-400">
+            {now.toLocaleDateString("vi-VN", { month: "long", year: "numeric" })}
+          </span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="bg-slate-50 rounded-xl p-2.5">
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">Thu nhập</span>
+            <span className="text-[11px] font-extrabold text-emerald-600 mt-0.5 block">{formatVND(incomeThisMonth)}</span>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-2.5">
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">Đã chi</span>
+            <span className="text-[11px] font-extrabold text-rose-600 mt-0.5 block">{formatVND(expenseThisMonth)}</span>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-2.5">
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">Trả nợ</span>
+            <span className="text-[11px] font-extrabold text-blue-600 mt-0.5 block">{formatVND(totalPayablesMonthly)}</span>
+          </div>
+          <div className={`rounded-xl p-2.5 ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">Dự báo</span>
+            <span className={`text-[11px] font-extrabold mt-0.5 block ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {formatVND(projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed)}
+            </span>
           </div>
         </div>
+        {projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed < 0 && (
+          <div className="mt-2 bg-rose-50 border border-rose-100 rounded-xl p-2 flex items-center gap-1.5">
+            <Icon path={mdiAlertCircleOutline} size={0.6} className="text-rose-500 shrink-0" />
+            <span className="text-[9px] font-bold text-rose-600">Dự báo âm. Cần cắt giảm chi tiêu.</span>
+          </div>
+        )}
       </div>
 
       {urgentDebts.length > 0 && (
