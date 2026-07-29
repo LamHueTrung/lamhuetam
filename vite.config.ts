@@ -50,6 +50,20 @@ export default defineConfig(() => {
                 },
               },
             },
+            {
+              urlPattern: /^https:\/\/maps\.vietmap\.vn\/maps\/tiles\/(tm|st)\/.*\.png/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'vietmap-tiles',
+                expiration: {
+                  maxEntries: 1000,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
           ],
         },
       }),

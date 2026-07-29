@@ -18,6 +18,9 @@ import {
   mdiCommentTextOutline,
   mdiBookOpenVariant,
   mdiCalendarMonth,
+  mdiSatelliteVariant,
+  mdiEyeOutline,
+  mdiNavigation,
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import toast from "react-hot-toast";
@@ -66,6 +69,11 @@ function formatMonth(m: string) {
   return `Tháng ${parseInt(mo)}/${y}`;
 }
 
+const VN_BOUNDS: [[number, number], [number, number]] = [
+  [8.0, 102.0],
+  [24.0, 110.0],
+];
+
 function LeafletMap({
   entries,
   onSelectEntryDetail,
@@ -106,22 +114,83 @@ function LeafletMap({
       const map = L.map(mapRef.current, {
         zoomControl: true,
         attributionControl: false,
+        maxBounds: VN_BOUNDS,
+        maxBoundsViscosity: 1.0,
+        minZoom: 5,
       }).setView(center, 12);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 18,
-      }).addTo(map);
+      const apiKey = "4d0b5b164d23088c30476f3893ccaf470f2d6bcaa641174c";
+      const adminLayer = L.tileLayer(
+        `https://maps.vietmap.vn/maps/tiles/tm/{z}/{x}/{y}.png?apikey=${apiKey}`,
+        { maxZoom: 19, tms: false },
+      ).addTo(map);
+      const satLayer = L.tileLayer(
+        `https://maps.vietmap.vn/maps/tiles/st/{z}/{x}/{y}.png?apikey=${apiKey}`,
+        { maxZoom: 19, tms: false },
+      );
+      const MapStyleControl = L.Control.extend({
+        onAdd() {
+          const div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+          div.style.cssText =
+            "display:flex;gap:2px;background:#fff;border-radius:10px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-family:sans-serif";
+          div.innerHTML = `
+            <button data-layer="admin" style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:#06b6d4;color:#fff;transition:all 0.2s">
+              <svg viewBox="0 0 24 24" width="13" height="13" style="fill:currentColor"><path d="${mdiMap}"/></svg>
+              Hành chính
+            </button>
+            <button data-layer="sat" style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:transparent;color:#64748b;transition:all 0.2s">
+              <svg viewBox="0 0 24 24" width="13" height="13" style="fill:currentColor"><path d="${mdiSatelliteVariant}"/></svg>
+              Vệ tinh
+            </button>
+          `;
+          const btns = div.querySelectorAll("button");
+          const activeStyle =
+            "display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:#06b6d4;color:#fff";
+          const inactiveStyle =
+            "display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:transparent;color:#64748b";
+          btns.forEach((btn) => {
+            btn.onclick = () => {
+              if (btn.dataset.layer === "admin") {
+                map.removeLayer(satLayer);
+                map.addLayer(adminLayer);
+                btns[0].style.cssText = activeStyle;
+                btns[1].style.cssText = inactiveStyle;
+              } else {
+                map.removeLayer(adminLayer);
+                map.addLayer(satLayer);
+                btns[1].style.cssText = activeStyle;
+                btns[0].style.cssText = inactiveStyle;
+              }
+            };
+          });
+          return div;
+        },
+      });
+      new MapStyleControl({ position: "bottomleft" }).addTo(map);
       mapInstanceRef.current = map;
 
       map.on("popupopen", (evt: any) => {
         const popupEl = evt.popup.getElement();
         if (!popupEl) return;
-        const btns = popupEl.querySelectorAll(".btn-view-diary-detail");
-        btns.forEach((btn: any) => {
+        const detailBtns = popupEl.querySelectorAll(".btn-view-diary-detail");
+        detailBtns.forEach((btn: any) => {
           btn.onclick = () => {
             const id = btn.getAttribute("data-id");
             const target = entries.find((x) => x.id === id);
             if (target && onSelectEntryDetail) {
               onSelectEntryDetail(target);
+            }
+          };
+        });
+        const dirBtns = popupEl.querySelectorAll(".btn-directions");
+        dirBtns.forEach((btn: any) => {
+          btn.onclick = () => {
+            const lat = btn.getAttribute("data-lat");
+            const lng = btn.getAttribute("data-lng");
+            if (lat && lng) {
+              window.open(
+                `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+                "_blank",
+              );
             }
           };
         });
@@ -166,18 +235,25 @@ function LeafletMap({
             e.content.length > 50 ? e.content.slice(0, 50) + "..." : e.content;
 
           marker.bindPopup(`
-            <div style="font-family:sans-serif;padding:4px;min-width:175px;max-width:220px">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px">
-                <span style="font-size:11px;font-weight:800;color:${hex};background:${hex}18;padding:3px 10px;border-radius:14px;border:1.5px solid ${hex}40;display:inline-flex;align-items:center;gap:4px">
+            <div style="font-family:sans-serif;padding:5px;min-width:180px;max-width:220px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
+                <span style="font-size:10px;font-weight:800;color:${hex};background:${hex}18;padding:2px 10px;border-radius:12px;border:1.5px solid ${hex}40;display:inline-flex;align-items:center;gap:4px">
                   ${emoji} ${mood.label}
                 </span>
-                <span style="font-size:10px;color:#94a3b8;font-weight:600">${e.date}</span>
+                <span style="font-size:9px;color:#94a3b8;font-weight:600">${e.date}</span>
               </div>
-              ${e.location ? `<div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px">📍 ${e.location}</div>` : ""}
-              <p style="font-size:11px;color:#334155;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${snippet}</p>
-              <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;padding:7px 0;background:linear-gradient(to right, #06b6d4, #3b82f6);color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(6,182,212,0.25)">
-                Xem chi tiết
-              </button>
+              ${e.location ? `<div style="font-size:9.5px;color:#64748b;font-weight:600;margin-bottom:4px">📍 ${e.location}</div>` : ""}
+              <p style="font-size:10.5px;color:#334155;margin:0 0 7px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${snippet}</p>
+              <div style="display:flex;gap:4px">
+                <button data-id="${e.id}" class="btn-view-diary-detail" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 0;background:linear-gradient(to right,#06b6d4,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:9px;font-weight:700;cursor:pointer">
+                  <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="${mdiEyeOutline}"/></svg>
+                  Chi tiết
+                </button>
+                <button data-lat="${e.lat}" data-lng="${e.lng}" class="btn-directions" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 0;background:#fff;color:#3b82f6;border:1.5px solid #3b82f6;border-radius:10px;font-size:9px;font-weight:700;cursor:pointer">
+                  <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="${mdiNavigation}"/></svg>
+                  Đường đi
+                </button>
+              </div>
             </div>
           `);
         } else {
@@ -190,16 +266,17 @@ function LeafletMap({
                   ? e.content.slice(0, 45) + "..."
                   : e.content;
               return `
-              <div style="background:#f8fafc;padding:8px;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:6px">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px">
-                  <span style="font-size:10px;font-weight:800;color:${eMood.hex};background:${eMood.hex}15;padding:2px 7px;border-radius:10px">
+              <div style="background:#f8fafc;padding:7px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:5px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:3px">
+                  <span style="font-size:9px;font-weight:800;color:${eMood.hex};background:${eMood.hex}15;padding:2px 7px;border-radius:10px">
                     ${eMood.emoji} ${eMood.label}
                   </span>
-                  <span style="font-size:9px;color:#94a3b8;font-weight:600">${e.date}</span>
+                  <span style="font-size:8px;color:#94a3b8;font-weight:600">${e.date}</span>
                 </div>
-                <p style="font-size:10.5px;color:#334155;margin:0 0 6px 0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${eSnippet}</p>
-                <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;padding:5px 0;background:linear-gradient(to right, #06b6d4, #3b82f6);color:#fff;border:none;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer">
-                  Xem nhật ký này
+                <p style="font-size:10px;color:#334155;margin:0 0 5px 0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${eSnippet}</p>
+                <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:4px 0;background:linear-gradient(to right,#06b6d4,#3b82f6);color:#fff;border:none;border-radius:7px;font-size:8px;font-weight:700;cursor:pointer">
+                  <svg viewBox="0 0 24 24" width="10" height="10" style="fill:currentColor"><path d="${mdiEyeOutline}"/></svg>
+                  Chi tiết
                 </button>
               </div>
             `;
@@ -207,11 +284,15 @@ function LeafletMap({
             .join("");
 
           marker.bindPopup(`
-            <div style="font-family:sans-serif;padding:4px;min-width:210px;max-width:260px;max-height:260px;overflow-y:auto">
-              <div style="font-size:11px;font-weight:800;color:#0f172a;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+            <div style="font-family:sans-serif;padding:4px;min-width:210px;max-width:260px;max-height:270px;overflow-y:auto">
+              <div style="font-size:10.5px;font-weight:800;color:#0f172a;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
                 <span>📍 ${locName}</span>
-                <span style="font-size:9.5px;background:#06b6d4;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${group.entries.length} nhật ký</span>
+                <span style="font-size:9px;background:#06b6d4;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${group.entries.length} nhật ký</span>
               </div>
+              <button data-lat="${firstEntry.lat}" data-lng="${firstEntry.lng}" class="btn-directions" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 0;margin-bottom:5px;background:#fff;color:#3b82f6;border:1.5px solid #3b82f6;border-radius:8px;font-size:9px;font-weight:700;cursor:pointer">
+                <svg viewBox="0 0 24 24" width="11" height="11" style="fill:currentColor"><path d="${mdiNavigation}"/></svg>
+                Đường đi
+              </button>
               <div>${storiesHtml}</div>
             </div>
           `);

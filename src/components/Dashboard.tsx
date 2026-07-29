@@ -139,16 +139,16 @@ export default function Dashboard({
   });
 
   const colorHexMap: Record<string, string> = {
-    red: "#FED7D7",
-    amber: "#FEEBC8",
-    blue: "#EBF8FF",
-    teal: "#E6FFFA",
-    emerald: "#D1FAE5",
-    slate: "#EDF2F7",
-    indigo: "#E0E7FF",
-    rose: "#FFE4E6",
-    purple: "#F3E8FF",
-    orange: "#FFEDD5",
+    red: "#ef4444",
+    amber: "#f59e0b",
+    blue: "#3b82f6",
+    teal: "#0d9488",
+    emerald: "#10b981",
+    slate: "#64748b",
+    indigo: "#6366f1",
+    rose: "#f43f5e",
+    purple: "#8b5cf6",
+    orange: "#f97316",
   };
 
   const getColor = (name: string) => {
@@ -673,14 +673,14 @@ export default function Dashboard({
       </div>
 
       {/* ── 3. Cơ cấu Thu / Chi (2 tabs) ── */}
-      <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center gap-1.5 mb-4">
+      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-100 dark:border-slate-700/50 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center gap-1.5 mb-4 bg-slate-100/50 dark:bg-slate-900/50 p-1 rounded-full w-fit border border-slate-100/30 dark:border-slate-800/30">
           <button
             onClick={() => setSpendingTab("expense")}
-            className={`text-[10px] font-bold px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`text-[10px] font-bold px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 border ${
               spendingTab === "expense"
-                ? "bg-rose-500 text-white shadow-sm"
-                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                ? "bg-rose-700 dark:bg-rose-600 text-white border-rose-700 dark:border-rose-600 shadow-sm"
+                : "bg-transparent text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-800 dark:hover:text-white"
             }`}
           >
             <Icon path={mdiTrendingDown} size={0.667} />
@@ -688,10 +688,10 @@ export default function Dashboard({
           </button>
           <button
             onClick={() => setSpendingTab("income")}
-            className={`text-[10px] font-bold px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`text-[10px] font-bold px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 border ${
               spendingTab === "income"
-                ? "bg-emerald-500 text-white shadow-sm"
-                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                ? "bg-emerald-700 dark:bg-emerald-600 text-white border-emerald-700 dark:border-emerald-600 shadow-sm"
+                : "bg-transparent text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-800 dark:hover:text-white"
             }`}
           >
             <Icon path={mdiTrendingUp} size={0.667} />
@@ -718,7 +718,7 @@ export default function Dashboard({
                         dataKey="value"
                       >
                         {data.map((entry, i) => (
-                          <Cell key={i} fill={entry.color.replace("bg-", "#").replace("-100", "E8")} />
+                          <Cell key={i} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip
@@ -727,7 +727,7 @@ export default function Dashboard({
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <p className="text-center text-[10px] font-bold text-slate-400 mt-1">
+                  <p className="text-center text-[10px] font-extrabold text-slate-700 dark:text-slate-300 mt-1">
                     Tổng chi: {formatVND(totalExpenseComputed)}
                   </p>
                 </div>
@@ -738,12 +738,12 @@ export default function Dashboard({
                     return (
                       <div key={idx} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                          <span className="font-semibold text-slate-600 truncate">{cat.name}</span>
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: cat.color }} />
+                          <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{cat.name}</span>
                         </div>
                         <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-slate-400 font-medium">{formatVND(cat.value)}</span>
-                          <span className="font-bold text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
+                          <span className="text-slate-500 dark:text-slate-400 font-semibold">{formatVND(cat.value)}</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 bg-slate-100/80 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
                         </div>
                       </div>
                     );
@@ -764,6 +764,7 @@ export default function Dashboard({
             const sortedIncome = Object.entries(incomeMap).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
             const topIncome = sortedIncome.slice(0, 6);
             const totalIncomeVal = sortedIncome.reduce((s, [, v]) => s + v, 0);
+            const incomeColors = ["#047857", "#059669", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"];
 
             if (topIncome.length === 0) return <p className="text-xs text-slate-400 text-center py-8">Chưa có dữ liệu thu nhập</p>;
             return (
@@ -778,12 +779,9 @@ export default function Dashboard({
                         outerRadius={70}
                         dataKey="value"
                       >
-                        <Cell fill="#059669" />
-                        <Cell fill="#10b981" />
-                        <Cell fill="#34d399" />
-                        <Cell fill="#6ee7b7" />
-                        <Cell fill="#a7f3d0" />
-                        <Cell fill="#d1fae5" />
+                        {topIncome.map((_, i) => (
+                          <Cell key={i} fill={incomeColors[i % incomeColors.length]} />
+                        ))}
                       </Pie>
                       <Tooltip
                         contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }}
@@ -791,7 +789,7 @@ export default function Dashboard({
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <p className="text-center text-[10px] font-bold text-slate-400 mt-1">
+                  <p className="text-center text-[10px] font-extrabold text-slate-700 dark:text-slate-300 mt-1">
                     Tổng thu: {formatVND(totalIncomeVal)}
                   </p>
                 </div>
@@ -801,12 +799,12 @@ export default function Dashboard({
                     return (
                       <div key={idx} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-emerald-400" />
-                          <span className="font-semibold text-slate-600 truncate">{name}</span>
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: incomeColors[idx % incomeColors.length] }} />
+                          <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{name}</span>
                         </div>
                         <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-slate-400 font-medium">{formatVND(value)}</span>
-                          <span className="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
+                          <span className="text-slate-500 dark:text-slate-400 font-semibold">{formatVND(value)}</span>
+                          <span className="font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
                         </div>
                       </div>
                     );
