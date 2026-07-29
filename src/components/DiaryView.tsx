@@ -117,6 +117,7 @@ function LeafletMap({
         maxBounds: VN_BOUNDS,
         maxBoundsViscosity: 1.0,
         minZoom: 5,
+        tap: false,
       }).setView(center, 12);
       const apiKey = "4d0b5b164d23088c30476f3893ccaf470f2d6bcaa641174c";
       const adminLayer = L.tileLayer(
