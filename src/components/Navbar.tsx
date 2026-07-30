@@ -96,14 +96,10 @@ export default function Navbar({
           onClick={() => setCurrentTab(5)}
           whileHover={{ scale: 1.12 }}
           whileTap={{ scale: 0.88 }}
-          className="fixed bottom-44 right-5 md:right-[calc(50%-12.75rem)] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 bg-gradient-to-br from-cyan-400 to-blue-500 border-0 shadow-[0_4px_20px_rgba(6,182,212,0.4)]"
+          className="fixed bottom-44 right-5 md:right-[calc(50%-12.75rem)] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 bg-gradient-to-br from-cyan-40 border-0 shadow-[0_4px_20px_rgba(6,182,212,0.4)]"
           title="Cố vấn AI"
         >
-          <img
-            src="/logo_chat.png"
-            alt="AI"
-            className="w-8 h-8 rounded-full"
-          />
+          <img src="/logo_chat.png" alt="AI" className="w-8 h-8 rounded-full" />
         </motion.button>
       )}
 
