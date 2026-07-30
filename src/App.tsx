@@ -10,7 +10,7 @@ import {
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import ToastProvider from "./components/ToastProvider";
+import ToastProvider, { aiToast } from "./components/ToastProvider";
 import Navbar from "./components/Navbar";
 import Dashboard from "./components/Dashboard";
 import Ledger from "./components/Ledger";
@@ -214,11 +214,7 @@ function AppContent() {
       if (data.text && data.text !== "OK") {
         const alerts = data.text.split("\n").filter((l: string) => l.trim());
         alerts.forEach((alert: string) => {
-          toast(alert, {
-            icon: "⚠️",
-            duration: 6000,
-            style: { borderRadius: "16px", fontSize: "12px", fontWeight: 600 },
-          });
+          aiToast(alert, { type: "warning", duration: 6000 });
         });
       }
     } catch {}
