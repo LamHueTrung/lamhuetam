@@ -1307,7 +1307,7 @@ export default function FinanceBudget({
             Thiếu {formatVND(-remainingCash)} — cần giảm chi phí!
           </div>
         )}
-        <button
+        {/* <button
           onClick={handleAiCashflowAdvice}
           disabled={isAiLoading || expectedIncomeNum <= 0}
           className="w-full bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[10px] py-2.5 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-2"
@@ -1318,7 +1318,7 @@ export default function FinanceBudget({
             <Icon path={mdiAutoFix} size={0.75} />
           )}
           {isAiLoading ? "AI đang phân tích..." : "Cố vấn AI phân bổ thu nhập"}
-        </button>
+        </button> */}
       </div>
     </div>
   );

@@ -86,42 +86,42 @@ export default function QuickAddModal({
     }
   };
 
-  useEffect(() => {
-    if (suggestTimer.current) clearTimeout(suggestTimer.current);
-    if (
-      !description.trim() ||
-      type !== "expense" ||
-      propCategories.length === 0
-    )
-      return;
-    setAiSuggesting(true);
-    suggestTimer.current = setTimeout(async () => {
-      try {
-        const response = await fetch("/.netlify/functions/gemini-advisor", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            promptType: "suggest-category",
-            customMessage: description,
-            categoryDescription: propCategories.map((c) => c.name),
-          }),
-        });
-        const data = await response.json();
-        if (
-          data.text &&
-          propCategories.some((c) => c.name === data.text.trim())
-        ) {
-          setCategory(data.text.trim());
-        }
-      } catch {
-      } finally {
-        setAiSuggesting(false);
-      }
-    }, 800);
-    return () => {
-      if (suggestTimer.current) clearTimeout(suggestTimer.current);
-    };
-  }, [description, type]);
+  // useEffect(() => {
+  //   if (suggestTimer.current) clearTimeout(suggestTimer.current);
+  //   if (
+  //     !description.trim() ||
+  //     type !== "expense" ||
+  //     propCategories.length === 0
+  //   )
+  //     return;
+  //   setAiSuggesting(true);
+  //   suggestTimer.current = setTimeout(async () => {
+  //     try {
+  //       const response = await fetch("/.netlify/functions/gemini-advisor", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({
+  //           promptType: "suggest-category",
+  //           customMessage: description,
+  //           categoryDescription: propCategories.map((c) => c.name),
+  //         }),
+  //       });
+  //       const data = await response.json();
+  //       if (
+  //         data.text &&
+  //         propCategories.some((c) => c.name === data.text.trim())
+  //       ) {
+  //         setCategory(data.text.trim());
+  //       }
+  //     } catch {
+  //     } finally {
+  //       setAiSuggesting(false);
+  //     }
+  //   }, 800);
+  //   return () => {
+  //     if (suggestTimer.current) clearTimeout(suggestTimer.current);
+  //   };
+  // }, [description, type]);
 
   const categories =
     propCategories.length > 0

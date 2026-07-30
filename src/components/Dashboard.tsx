@@ -196,7 +196,9 @@ export default function Dashboard({
 
   const [trendRange, setTrendRange] = useState<"7d" | "30d" | "12m">("30d");
   const [showAmounts, setShowAmounts] = useState(false);
-  const [spendingTab, setSpendingTab] = useState<"expense" | "income">("expense");
+  const [spendingTab, setSpendingTab] = useState<"expense" | "income">(
+    "expense",
+  );
 
   const trendData = useMemo(() => {
     const filtered = transactions.filter((t) => {
@@ -221,7 +223,10 @@ export default function Dashboard({
       const key = d.toISOString().split("T")[0];
       // Get all transactions up to this date to calculate running balance
       const upToDate = sorted.filter((t) => t.date <= key);
-      runningBalance = upToDate.reduce((s, t) => s + (t.type === "income" ? t.amount : -t.amount), 0);
+      runningBalance = upToDate.reduce(
+        (s, t) => s + (t.type === "income" ? t.amount : -t.amount),
+        0,
+      );
       map[key] = { date: key, income: 0, expense: 0, balance: runningBalance };
     }
     // Reset per-day sums
@@ -351,9 +356,9 @@ export default function Dashboard({
     }
   }, [transactions, budgets, debts, savings]);
 
-  useEffect(() => {
-    if (!aiLoaded && !aiLoading) fetchAiInsight();
-  }, [fetchAiInsight, aiLoaded, aiLoading]);
+  // useEffect(() => {
+  //   if (!aiLoaded && !aiLoading) fetchAiInsight();
+  // }, [fetchAiInsight, aiLoaded, aiLoading]);
 
   return (
     <div className="space-y-6 pb-40">
@@ -479,7 +484,11 @@ export default function Dashboard({
         {/* Net Debt Badge */}
         {netDebt > 0 && (
           <div className="mt-2 px-2.5 py-1 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-1.5">
-            <Icon path={mdiShieldAlertOutline} size={0.6} className="text-amber-500 shrink-0" />
+            <Icon
+              path={mdiShieldAlertOutline}
+              size={0.6}
+              className="text-amber-500 shrink-0"
+            />
             <span className="text-[9px] font-bold text-amber-700">
               Dư nợ ròng: {formatVND(netDebt)}
             </span>
@@ -490,7 +499,11 @@ export default function Dashboard({
         <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-100">
           <div className="bg-slate-50 rounded-2xl p-3">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
-              <Icon path={mdiArrowDownBold} size={0.65} className="text-emerald-500" />
+              <Icon
+                path={mdiArrowDownBold}
+                size={0.65}
+                className="text-emerald-500"
+              />
               Thu tháng
             </span>
             <span className="text-xs font-extrabold text-emerald-600 block mt-0.5">
@@ -499,7 +512,11 @@ export default function Dashboard({
           </div>
           <div className="bg-slate-50 rounded-2xl p-3">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
-              <Icon path={mdiArrowUpBold} size={0.65} className="text-rose-500" />
+              <Icon
+                path={mdiArrowUpBold}
+                size={0.65}
+                className="text-rose-500"
+              />
               Chi tháng
             </span>
             <span className="text-xs font-extrabold text-rose-500 block mt-0.5">
@@ -508,7 +525,11 @@ export default function Dashboard({
           </div>
           <div className="bg-slate-50 rounded-2xl p-3">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
-              <Icon path={mdiArrowUpBold} size={0.65} className="text-blue-500" />
+              <Icon
+                path={mdiArrowUpBold}
+                size={0.65}
+                className="text-blue-500"
+              />
               Trả nợ tháng
             </span>
             <span className="text-xs font-extrabold text-blue-600 block mt-0.5">
@@ -520,35 +541,72 @@ export default function Dashboard({
               <Icon path={mdiWallet} size={0.65} className="text-indigo-500" />
               Còn lại
             </span>
-            <span className={`text-xs font-extrabold block mt-0.5 ${incomeThisMonth - expenseThisMonth - totalPayablesMonthly >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-              {showAmounts ? formatVND(Math.max(0, incomeThisMonth - expenseThisMonth - totalPayablesMonthly)) : "••••"}
+            <span
+              className={`text-xs font-extrabold block mt-0.5 ${incomeThisMonth - expenseThisMonth - totalPayablesMonthly >= 0 ? "text-emerald-600" : "text-rose-500"}`}
+            >
+              {showAmounts
+                ? formatVND(
+                    Math.max(
+                      0,
+                      incomeThisMonth - expenseThisMonth - totalPayablesMonthly,
+                    ),
+                  )
+                : "••••"}
             </span>
           </div>
         </div>
 
         {/* So sánh tháng trước inline */}
         {(() => {
-          const lastMonthObj = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const lastMonthObj = new Date(
+            now.getFullYear(),
+            now.getMonth() - 1,
+            1,
+          );
           const lastMonth = `${lastMonthObj.getFullYear()}-${String(lastMonthObj.getMonth() + 1).padStart(2, "0")}`;
-          const lastIncome = transactions.filter((t) => t.type === "income" && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
-          const lastExpense = transactions.filter((t) => t.type === "expense" && t.date.startsWith(lastMonth)).reduce((s, t) => s + t.amount, 0);
-          const incomeChange = lastIncome > 0 ? Math.round(((incomeThisMonth - lastIncome) / lastIncome) * 100) : 0;
-          const expenseChange = lastExpense > 0 ? Math.round(((expenseThisMonth - lastExpense) / lastExpense) * 100) : 0;
+          const lastIncome = transactions
+            .filter((t) => t.type === "income" && t.date.startsWith(lastMonth))
+            .reduce((s, t) => s + t.amount, 0);
+          const lastExpense = transactions
+            .filter((t) => t.type === "expense" && t.date.startsWith(lastMonth))
+            .reduce((s, t) => s + t.amount, 0);
+          const incomeChange =
+            lastIncome > 0
+              ? Math.round(((incomeThisMonth - lastIncome) / lastIncome) * 100)
+              : 0;
+          const expenseChange =
+            lastExpense > 0
+              ? Math.round(
+                  ((expenseThisMonth - lastExpense) / lastExpense) * 100,
+                )
+              : 0;
 
           return (
             <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100">
               <div className="flex items-center gap-1.5 text-[10px]">
                 <span className="text-slate-400 font-medium">Thu:</span>
-                <span className={`font-black flex items-center gap-0.5 ${incomeChange >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-                  <Icon path={incomeChange >= 0 ? mdiTrendingUp : mdiTrendingDown} size={0.6} />
-                  {incomeChange >= 0 ? "+" : ""}{incomeChange}%
+                <span
+                  className={`font-black flex items-center gap-0.5 ${incomeChange >= 0 ? "text-emerald-600" : "text-rose-500"}`}
+                >
+                  <Icon
+                    path={incomeChange >= 0 ? mdiTrendingUp : mdiTrendingDown}
+                    size={0.6}
+                  />
+                  {incomeChange >= 0 ? "+" : ""}
+                  {incomeChange}%
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-[10px]">
                 <span className="text-slate-400 font-medium">Chi:</span>
-                <span className={`font-black flex items-center gap-0.5 ${expenseChange <= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-                  <Icon path={expenseChange <= 0 ? mdiTrendingDown : mdiTrendingUp} size={0.6} />
-                  {expenseChange > 0 ? "+" : ""}{expenseChange}%
+                <span
+                  className={`font-black flex items-center gap-0.5 ${expenseChange <= 0 ? "text-emerald-600" : "text-rose-500"}`}
+                >
+                  <Icon
+                    path={expenseChange <= 0 ? mdiTrendingDown : mdiTrendingUp}
+                    size={0.6}
+                  />
+                  {expenseChange > 0 ? "+" : ""}
+                  {expenseChange}%
                 </span>
               </div>
               <span className="text-[9px] text-slate-400 ml-auto">
@@ -613,7 +671,11 @@ export default function Dashboard({
                 }}
                 formatter={(value: number, name: string) => [
                   new Intl.NumberFormat("vi-VN").format(value) + "đ",
-                  name === "income" ? "Thu nhập" : name === "expense" ? "Chi tiêu" : "Chênh lệch",
+                  name === "income"
+                    ? "Thu nhập"
+                    : name === "expense"
+                      ? "Chi tiêu"
+                      : "Chênh lệch",
                 ]}
                 labelFormatter={(label: string) =>
                   new Date(label + "T00:00:00").toLocaleDateString("vi-VN", {
@@ -692,121 +754,202 @@ export default function Dashboard({
           </button>
         </div>
 
-        {spendingTab === "expense" ? (
-          (() => {
-            const data = categoriesData.filter(c => c.value > 0);
-            if (data.length === 0) return <p className="text-xs text-slate-400 text-center py-8">Chưa có dữ liệu chi tiêu</p>;
-            return (
-              <div className="flex flex-col sm:flex-row items-start gap-6">
-                {/* PieChart */}
-                <div className="w-full sm:w-40 h-40 shrink-0 mx-auto sm:mx-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={data}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={70}
-                        dataKey="value"
-                      >
-                        {data.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }}
-                        formatter={(value: number) => [new Intl.NumberFormat("vi-VN").format(value) + "đ", "Chi tiêu"]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <p className="text-center text-[10px] font-extrabold text-slate-700 dark:text-slate-300 mt-1">
-                    Tổng chi: {formatVND(totalExpenseComputed)}
+        {spendingTab === "expense"
+          ? (() => {
+              const data = categoriesData.filter((c) => c.value > 0);
+              if (data.length === 0)
+                return (
+                  <p className="text-xs text-slate-400 text-center py-8">
+                    Chưa có dữ liệu chi tiêu
                   </p>
+                );
+              return (
+                <div className="flex flex-col sm:flex-row items-start gap-6">
+                  {/* PieChart */}
+                  <div className="w-full sm:w-40 h-40 shrink-0 mx-auto sm:mx-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={data}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={70}
+                          dataKey="value"
+                        >
+                          {data.map((entry, i) => (
+                            <Cell key={i} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #e2e8f0",
+                            fontSize: 11,
+                          }}
+                          formatter={(value: number) => [
+                            new Intl.NumberFormat("vi-VN").format(value) + "đ",
+                            "Chi tiêu",
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <p className="text-center text-[10px] font-extrabold text-slate-700 dark:text-slate-300 mt-1">
+                      Tổng chi: {formatVND(totalExpenseComputed)}
+                    </p>
+                  </div>
+                  {/* Danh sách */}
+                  <div className="flex-1 w-full space-y-2.5">
+                    {data
+                      .sort((a, b) => b.value - a.value)
+                      .map((cat, idx) => {
+                        const pct =
+                          totalExpenseComputed > 0
+                            ? Math.round(
+                                (cat.value / totalExpenseComputed) * 100,
+                              )
+                            : 0;
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse"
+                                style={{ backgroundColor: cat.color }}
+                              />
+                              <span className="font-bold text-slate-700 dark:text-slate-200 truncate">
+                                {cat.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2.5 shrink-0">
+                              <span className="text-slate-500 dark:text-slate-400 font-semibold">
+                                {formatVND(cat.value)}
+                              </span>
+                              <span className="font-extrabold text-slate-800 dark:text-slate-200 bg-slate-100/80 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">
+                                {pct}%
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
-                {/* Danh sách */}
-                <div className="flex-1 w-full space-y-2.5">
-                  {data.sort((a, b) => b.value - a.value).map((cat, idx) => {
-                    const pct = totalExpenseComputed > 0 ? Math.round((cat.value / totalExpenseComputed) * 100) : 0;
-                    return (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: cat.color }} />
-                          <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{cat.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-slate-500 dark:text-slate-400 font-semibold">{formatVND(cat.value)}</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 bg-slate-100/80 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()
-        ) : (
-          (() => {
-            // Income breakdown (top sources)
-            const incomeData = transactions.filter(t => t.type === "income" && t.date.startsWith(currentMonthStr));
-            const incomeMap: Record<string, number> = {};
-            incomeData.forEach(t => {
-              const cat = t.category?.trim() || "Khác";
-              incomeMap[cat] = (incomeMap[cat] || 0) + t.amount;
-            });
-            const sortedIncome = Object.entries(incomeMap).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-            const topIncome = sortedIncome.slice(0, 6);
-            const totalIncomeVal = sortedIncome.reduce((s, [, v]) => s + v, 0);
-            const incomeColors = ["#047857", "#059669", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"];
+              );
+            })()
+          : (() => {
+              // Income breakdown (top sources)
+              const incomeData = transactions.filter(
+                (t) =>
+                  t.type === "income" && t.date.startsWith(currentMonthStr),
+              );
+              const incomeMap: Record<string, number> = {};
+              incomeData.forEach((t) => {
+                const cat = t.category?.trim() || "Khác";
+                incomeMap[cat] = (incomeMap[cat] || 0) + t.amount;
+              });
+              const sortedIncome = Object.entries(incomeMap)
+                .filter(([, v]) => v > 0)
+                .sort((a, b) => b[1] - a[1]);
+              const topIncome = sortedIncome.slice(0, 6);
+              const totalIncomeVal = sortedIncome.reduce(
+                (s, [, v]) => s + v,
+                0,
+              );
+              const incomeColors = [
+                "#047857",
+                "#059669",
+                "#10b981",
+                "#34d399",
+                "#6ee7b7",
+                "#a7f3d0",
+              ];
 
-            if (topIncome.length === 0) return <p className="text-xs text-slate-400 text-center py-8">Chưa có dữ liệu thu nhập</p>;
-            return (
-              <div className="flex flex-col sm:flex-row items-start gap-6">
-                <div className="w-full sm:w-40 h-40 shrink-0 mx-auto sm:mx-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={topIncome.map(([name, value]) => ({ name, value }))}
-                        cx="50%" cy="50%"
-                        innerRadius={45}
-                        outerRadius={70}
-                        dataKey="value"
-                      >
-                        {topIncome.map((_, i) => (
-                          <Cell key={i} fill={incomeColors[i % incomeColors.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }}
-                        formatter={(value: number) => [new Intl.NumberFormat("vi-VN").format(value) + "đ", "Thu nhập"]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <p className="text-center text-[10px] font-extrabold text-slate-700 dark:text-slate-300 mt-1">
-                    Tổng thu: {formatVND(totalIncomeVal)}
+              if (topIncome.length === 0)
+                return (
+                  <p className="text-xs text-slate-400 text-center py-8">
+                    Chưa có dữ liệu thu nhập
                   </p>
-                </div>
-                <div className="flex-1 w-full space-y-2.5">
-                  {topIncome.map(([name, value], idx) => {
-                    const pct = totalIncomeVal > 0 ? Math.round((value / totalIncomeVal) * 100) : 0;
-                    return (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: incomeColors[idx % incomeColors.length] }} />
-                          <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{name}</span>
+                );
+              return (
+                <div className="flex flex-col sm:flex-row items-start gap-6">
+                  <div className="w-full sm:w-40 h-40 shrink-0 mx-auto sm:mx-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={topIncome.map(([name, value]) => ({
+                            name,
+                            value,
+                          }))}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={70}
+                          dataKey="value"
+                        >
+                          {topIncome.map((_, i) => (
+                            <Cell
+                              key={i}
+                              fill={incomeColors[i % incomeColors.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #e2e8f0",
+                            fontSize: 11,
+                          }}
+                          formatter={(value: number) => [
+                            new Intl.NumberFormat("vi-VN").format(value) + "đ",
+                            "Thu nhập",
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <p className="text-center text-[10px] font-extrabold text-slate-700 dark:text-slate-300 mt-1">
+                      Tổng thu: {formatVND(totalIncomeVal)}
+                    </p>
+                  </div>
+                  <div className="flex-1 w-full space-y-2.5">
+                    {topIncome.map(([name, value], idx) => {
+                      const pct =
+                        totalIncomeVal > 0
+                          ? Math.round((value / totalIncomeVal) * 100)
+                          : 0;
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{
+                                backgroundColor:
+                                  incomeColors[idx % incomeColors.length],
+                              }}
+                            />
+                            <span className="font-bold text-slate-700 dark:text-slate-200 truncate">
+                              {name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            <span className="text-slate-500 dark:text-slate-400 font-semibold">
+                              {formatVND(value)}
+                            </span>
+                            <span className="font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">
+                              {pct}%
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-slate-500 dark:text-slate-400 font-semibold">{formatVND(value)}</span>
-                          <span className="font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md min-w-[28px] text-center">{pct}%</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })()
-        )}
+              );
+            })()}
       </div>
 
       {/* ── 4. Dự Báo Dòng Tiền ── */}
@@ -821,33 +964,69 @@ export default function Dashboard({
             </h3>
           </div>
           <span className="text-[9px] font-bold text-slate-400">
-            {now.toLocaleDateString("vi-VN", { month: "long", year: "numeric" })}
+            {now.toLocaleDateString("vi-VN", {
+              month: "long",
+              year: "numeric",
+            })}
           </span>
         </div>
         <div className="grid grid-cols-4 gap-2">
           <div className="bg-slate-50 rounded-xl p-2.5">
-            <span className="text-[8px] font-bold text-slate-400 uppercase block">Thu nhập</span>
-            <span className="text-[11px] font-extrabold text-emerald-600 mt-0.5 block">{formatVND(incomeThisMonth)}</span>
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">
+              Thu nhập
+            </span>
+            <span className="text-[11px] font-extrabold text-emerald-600 mt-0.5 block">
+              {formatVND(incomeThisMonth)}
+            </span>
           </div>
           <div className="bg-slate-50 rounded-xl p-2.5">
-            <span className="text-[8px] font-bold text-slate-400 uppercase block">Đã chi</span>
-            <span className="text-[11px] font-extrabold text-rose-600 mt-0.5 block">{formatVND(expenseThisMonth)}</span>
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">
+              Đã chi
+            </span>
+            <span className="text-[11px] font-extrabold text-rose-600 mt-0.5 block">
+              {formatVND(expenseThisMonth)}
+            </span>
           </div>
           <div className="bg-slate-50 rounded-xl p-2.5">
-            <span className="text-[8px] font-bold text-slate-400 uppercase block">Trả nợ</span>
-            <span className="text-[11px] font-extrabold text-blue-600 mt-0.5 block">{formatVND(totalPayablesMonthly)}</span>
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">
+              Trả nợ
+            </span>
+            <span className="text-[11px] font-extrabold text-blue-600 mt-0.5 block">
+              {formatVND(totalPayablesMonthly)}
+            </span>
           </div>
-          <div className={`rounded-xl p-2.5 ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
-            <span className="text-[8px] font-bold text-slate-400 uppercase block">Dự báo</span>
-            <span className={`text-[11px] font-extrabold mt-0.5 block ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-              {formatVND(projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed)}
+          <div
+            className={`rounded-xl p-2.5 ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}
+          >
+            <span className="text-[8px] font-bold text-slate-400 uppercase block">
+              Dự báo
+            </span>
+            <span
+              className={`text-[11px] font-extrabold mt-0.5 block ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+            >
+              {formatVND(
+                projectedIncome -
+                  expenseThisMonth -
+                  totalPayablesMonthly -
+                  totalFixed,
+              )}
             </span>
           </div>
         </div>
-        {projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed < 0 && (
+        {projectedIncome -
+          expenseThisMonth -
+          totalPayablesMonthly -
+          totalFixed <
+          0 && (
           <div className="mt-2 bg-rose-50 border border-rose-100 rounded-xl p-2 flex items-center gap-1.5">
-            <Icon path={mdiAlertCircleOutline} size={0.6} className="text-rose-500 shrink-0" />
-            <span className="text-[9px] font-bold text-rose-600">Dự báo âm. Cần cắt giảm chi tiêu.</span>
+            <Icon
+              path={mdiAlertCircleOutline}
+              size={0.6}
+              className="text-rose-500 shrink-0"
+            />
+            <span className="text-[9px] font-bold text-rose-600">
+              Dự báo âm. Cần cắt giảm chi tiêu.
+            </span>
           </div>
         )}
       </div>
@@ -915,7 +1094,7 @@ export default function Dashboard({
       )}
 
       {/* AI INSIGHTS CARD */}
-      <div
+      {/* <div
         id="ai-insights-card"
         className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]"
       >
@@ -955,7 +1134,7 @@ export default function Dashboard({
             </p>
           )}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
