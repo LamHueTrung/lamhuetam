@@ -59,7 +59,7 @@ function CategoryItemRow({
       value={cat}
       dragListener={false}
       dragControls={dragControls}
-      className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-2xl touch-none select-none"
+      className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-2xl select-none"
     >
       <div className="flex items-center gap-3 flex-1">
         {/* Drag Handle */}

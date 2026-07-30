@@ -35,6 +35,15 @@ export const handler = async (event: any) => {
       return { statusCode: 201, body: JSON.stringify(cat) };
     }
 
+    // PUT /reorder — batch update order
+    if (method === 'PUT' && event.path?.endsWith('/reorder')) {
+      const { orderedIds } = body;
+      for (let i = 0; i < orderedIds.length; i++) {
+        await CategoryModel.findByIdAndUpdate(orderedIds[i], { order: i });
+      }
+      return { statusCode: 200, body: JSON.stringify({ success: true }) };
+    }
+
     // PUT — update (rename, icon, color, order)
     if (method === 'PUT') {
       const { _id, ...update } = body;
@@ -45,15 +54,6 @@ export const handler = async (event: any) => {
     // DELETE
     if (method === 'DELETE') {
       await CategoryModel.findByIdAndDelete(body._id);
-      return { statusCode: 200, body: JSON.stringify({ success: true }) };
-    }
-
-    // PUT /reorder — batch update order
-    if (method === 'PUT' && event.path?.endsWith('/reorder')) {
-      const { orderedIds } = body;
-      for (let i = 0; i < orderedIds.length; i++) {
-        await CategoryModel.findByIdAndUpdate(orderedIds[i], { order: i });
-      }
       return { statusCode: 200, body: JSON.stringify({ success: true }) };
     }
 

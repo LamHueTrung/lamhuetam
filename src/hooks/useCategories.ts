@@ -10,7 +10,10 @@ export function useCategories() {
     try {
       setLoading(true);
       const data = await api.categories.list();
-      if (Array.isArray(data)) setCategories(data);
+      if (Array.isArray(data)) {
+        const sorted = [...data].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        setCategories(sorted);
+      }
     } catch (err) {
       console.error("Failed to load categories", err);
     } finally {
