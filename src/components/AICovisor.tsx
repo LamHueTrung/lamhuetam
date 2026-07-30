@@ -79,8 +79,7 @@ const quickChips: {
   },
 ];
 
-const WELCOME_TEXT =
-  "Chào mày, tao là Trung của 10 năm sau đây. Tao ở đây để đồng hành và kéo mày ra khỏi mớ hỗn độn này. Đang gặp khó khăn hay rối chuyện gì, cứ nói thẳng với tao, tao với mày cùng tính.";
+const WELCOME_TEXT = "Tao nè, ổn không mậy. Hỏi gì hỏi đi, tao chỉ đường cho.";
 
 export default function AICovisor({
   transactions,
@@ -114,9 +113,12 @@ export default function AICovisor({
     if (isLoading) return;
 
     let userText = "";
-    if (promptType === "debt") userText = "Phân tích và tối ưu các khoản nợ hiện tại";
-    else if (promptType === "balance") userText = "Phân tích chi tiêu tháng này và gợi ý tiết kiệm";
-    else if (promptType === "savings") userText = "Dự báo dòng tiền và gợi ý kế hoạch tài chính";
+    if (promptType === "debt")
+      userText = "Phân tích và tối ưu các khoản nợ hiện tại";
+    else if (promptType === "balance")
+      userText = "Phân tích chi tiêu tháng này và gợi ý tiết kiệm";
+    else if (promptType === "savings")
+      userText = "Dự báo dòng tiền và gợi ý kế hoạch tài chính";
     else userText = customText || inputMessage;
 
     if (!userText.trim()) return;
@@ -232,11 +234,7 @@ export default function AICovisor({
           >
             <Icon path={mdiArrowLeft} size={1.2} />
           </button>
-          <img
-            src="/logo_chat.png"
-            alt="AI"
-            className="w-8 h-8 rounded-full"
-          />
+          <img src="/logo_chat.png" alt="AI" className="w-8 h-8 rounded-full" />
           <div>
             <h1 className="text-[15px] font-bold text-slate-900 dark:text-white">
               Trung (+10 năm)
@@ -304,7 +302,9 @@ export default function AICovisor({
                   >
                     <div
                       className={`markdown-body prose prose-sm max-w-none ${
-                        isGemini ? "prose-slate dark:prose-invert" : "prose-invert"
+                        isGemini
+                          ? "prose-slate dark:prose-invert"
+                          : "prose-invert"
                       }`}
                     >
                       <Markdown>{msg.text}</Markdown>
@@ -401,7 +401,10 @@ export default function AICovisor({
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
+        <form
+          onSubmit={handleSubmit}
+          className="relative flex items-center gap-2"
+        >
           <input
             id="chat-input"
             type="text"
