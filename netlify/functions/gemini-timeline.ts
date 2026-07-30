@@ -2,7 +2,7 @@ import { Handler } from "@netlify/functions";
 
 const BASE_URL = () =>
   process.env.GEMINI_API_BASE_URL || "https://trungsaas-beta.onrender.com/v1";
-const MODEL = () => process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODEL = () => process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const API_KEY = () => process.env.GEMINI_API_KEY || "";
 
 function generateDefaultTimeline(

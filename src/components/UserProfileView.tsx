@@ -103,7 +103,7 @@ export default function UserProfileView({
   const [openSection, setOpenSection] = useState<number | null>(null);
 
   // AI Configuration states
-  const [aiModel, setAiModel] = useState("gemini-2.5-flash");
+  const [aiModel, setAiModel] = useState("gemini-2.0-flash");
   const [aiApiKey, setAiApiKey] = useState("");
   const [aiBaseUrl, setAiBaseUrl] = useState(
     "https://trungsaas-beta.onrender.com/v1",
@@ -125,7 +125,8 @@ export default function UserProfileView({
   // Helper: lấy URL đăng ký API Key dựa trên provider hiện tại
   const getApiKeyUrl = () => {
     if (aiBaseUrl.includes("openrouter")) return "https://openrouter.ai/keys";
-    if (aiBaseUrl.includes("nvidia.com")) return "https://build.nvidia.com/deepseek-ai/deepseek-v4-flash";
+    if (aiBaseUrl.includes("nvidia.com"))
+      return "https://build.nvidia.com/deepseek-ai/deepseek-v4-flash";
     return "";
   };
 
@@ -1137,13 +1138,13 @@ export default function UserProfileView({
                   onChange={(e) => setAiModel(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-semibold"
                 >
-                  <option value="gemini-2.5-flash">
+                  <option value="gemini-2.0-flash">
                     Gemini 2.5 Flash (Khuyên dùng)
                   </option>
                   <option value="gemini-3.5-flash">
                     Gemini 3.5 Flash (Khuyên dùng)
                   </option>
-                  <option value="gemini-2.5-flash-lite-preview-06-17">
+                  <option value="gemini-2.0-flash-lite-preview-06-17">
                     Gemini 2.5 Flash Lite
                   </option>
                   <option value="gemini-flash-1.5">Gemini 1.5 Flash</option>
@@ -1151,7 +1152,10 @@ export default function UserProfileView({
                     Gemini 1.5 Flash Lite
                   </option>
                   <option value="gemma-4-31b-it">Gemma 4 31B IT</option>
-                  <option value="deepseek/deepseek-v4-flash:free" className="border-t border-slate-200 dark:border-slate-700">
+                  <option
+                    value="deepseek/deepseek-v4-flash:free"
+                    className="border-t border-slate-200 dark:border-slate-700"
+                  >
                     DeepSeek V4 Flash (Free - OpenRouter)
                   </option>
                   <option value="deepseek-ai/deepseek-v4-flash">

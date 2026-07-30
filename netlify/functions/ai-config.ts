@@ -10,7 +10,7 @@ const headers = {
 };
 
 const DEFAULT_CONFIG = {
-  model: "gemini-2.5-flash",
+  model: "gemini-2.0-flash",
   apiKey: "",
   baseUrl: "https://trungsaas-beta.onrender.com/v1",
   lastTestedAt: "",
@@ -73,7 +73,7 @@ export const handler: Handler = async (event) => {
       // Lấy apiKey hiện tại trong DB nếu như FE gửi lên chuỗi rỗng (không đổi key)
       let finalKey = apiKey;
       let finalBaseUrl = baseUrl || "https://trungsaas-beta.onrender.com/v1";
-      let finalModel = model || "gemini-2.5-flash";
+      let finalModel = model || "gemini-2.0-flash";
 
       if (!finalKey) {
         const currentConfig = await AIConfig.findOne();

@@ -123,14 +123,14 @@ QUY TẮC BẮT BUỘC (CRITICAL RULES):
 5. HÀNH ĐỘNG CỤ THỂ: Kết thúc câu trả lời bằng 1 hành động thực thi được ngay.`;
 
     let userPrompt = "";
-    let maxTokens = 350;
+    let maxTokens = 1000;
     let temperature = 0.3; // Độ sáng tạo vừa phải, đảm bảo tính chính xác cho tài chính
 
     // ── CẤU HÌNH KỸ NĂNG (SKILLS & THRESHOLDS PER PROMPT TYPE) ──
     if (promptType === "suggest-category") {
       // Skill: Gợi ý danh mục chuẩn xác tuyệt đối
       userPrompt = `Giao dịch: "${customMessage}"\n\nDựa vào mô tả trên, hãy chọn 1 danh mục tài chính phù hợp nhất.\nCHỈ TRẢ VỀ DUY NHẤT TÊN DANH MỤC (Ví dụ: Ăn uống, Di chuyển, Mua sắm, Hóa đơn,...). Không thêm bất kỳ từ nào khác, không dấu chấm câu.`;
-      maxTokens = 50;
+      maxTokens = 100;
       temperature = 0.0; // Nhiệt độ 0.0 để kết quả tuyệt đối chính xác
     } else if (promptType === "alerts") {
       // Skill: Cảnh báo vỡ ngân sách & nợ đến hạn
@@ -155,12 +155,12 @@ QUY TẮC BẮT BUỘC (CRITICAL RULES):
       }
 
       userPrompt = `Ngân sách cảnh báo (>80%): ${JSON.stringify(budgetAlerts.map((b: any) => `${b.category}: ${formatVND(b.spent)}/${formatVND(b.limit)}`))}\nNợ sắp đến hạn trong 7 ngày: ${JSON.stringify(upcomingDebts.map((d: any) => d.name))}\n\nĐưa ra các cảnh báo ngắn gọn, mỗi dòng bắt đầu bằng icon ⚠️.`;
-      maxTokens = 250;
+      maxTokens = 600;
       temperature = 0.1;
     } else if (promptType === "insights") {
       // Skill: Đánh giá sức khỏe tài chính tháng
       userPrompt = `${dataSummary}\nTop chi tiêu: ${topCategory.join(", ")}\nNgân sách: ${budgetSummary}\n\nĐưa ra 3 nhận xét ngắn gọn về sức khỏe tài chính tháng này. Mỗi nhận xét 1 dòng có số liệu.`;
-      maxTokens = 350;
+      maxTokens = 1000;
       temperature = 0.3;
     } else if (promptType === "debt") {
       // Skill: Tối ưu công nợ theo chiến lược Debt Avalanche (Trả nợ lãi cao trước)
@@ -178,12 +178,12 @@ QUY TẮC BẮT BUỘC (CRITICAL RULES):
           Lãi_suất: d.interestRate + "%/năm",
         })),
       )}\n${dataSummary}\n\nYêu cầu phân tích:\n1. Chỉ ra khoản nợ nguy hiểm nhất (dựa trên lãi suất và áp lực dòng tiền).\n2. Gợi ý thứ tự trả nợ tối ưu (Ưu tiên nợ lãi cao).\n3. 1 Hành động dứt điểm nợ ngay tháng này.`;
-      maxTokens = 450;
+      maxTokens = 1500;
       temperature = 0.2;
     } else if (promptType === "balance") {
       // Skill: Tối ưu dòng tiền & Cân bằng chi tiêu
       userPrompt = `${dataSummary}\nTop chi tiêu lớn nhất: ${topCategory.join(", ")}\nTrạng thái Ngân sách: ${budgetSummary}\n\nPhân tích dòng tiền:\n1. Tỷ lệ Chi tiêu & Trả nợ so với Thu nhập (Có an toàn không?).\n2. Đánh giá Dòng tiền tự do còn lại (${formatVND(freeCashflow)}).\n3. 2 vị trí có thể cắt giảm chi tiêu ngay lập tức.`;
-      maxTokens = 450;
+      maxTokens = 1500;
       temperature = 0.3;
     } else if (promptType === "savings") {
       // Skill: Lập kế hoạch & dự báo hoàn thành mục tiêu tiết kiệm
@@ -194,12 +194,12 @@ QUY TẮC BẮT BUỘC (CRITICAL RULES):
           Đã_có: formatVND(s.currentAmount),
         })),
       )}\nDòng tiền dư có thể tích lũy: ${formatVND(freeCashflow)}/tháng.\n\nPhân tích:\n1. Với mức dư ${formatVND(freeCashflow)}/tháng, bao lâu sẽ đạt mục tiêu?\n2. Lộ trình phân bổ tiền tích lũy hợp lý.\n3. 1 Lời khuyên để tăng tốc độ hoàn thành.`;
-      maxTokens = 450;
+      maxTokens = 1500;
       temperature = 0.3;
     } else {
       // Skill: Tư vấn & Giải đáp thắc mắc tài chính tổng quát
       userPrompt = `${dataSummary}\nTop chi tiêu: ${topCategory.join(", ")}\n\nCâu hỏi người dùng: "${customMessage}"\n\nTrả lời chính xác, ngắn gọn dựa trên dữ liệu tài chính ở trên.`;
-      maxTokens = 350;
+      maxTokens = 1000;
       temperature = 0.4;
     }
 

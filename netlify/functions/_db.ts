@@ -310,7 +310,7 @@ export const UserProfile =
 
 const AIConfigSchema = new mongoose.Schema(
   {
-    model: { type: String, default: "gemini-2.5-flash" },
+    model: { type: String, default: "gemini-2.0-flash" },
     apiKey: { type: String, default: "" },
     baseUrl: {
       type: String,
