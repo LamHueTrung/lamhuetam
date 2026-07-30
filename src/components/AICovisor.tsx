@@ -237,7 +237,7 @@ export default function AICovisor({
           <img src="/logo_chat.png" alt="AI" className="w-8 h-8 rounded-full" />
           <div>
             <h1 className="text-[15px] font-bold text-slate-900 dark:text-white">
-              Trung (+10 năm)
+              Huệ Tâm
             </h1>
             <p className="text-[11px] text-slate-400 font-medium">
               Bản thân ở tương lai
