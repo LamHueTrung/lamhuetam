@@ -31,9 +31,12 @@ import {
   mdiServer,
   mdiCheck,
   mdiAlert,
+  mdiPackageUp,
+  mdiClockOutline,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
+import { useRegisterSW } from "virtual:pwa-register/react";
 import { UserProfile, CustomProfileField } from "../types";
 
 interface UserProfileViewProps {
@@ -149,6 +152,8 @@ export default function UserProfileView({
       console.error("Lỗi khi load cấu hình AI:", err);
     }
   };
+
+  const { needRefresh, updateServiceWorker } = useRegisterSW();
 
   useEffect(() => {
     setFullName(profile.fullName || "");
@@ -1511,6 +1516,27 @@ export default function UserProfileView({
             <span>{isSaving ? "Đang lưu..." : "Lưu toàn bộ hồ sơ"}</span>
           </button>
         )}
+      </div>
+
+      {/* Version info */}
+      <div className="border-t border-slate-100 dark:border-slate-700 pt-4 mt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+            <Icon path={mdiClockOutline} size={0.65} />
+            <span>
+              Phiên bản: <b className="text-slate-500 dark:text-slate-300">{__APP_VERSION__}</b>
+            </span>
+          </div>
+          {needRefresh && (
+            <button
+              onClick={() => updateServiceWorker(true)}
+              className="bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm cursor-pointer flex items-center gap-1 hover:opacity-90 transition-all"
+            >
+              <Icon path={mdiPackageUp} size={0.65} />
+              <span>Cập nhật mới</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

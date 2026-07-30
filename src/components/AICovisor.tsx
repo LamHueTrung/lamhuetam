@@ -234,7 +234,7 @@ export default function AICovisor({
           >
             <Icon path={mdiArrowLeft} size={1.2} />
           </button>
-          <img src="/logo_chat.png" alt="AI" className="w-8 h-8 rounded-full" />
+           <img src="/avatar_bot.png" alt="AI" className="w-8 h-8 rounded-full" />
           <div>
             <h1 className="text-[15px] font-bold text-slate-900 dark:text-white">
               Huệ Tâm
@@ -283,7 +283,7 @@ export default function AICovisor({
                 {isGemini && (
                   <div className="shrink-0 mb-1">
                     <img
-                      src="/logo_chat.png"
+                      src="/avatar_bot.png"
                       alt="AI"
                       className="w-7 h-7 rounded-full"
                     />
@@ -330,16 +330,6 @@ export default function AICovisor({
                     )}
                   </div>
                 </div>
-
-                {!isGemini && (
-                  <div className="w-7 h-7 rounded-full bg-[#007AFF]/10 flex items-center justify-center shrink-0 mb-1">
-                    <Icon
-                      path={mdiSend}
-                      size={0.75}
-                      className="text-[#007AFF]"
-                    />
-                  </div>
-                )}
               </motion.div>
             );
           })}
@@ -354,7 +344,7 @@ export default function AICovisor({
               >
                 <div className="shrink-0 mb-1">
                   <img
-                    src="/logo_chat.png"
+                    src="/avatar_bot.png"
                     alt="AI"
                     className="w-7 h-7 rounded-full"
                   />
