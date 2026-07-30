@@ -271,8 +271,8 @@ Vai trò và tính cách của bạn:
       temperature = 0.1;
     } else if (promptType === "insights") {
       // Skill: Đánh giá sức khỏe tài chính tháng
-      userPrompt = `Dữ liệu tài chính:\n${financeMd}\n\nMày hãy đánh giá sức khỏe tài chính tháng này cho tao. Viết dưới giọng điệu "Lâm Huệ Trung 10 năm sau", phân tích sắc nét 3 điểm và đưa ra lời khuyên thực tế nhất.`;
-      maxTokens = 4000;
+      userPrompt = `Dữ liệu tài chính:\n${financeMd}\n\nMày hãy đánh giá sức khỏe tài chính tháng này cho tao. Viết dưới giọng điệu "Lâm Huệ Trung 10 năm sau", phân tích sắc nét đúng 3 điểm chính cực kỳ ngắn gọn (mỗi điểm tối đa 2 dòng dưới dạng gạch đầu dòng), không dài dòng sáo rỗng.`;
+      maxTokens = 800;
       temperature = 0.3;
     } else if (promptType === "debt") {
       // Skill: Tối ưu công nợ theo chiến lược Debt Avalanche (Trả nợ lãi cao trước)

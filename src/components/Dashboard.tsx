@@ -47,6 +47,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import Markdown from "react-markdown";
 import { calcRemainingBalance, calcPaidPercent } from "../lib/debtUtils";
 type Debt = DebtAccount;
 
@@ -945,9 +946,9 @@ export default function Dashboard({
               <span className="text-xs font-medium">AI đang phân tích...</span>
             </div>
           ) : aiInsight ? (
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              {aiInsight}
-            </p>
+            <div className="markdown-body prose prose-sm max-w-none prose-slate dark:prose-invert text-xs leading-relaxed font-medium">
+              <Markdown>{aiInsight}</Markdown>
+            </div>
           ) : (
             <p className="text-xs text-slate-400 font-medium italic">
               Chưa có dữ liệu. Thêm giao dịch để AI phân tích.
