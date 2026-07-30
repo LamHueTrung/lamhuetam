@@ -178,7 +178,7 @@ export default function QuickAddModal({ isOpen, onClose, onAddTransaction, categ
               className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
             >
               <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
-              <div className="flex items-center gap-2">
+              <div className="hidden flex items-center gap-2">
                 <span className="w-2.5 h-2.5 bg-slate-900 rounded-full animate-pulse" />
                 <h2 className="text-base font-bold text-slate-800">Ghi Chép Một Chạm</h2>
               </div>

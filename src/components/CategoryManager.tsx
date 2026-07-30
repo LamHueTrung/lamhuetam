@@ -29,6 +29,103 @@ const colorOptions = [
   { name: 'slate', bg: 'bg-slate-100', ring: 'ring-slate-400' },
 ];
 
+// Sub-component for individual category items to have their own drag controls
+function CategoryItemRow({
+  cat,
+  isEditing,
+  editName,
+  setEditName,
+  onUpdate,
+  onDelete,
+  setEditingId,
+  editIcon,
+  editColor,
+}: {
+  cat: Category;
+  isEditing: boolean;
+  editName: string;
+  setEditName: (val: string) => void;
+  onUpdate: (cat: Category) => void;
+  onDelete: (id: string) => void;
+  setEditingId: (id: string | null) => void;
+  editIcon: string;
+  editColor: string;
+}) {
+  const dragControls = useDragControls();
+  const IconComp = iconMap[cat.icon || "Tag"];
+
+  return (
+    <Reorder.Item
+      value={cat}
+      dragListener={false}
+      dragControls={dragControls}
+      className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-2xl touch-none select-none"
+    >
+      <div className="flex items-center gap-3 flex-1">
+        {/* Drag Handle */}
+        <div
+          onPointerDown={(e) => {
+            e.preventDefault();
+            dragControls.start(e);
+          }}
+          className="cursor-grab active:cursor-grabbing p-1.5 -ml-1.5 hover:bg-slate-200/50 rounded-lg transition-colors shrink-0 touch-none select-none"
+        >
+          <Icon path={mdiDragVertical} size={0.875} className="text-slate-400" />
+        </div>
+        <div className="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+          {IconComp ? <IconComp className="w-4 h-4" /> : <Icon path={mdiPalette} size={0.75} />}
+        </div>
+        {isEditing ? (
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold flex-1"
+          />
+        ) : (
+          <div
+            className="flex flex-col cursor-pointer"
+            onClick={() => {
+              setEditingId(cat._id);
+              setEditName(cat.name);
+            }}
+          >
+            <span className="text-xs font-bold text-slate-800">{cat.name}</span>
+            <span className="text-[9px] font-semibold text-slate-400">
+              {cat.type === "income" ? "Khoản thu" : "Khoản chi"}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        {isEditing ? (
+          <button
+            onClick={() => {
+              if (!editName.trim()) {
+                toast.error("Tên không được để trống");
+                return;
+              }
+              onUpdate({ ...cat, name: editName.trim(), icon: editIcon, color: editColor });
+              setEditingId(null);
+              toast.success("Đã cập nhật!");
+            }}
+            className="p-1.5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 cursor-pointer"
+          >
+            <Icon path={mdiCheck} size={0.75} />
+          </button>
+        ) : (
+          <button
+            onClick={() => onDelete(cat._id)}
+            className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 cursor-pointer"
+          >
+            <Icon path={mdiDeleteOutline} size={0.75} />
+          </button>
+        )}
+      </div>
+    </Reorder.Item>
+  );
+}
+
 export default function CategoryManager({ isOpen, onClose, categories, onAdd, onUpdate, onDelete, onReorder }: CategoryManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -129,41 +226,20 @@ export default function CategoryManager({ isOpen, onClose, categories, onAdd, on
               )}
 
               <Reorder.Group axis="y" values={categoryList} onReorder={handleReorder} className="space-y-2">
-                {categoryList.map((cat) => {
-                  const IconComp = iconMap[cat.icon || "Tag"];
-                  const isEditing = editingId === cat._id;
-
-                  return (
-                    <Reorder.Item key={cat._id} value={cat} className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-2xl cursor-grab active:cursor-grabbing">
-                      <div className="flex items-center gap-3 flex-1">
-                        <Icon path={mdiDragVertical} size={0.875} className="text-slate-300 shrink-0" />
-                        <div className="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-700 shrink-0">
-                          {IconComp ? <IconComp className="w-4 h-4" /> : <Icon path={mdiPalette} size={0.75} />}
-                        </div>
-                        {isEditing ? (
-                          <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold flex-1" />
-                        ) : (
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-800">{cat.name}</span>
-                            <span className="text-[9px] font-semibold text-slate-400">{cat.type === "income" ? "Khoản thu" : "Khoản chi"}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {isEditing ? (
-                          <button onClick={() => { if (!editName.trim()) { toast.error("Tên không được để trống"); return; } onUpdate({ ...cat, name: editName.trim(), icon: editIcon, color: editColor }); setEditingId(null); toast.success("Đã cập nhật!"); }}
-                            className="p-1.5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 cursor-pointer">
-                            <Icon path={mdiCheck} size={0.75} />
-                          </button>
-                        ) : (
-                          <button onClick={() => onDelete(cat._id)} className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 cursor-pointer">
-                            <Icon path={mdiDeleteOutline} size={0.75} />
-                          </button>
-                        )}
-                      </div>
-                    </Reorder.Item>
-                  );
-                })}
+                {categoryList.map((cat) => (
+                  <CategoryItemRow
+                    key={cat._id}
+                    cat={cat}
+                    isEditing={editingId === cat._id}
+                    editName={editName}
+                    setEditName={setEditName}
+                    onUpdate={onUpdate}
+                    onDelete={onDelete}
+                    setEditingId={setEditingId}
+                    editIcon={editIcon}
+                    editColor={editColor}
+                  />
+                ))}
               </Reorder.Group>
             </div>
           </motion.div>

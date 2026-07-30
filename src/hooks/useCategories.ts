@@ -38,11 +38,20 @@ export function useCategories() {
   };
 
   const reorderCategories = async (orderedIds: string[]) => {
-    await api.categories.reorder(orderedIds);
+    // Optimistically update React state immediately
     setCategories(prev => {
       const map = new Map(prev.map(c => [c._id, c]));
-      return orderedIds.map((id, i) => ({ ...map.get(id)!, order: i }));
+      return orderedIds.map((id, i) => {
+        const item = map.get(id);
+        return item ? { ...item, order: i } : null!;
+      }).filter(Boolean);
     });
+
+    try {
+      await api.categories.reorder(orderedIds);
+    } catch (err) {
+      console.error("Failed to reorder categories", err);
+    }
   };
 
   return { categories, loading, addCategory, updateCategory, deleteCategory, reorderCategories, refetch: fetchCategories };

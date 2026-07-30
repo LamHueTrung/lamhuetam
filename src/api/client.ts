@@ -301,6 +301,22 @@ async function deleteCategory(_id: string) {
 }
 
 async function reorderCategories(orderedIds: string[]) {
+  try {
+    const cached = await readCache<any>(db.categories);
+    if (cached && cached.length) {
+      const map = new Map(cached.map((c: any) => [c._id, c]));
+      const updated = orderedIds.map((id, i) => {
+        const item = map.get(id);
+        return item ? { ...item, order: i } : null;
+      }).filter(Boolean);
+      if (updated.length) {
+        await db.categories.bulkPut(updated as any);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to update IndexedDB during category reordering:", err);
+  }
+
   if (navigator.onLine) {
     try {
       await apiFetch(`${BASE}/categories/reorder`, { method: 'PUT', body: JSON.stringify({ orderedIds }) });

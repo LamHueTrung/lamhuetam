@@ -100,7 +100,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
   return createPortal(
     <AnimatePresence>
       {isOpen && transaction && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 overflow-hidden z-50 flex items-end justify-center">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -124,7 +124,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                 onClose();
               }
             }}
-            className="relative w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-hidden z-10"
+            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-hidden z-10"
           >
             {/* Draggable Header Section */}
             <div
@@ -141,7 +141,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             </div>
 
             {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 pt-2">
               <form onSubmit={handleSubmit} className="space-y-6">
               <div className="bg-slate-50 rounded-[24px] p-5 border border-slate-100 text-center space-y-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">SỐ TIỀN GIAO DỊCH</label>
