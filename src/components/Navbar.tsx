@@ -5,7 +5,6 @@ import {
   mdiReceiptTextCheckOutline,
   mdiPlus,
   mdiSwapHorizontal,
-  mdiAutoFix,
   mdiBookOpenVariant,
   mdiAccountCircle,
 } from "@mdi/js";
@@ -27,7 +26,6 @@ export default function Navbar({
     { id: 2, label: "Sổ cái", icon: mdiReceiptTextCheckOutline },
     { id: 3, label: "Thêm nhanh", icon: mdiPlus, isFab: true },
     { id: 4, label: "Tài chính", icon: mdiSwapHorizontal },
-    // { id: 5, label: "Cố vấn AI", icon: mdiAutoFix },
     { id: 7, label: "Tôi", icon: mdiAccountCircle },
   ];
 
@@ -90,6 +88,24 @@ export default function Navbar({
           );
         })}
       </div>
+
+      {/* AI floating button — above Diary */}
+      {currentTab !== 5 && (
+        <motion.button
+          id="btn-ai"
+          onClick={() => setCurrentTab(5)}
+          whileHover={{ scale: 1.12 }}
+          whileTap={{ scale: 0.88 }}
+          className="fixed bottom-44 right-5 md:right-[calc(50%-12.75rem)] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 bg-gradient-to-br from-cyan-400 to-blue-500 border-0 shadow-[0_4px_20px_rgba(6,182,212,0.4)]"
+          title="Cố vấn AI"
+        >
+          <img
+            src="/logo_chat.png"
+            alt="AI"
+            className="w-8 h-8 rounded-full"
+          />
+        </motion.button>
+      )}
 
       {/* Diary floating button — bottom right */}
       {currentTab !== 6 && (

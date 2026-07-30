@@ -1,18 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Icon } from "@mdi/react";
 import {
-  mdiAutoFix,
   mdiSend,
+  mdiLoading,
+  mdiDeleteOutline,
+  mdiArrowLeft,
+  mdiContentCopy,
+  mdiCheck,
   mdiTrendingUp,
   mdiScale,
-  mdiTarget,
-  mdiLoading,
-  mdiRobot,
-  mdiAccount,
-  mdiDeleteOutline,
+  mdiPiggyBank,
 } from "@mdi/js";
 import Markdown from "react-markdown";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "react-hot-toast";
 import {
   Transaction,
   Budget,
@@ -21,7 +22,6 @@ import {
   Message,
   UserProfile,
 } from "../types";
-import { mdiCodeBraces, mdiHeartOutline } from "@mdi/js";
 type Debt = DebtAccount;
 
 interface AICovisorProps {
@@ -30,6 +30,7 @@ interface AICovisorProps {
   debts: Debt[];
   savings: SavingsGoal[];
   userProfile?: UserProfile;
+  onBack: () => void;
 }
 
 function formatTime(ts: string) {
@@ -47,45 +48,39 @@ function formatTime(ts: string) {
   });
 }
 
-const quickChips = [
+const quickChips: {
+  label: string;
+  icon: string;
+  promptType: "debt" | "balance" | "savings" | "custom";
+  customText?: string;
+  color: string;
+  bg: string;
+}[] = [
   {
-    label: "Lộ trình Node.js",
-    icon: mdiCodeBraces,
-    promptType: "custom" as const,
-    customText: "Làm sao để lấy lại gốc Node.js và phát triển sự nghiệp trong bối cảnh công việc hiện tại dùng Laravel/Vue 2?",
-    color: "text-cyan-600",
-  },
-  {
-    label: "Áp lực tài chính gia đình",
-    icon: mdiHeartOutline,
-    promptType: "custom" as const,
-    customText: "Tư vấn giúp tôi chiến lược quản lý tài chính khi làm việc xa nhà, vừa trả nợ vừa hỗ trợ gia đình ở quê.",
-    color: "text-rose-500",
-  },
-  {
-    label: "Phân tích nợ",
+    label: "Phân tích chi tiêu",
     icon: mdiTrendingUp,
+    promptType: "balance" as const,
+    color: "text-emerald-500",
+    bg: "bg-emerald-50",
+  },
+  {
+    label: "Tối ưu nợ",
+    icon: mdiScale,
     promptType: "debt" as const,
     color: "text-amber-500",
+    bg: "bg-amber-50",
   },
   {
     label: "Dự báo dòng tiền",
-    icon: mdiScale,
-    promptType: "balance" as const,
-    color: "text-emerald-500",
-  },
-  {
-    label: "Mẹo tiết kiệm",
-    icon: mdiTarget,
+    icon: mdiPiggyBank,
     promptType: "savings" as const,
-    color: "text-indigo-500",
+    color: "text-blue-500",
+    bg: "bg-blue-50",
   },
 ];
 
 const WELCOME_TEXT =
-  "Xin chào **Lâm Huệ Trung**! Tôi là **Gemini Co-Visor** — Cố vấn tài chính & sự nghiệp riêng của bạn.\n\nTôi đã đồng bộ toàn bộ **Hồ sơ cá nhân**, Sổ cái, Ngân sách, Công nợ và Mục tiêu tích lũy của bạn.\n\nHãy chọn một gợi ý bên dưới hoặc nhập câu hỏi để bắt đầu!";
-
-const SESSION_KEY = "ai_chat_session";
+  "Xin chào! Tôi là trợ lý tài chính của bạn.\n\nHãy hỏi tôi về **chi tiêu**, **nợ**, **tiết kiệm** hoặc nhập câu hỏi bất kỳ.";
 
 export default function AICovisor({
   transactions,
@@ -93,50 +88,24 @@ export default function AICovisor({
   debts,
   savings,
   userProfile,
+  onBack,
 }: AICovisorProps) {
-
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      sender: "gemini",
+      text: WELCOME_TEXT,
+      timestamp: new Date().toISOString(),
+    },
+  ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
-
-  // Load chat history from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(SESSION_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-          setInitialized(true);
-          return;
-        }
-      }
-    } catch {}
-    setMessages([
-      {
-        id: "welcome",
-        sender: "gemini",
-        text: WELCOME_TEXT,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-    setInitialized(true);
-  }, []);
-
-  // Save messages to localStorage on change
-  useEffect(() => {
-    if (initialized) {
-      try {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(messages));
-      } catch {}
-    }
-  }, [messages, initialized]);
 
   const sendMessageToGemini = async (
     promptType: "debt" | "balance" | "savings" | "custom",
@@ -145,9 +114,9 @@ export default function AICovisor({
     if (isLoading) return;
 
     let userText = "";
-    if (promptType === "debt") userText = "Phân tích tối ưu hóa công nợ";
-    else if (promptType === "balance") userText = "Đánh giá cân đối thu chi";
-    else if (promptType === "savings") userText = "Tư vấn chiến lược tích lũy";
+    if (promptType === "debt") userText = "Phân tích và tối ưu các khoản nợ hiện tại";
+    else if (promptType === "balance") userText = "Phân tích chi tiêu tháng này và gợi ý tiết kiệm";
+    else if (promptType === "savings") userText = "Dự báo dòng tiền và gợi ý kế hoạch tài chính";
     else userText = customText || inputMessage;
 
     if (!userText.trim()) return;
@@ -163,6 +132,9 @@ export default function AICovisor({
     setInputMessage("");
     setIsLoading(true);
 
+    const input = document.getElementById("chat-input");
+    input?.focus();
+
     try {
       const response = await fetch("/.netlify/functions/gemini-advisor", {
         method: "POST",
@@ -177,7 +149,6 @@ export default function AICovisor({
           userProfile,
         }),
       });
-
 
       const data = await response.json();
       if (!response.ok)
@@ -200,7 +171,7 @@ export default function AICovisor({
         {
           id: Math.random().toString(),
           sender: "gemini",
-          text: `❌ **Lỗi kết nối AI:** ${error.message}\n\nHãy đảm bảo đã cấu hình **GEMINI_API_KEY** trong Netlify Environment Variables hoặc kiểm tra kết nối mạng.`,
+          text: `**Lỗi kết nối:** ${error.message}\n\nKiểm tra cấu hình AI trong **Hồ sơ** hoặc thử lại sau.`,
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -216,9 +187,6 @@ export default function AICovisor({
   };
 
   const clearChat = () => {
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch {}
     setMessages([
       {
         id: "welcome",
@@ -227,6 +195,17 @@ export default function AICovisor({
         timestamp: new Date().toISOString(),
       },
     ]);
+  };
+
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast.success("Đã sao chép");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast.error("Không thể sao chép");
+    }
   };
 
   const groupedMessages: { type: "timestamp" | "message"; data: any }[] = [];
@@ -242,40 +221,51 @@ export default function AICovisor({
   });
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+    <div className="flex flex-col h-full min-h-0 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-sm">
-            <Icon path={mdiAutoFix} size={1.25} className="text-white" />
-          </div>
+          <button
+            onClick={onBack}
+            className="p-1 -ml-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+            title="Quay lại"
+          >
+            <Icon path={mdiArrowLeft} size={1.2} />
+          </button>
+          <img
+            src="/logo_chat.png"
+            alt="AI"
+            className="w-8 h-8 rounded-full"
+          />
           <div>
-            <h1 className="text-[15px] font-bold text-slate-900">
-              Gemini Co-Visor
+            <h1 className="text-[15px] font-bold text-slate-900 dark:text-white">
+              Cố vấn AI
             </h1>
             <p className="text-[11px] text-slate-400 font-medium">
-              Cố vấn tài chính AI
+              Trợ lý tài chính cá nhân
             </p>
           </div>
         </div>
         <button
           onClick={clearChat}
-          className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-rose-500 cursor-pointer transition-colors"
+          className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-rose-500 cursor-pointer transition-colors"
           title="Xoá chat"
         >
           <Icon path={mdiDeleteOutline} size={1} />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 py-2 -mx-1 px-1 overscroll-behavior-contain">
-        <div className="space-y-1">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 px-4 py-3 overscroll-behavior-contain bg-[#F2F2F7] dark:bg-[#1C1C1E]">
+        <div className="space-y-1.5">
           {groupedMessages.map((item, idx) => {
             if (item.type === "timestamp") {
+              const isToday =
+                item.data === new Date().toLocaleDateString("vi-VN");
               return (
                 <div key={`ts-${idx}`} className="flex justify-center py-2">
-                  <span className="text-[11px] text-slate-400 font-medium bg-slate-100/80 px-3 py-1 rounded-full">
-                    {item.data === new Date().toLocaleDateString("vi-VN")
-                      ? "Hôm nay"
-                      : item.data}
+                  <span className="text-[11px] text-slate-400 font-medium bg-slate-200/80 dark:bg-slate-800/80 px-3 py-1 rounded-full">
+                    {isToday ? "Hôm nay" : item.data}
                   </span>
                 </div>
               );
@@ -287,41 +277,65 @@ export default function AICovisor({
             return (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className={`flex items-end gap-2 px-1 ${isGemini ? "justify-start" : "justify-end"} mb-2`}
+                className={`flex items-end gap-2 ${isGemini ? "justify-start" : "justify-end"} mb-2`}
               >
                 {isGemini && (
-                  <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mb-1">
-                    <Icon path={mdiRobot} size={0.875} className="text-white" />
+                  <div className="shrink-0 mb-1">
+                    <img
+                      src="/logo_chat.png"
+                      alt="AI"
+                      className="w-7 h-7 rounded-full"
+                    />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-[78%] space-y-0.5 ${!isGemini ? "items-end" : ""}`}
+                  className={`max-w-[80%] space-y-0.5 ${!isGemini ? "items-end" : ""}`}
                 >
                   <div
-                    className={`px-3.5 py-2.5 text-[14px] leading-relaxed ${isGemini ? "bg-[#E9E9EB] text-slate-800 rounded-[20px] rounded-bl-[4px]" : "bg-[#007AFF] text-white rounded-[20px] rounded-br-[4px]"}`}
+                    className={`px-3.5 py-2.5 text-[14px] leading-relaxed ${
+                      isGemini
+                        ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-[20px] rounded-bl-[4px] shadow-sm"
+                        : "bg-[#007AFF] text-white rounded-[20px] rounded-br-[4px]"
+                    }`}
                   >
                     <div
-                      className={`markdown-body prose prose-sm max-w-none ${isGemini ? "prose-slate" : "prose-invert"}`}
+                      className={`markdown-body prose prose-sm max-w-none ${
+                        isGemini ? "prose-slate dark:prose-invert" : "prose-invert"
+                      }`}
                     >
                       <Markdown>{msg.text}</Markdown>
                     </div>
                   </div>
-                  <p
-                    className={`text-[10px] text-slate-400 font-medium px-1 ${!isGemini ? "text-right" : ""}`}
+                  <div
+                    className={`flex items-center gap-2 ${!isGemini ? "justify-end" : ""}`}
                   >
-                    {formatTime(msg.timestamp)}
-                  </p>
+                    <span className="text-[10px] text-slate-400 font-medium px-1">
+                      {formatTime(msg.timestamp)}
+                    </span>
+                    {isGemini && (
+                      <button
+                        onClick={() => handleCopy(msg.text, msg.id)}
+                        className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        title="Sao chép"
+                      >
+                        <Icon
+                          path={copiedId === msg.id ? mdiCheck : mdiContentCopy}
+                          size={0.65}
+                        />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {!isGemini && (
                   <div className="w-7 h-7 rounded-full bg-[#007AFF]/10 flex items-center justify-center shrink-0 mb-1">
                     <Icon
-                      path={mdiAccount}
-                      size={0.875}
+                      path={mdiSend}
+                      size={0.75}
                       className="text-[#007AFF]"
                     />
                   </div>
@@ -330,71 +344,83 @@ export default function AICovisor({
             );
           })}
 
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-end gap-2 px-1 mb-2"
-            >
-              <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mb-1">
-                <Icon path={mdiRobot} size={0.875} className="text-white" />
-              </div>
-              <div className="bg-[#E9E9EB] px-4 py-3 rounded-[20px] rounded-bl-[4px] flex items-center gap-1.5">
-                <span
-                  className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <span
-                  className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <span
-                  className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
-              </div>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                className="flex items-end gap-2 mb-2"
+              >
+                <div className="shrink-0 mb-1">
+                  <img
+                    src="/logo_chat.png"
+                    alt="AI"
+                    className="w-7 h-7 rounded-full"
+                  />
+                </div>
+                <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-[20px] rounded-bl-[4px] shadow-sm flex items-center gap-1.5">
+                  <span
+                    className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      <div className="pt-2 border-t border-slate-100 space-y-2.5 shrink-0">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 select-none no-swipe">
-          {quickChips.map((chip) => {
-            return (
-              <button
-                key={chip.label}
-                onClick={() => sendMessageToGemini(chip.promptType, chip.customText)}
-                disabled={isLoading}
-                className="px-3.5 py-2 bg-white border border-slate-100 hover:bg-slate-50 rounded-full text-[11px] font-bold flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm disabled:opacity-50 transition-all"
-              >
-
-                <Icon path={chip.icon} size={0.875} className={chip.color} />
-                <span className="text-slate-700">{chip.label}</span>
-              </button>
-            );
-          })}
+      {/* Input area */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+        {/* Quick chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2.5 no-swipe">
+          {quickChips.map((chip) => (
+            <button
+              key={chip.label}
+              onClick={() =>
+                sendMessageToGemini(chip.promptType, chip.customText)
+              }
+              disabled={isLoading}
+              className={`px-3 py-1.5 ${chip.bg} dark:bg-slate-800 hover:opacity-80 rounded-full text-[12px] font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 transition-all whitespace-nowrap`}
+            >
+              <Icon path={chip.icon} size={0.75} className={chip.color} />
+              <span className="text-slate-700 dark:text-slate-300">
+                {chip.label}
+              </span>
+            </button>
+          ))}
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="relative flex items-center gap-2"
-        >
+        <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
           <input
+            id="chat-input"
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             disabled={isLoading}
-            placeholder="Tin nhắn..."
-            className="flex-1 pl-4 pr-3 py-3 bg-white border border-slate-100 rounded-[22px] text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF]/30 placeholder-slate-400"
+            placeholder="Nhập câu hỏi..."
+            className="flex-1 pl-4 pr-3 py-2.5 bg-slate-100 dark:bg-slate-800 border-0 rounded-[22px] text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 placeholder-slate-400 dark:text-white dark:placeholder-slate-500"
           />
           <button
             type="submit"
             disabled={isLoading || !inputMessage.trim()}
-            className="p-3 bg-[#007AFF] text-white rounded-full hover:bg-[#0066D6] disabled:opacity-40 disabled:hover:bg-[#007AFF] cursor-pointer transition-all shadow-sm flex items-center justify-center"
+            className="p-2.5 bg-[#007AFF] text-white rounded-full hover:bg-[#0066D6] disabled:opacity-40 disabled:hover:bg-[#007AFF] cursor-pointer transition-all shadow-sm flex items-center justify-center"
           >
-            <Icon path={mdiSend} size={1} />
+            {isLoading ? (
+              <Icon path={mdiLoading} size={1} className="animate-spin" />
+            ) : (
+              <Icon path={mdiSend} size={1} />
+            )}
           </button>
         </form>
       </div>

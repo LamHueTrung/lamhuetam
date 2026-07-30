@@ -11,7 +11,7 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.png', 'apple-touch-icon.png'],
+        includeAssets: ['logo_192.png', 'logo_chat.png', 'logo_180.png'],
         manifest: {
           name: 'Tài Chính Cá Nhân',
           short_name: 'TCP',
@@ -25,12 +25,12 @@ export default defineConfig(() => {
           lang: 'vi-VN',
           icons: [
             {
-              src: '/icon-192x192.png',
+              src: '/logo_192.png',
               sizes: '192x192',
               type: 'image/png',
             },
             {
-              src: '/icon-512x512.png',
+              src: '/logo_192.png',
               sizes: '512x512',
               type: 'image/png',
             },

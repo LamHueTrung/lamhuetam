@@ -401,7 +401,7 @@ function AppContent() {
       <main
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 pb-[127px] min-h-0 overflow-hidden relative"
+        className={`flex-1 w-full max-w-md mx-auto px-5 pt-4 min-h-0 overflow-hidden relative ${currentTab === 5 ? "pb-4" : "pb-[127px]"}`}
       >
         {isInitialLoading ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
@@ -467,6 +467,7 @@ function AppContent() {
                   debts={debts}
                   savings={savings}
                   userProfile={userProfile}
+                  onBack={() => setCurrentTab(1)}
                 />
               )}
               {currentTab === 6 && (
@@ -485,11 +486,13 @@ function AppContent() {
         )}
       </main>
 
-      <Navbar
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-        onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-      />
+      {currentTab !== 5 && (
+        <Navbar
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+        />
+      )}
 
       <QuickAddModal
         isOpen={isQuickAddOpen}

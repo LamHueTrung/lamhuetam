@@ -3,6 +3,7 @@ import { Icon } from "@mdi/react";
 import { mdiLogin, mdiLoading } from "@mdi/js";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import AppLogo from "./AppLogo";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -26,7 +27,10 @@ export default function LoginPage() {
   return (
     <div className="h-screen bg-[#F2F2F7] flex items-center justify-center p-6">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
+        <div className="text-center space-y-3">
+          <div className="flex justify-center">
+            <AppLogo size={72} />
+          </div>
           <h1 className="text-2xl font-bold text-slate-900">Đăng nhập</h1>
           <p className="text-xs text-slate-400 font-medium">Tiếp tục quản lý tài chính của bạn</p>
         </div>
