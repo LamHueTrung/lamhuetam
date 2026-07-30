@@ -365,22 +365,14 @@ export default function Dashboard({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="relative shrink-0">
-              {userProfile?.avatar ? (
-                <img
-                  src={userProfile.avatar}
-                  alt={userProfile.fullName}
-                  onError={(e) => {
-                    e.currentTarget.src = "/avatar.jpg";
-                  }}
-                  className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-cyan-400 font-black text-lg flex items-center justify-center shadow-xs border border-slate-800">
-                  {userProfile?.fullName
-                    ? userProfile.fullName.split(" ").pop()?.charAt(0)
-                    : "T"}
-                </div>
-              )}
+              <img
+                src={userProfile?.avatar || "/avatar.jpg"}
+                alt={userProfile?.fullName}
+                onError={(e) => {
+                  e.currentTarget.src = "/avatar.jpg";
+                }}
+                className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
+              />
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
             </div>
 

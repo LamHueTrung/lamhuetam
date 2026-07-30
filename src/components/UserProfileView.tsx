@@ -379,20 +379,14 @@ export default function UserProfileView({
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="relative">
-              {avatar ? (
-                <img
-                  src={avatar}
-                  alt={fullName}
-                  onError={(e) => {
-                    e.currentTarget.src = "/avatar.jpg";
-                  }}
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-md"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black shadow-md border border-white/20">
-                  {fullName ? fullName.split(" ").pop()?.charAt(0) : "T"}
-                </div>
-              )}
+              <img
+                src={avatar || "/avatar.jpg"}
+                alt={fullName}
+                onError={(e) => {
+                  e.currentTarget.src = "/avatar.jpg";
+                }}
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-md"
+              />
               <span
                 className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full"
                 title="Trực tuyến"
