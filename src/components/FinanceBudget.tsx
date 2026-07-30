@@ -3,14 +3,12 @@ import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
   mdiCheckCircleOutline,
-  mdiAlertOutline,
   mdiPlus,
   mdiMinus,
   mdiAlertCircleOutline,
   mdiDeleteOutline,
   mdiClose,
   mdiCurrencyUsd,
-  mdiAutoFix,
   mdiLoading,
   mdiBank,
   mdiCreditCard,
@@ -84,7 +82,7 @@ interface FinanceBudgetProps {
   onTransactionAdded?: () => void;
 }
 
-type ViewTab = "debts" | "cashflow" | "salary" | "fixed";
+type ViewTab = "debts" | "salary" | "fixed";
 
 const debtTypeMeta: Record<
   string,
@@ -292,14 +290,6 @@ export default function FinanceBudget({
   const [paymentNote, setPaymentNote] = useState("");
   const dragControlsPayment = useDragControls();
 
-  // ── Cashflow states ───────────────────────────────────────────────────────
-  const [cashflowMonth, setCashflowMonth] = useState(currentMonth);
-  const [expectedIncome, setExpectedIncome] = useState("");
-  const [cfFixedExpenses, setCfFixedExpenses] = useState<
-    { name: string; amount: string }[]
-  >([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-
   // ── Salary states ─────────────────────────────────────────────────────────
   const [salaryEdit, setSalaryEdit] = useState(false);
   const [grossSalary, setGrossSalary] = useState("");
@@ -438,47 +428,6 @@ export default function FinanceBudget({
     );
     setPaymentDebtId(null);
     toast.success(`Đã thanh toán ${selectedInstallments.length} kỳ!`);
-  };
-
-  // ── Cashflow helpers ──────────────────────────────────────────────────────
-  const incomeThisMonth = transactions
-    .filter((t) => t.type === "income" && t.date.startsWith(cashflowMonth))
-    .reduce((s, t) => s + t.amount, 0);
-  const debtPaymentsThisMonth = debts
-    .filter((d) => d.status === "active")
-    .reduce((s, d) => s + d.monthlyPayment, 0);
-  const cfFixedTotal = cfFixedExpenses.reduce(
-    (s, f) => s + (parseInt(f.amount.replace(/\D/g, "")) || 0),
-    0,
-  );
-  const expectedIncomeNum = parseInt(expectedIncome.replace(/\D/g, "")) || 0;
-  const remainingCash =
-    expectedIncomeNum - debtPaymentsThisMonth - cfFixedTotal;
-
-  const handleAiCashflowAdvice = async () => {
-    if (expectedIncomeNum <= 0) {
-      toast.error("Nhập thu nhập dự kiến trước!");
-      return;
-    }
-    setIsAiLoading(true);
-    try {
-      const res = await fetch("/.netlify/functions/gemini-advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transactions,
-          debts,
-          promptType: "custom",
-          customMessage: `Tôi có thu nhập tháng này ${expectedIncomeNum}đ. Nợ: ${JSON.stringify(debts)}. Chi phí cố định: ${JSON.stringify(cfFixedExpenses)}. Tư vấn phân bổ tiền lương thực tế.`,
-        }),
-      });
-      const data = await res.json();
-      if (data.text) toast(data.text, { icon: "🤖", duration: 9000 });
-    } catch {
-      toast.error("AI không phản hồi.");
-    } finally {
-      setIsAiLoading(false);
-    }
   };
 
   // ── Salary helpers ────────────────────────────────────────────────────────
@@ -1133,193 +1082,6 @@ export default function FinanceBudget({
           )}
         </div>
       )}
-    </div>
-  );
-
-  const renderCashflow = () => (
-    <div className="space-y-5">
-      <div>
-        <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
-          KẾ HOẠCH TÀI CHÍNH
-        </span>
-        {/* <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
-          Dòng Tiền Tháng
-        </h1> */}
-      </div>
-      <div className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[24px] p-4 shadow-sm">
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Chọn tháng
-        </label>
-        <input
-          type="month"
-          value={cashflowMonth}
-          onChange={(e) => setCashflowMonth(e.target.value)}
-          className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-xl px-3 py-2.5 text-xs font-semibold outline-none dark:text-white"
-        />
-      </div>
-      <div className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[24px] p-4 shadow-sm space-y-3">
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-          Thu nhập dự kiến
-        </label>
-        <div className="relative">
-          <Icon
-            path={mdiCashMultiple}
-            size={1}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={expectedIncome}
-            onKeyDown={handleAmountKeyDown}
-            onChange={(e) => setExpectedIncome(numFmt(e.target.value))}
-            placeholder="VD: 15,000,000"
-            className="w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-[16px] text-sm font-bold outline-none dark:text-white"
-          />
-        </div>
-        <div className="text-[10px] text-slate-400 font-medium">
-          Thực tế tháng này:{" "}
-          <b className="text-slate-600 dark:text-slate-300">
-            {formatVND(incomeThisMonth)}
-          </b>
-        </div>
-      </div>
-      <div className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[24px] p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            Chi phí cố định
-          </span>
-          <button
-            onClick={() =>
-              setCfFixedExpenses([...cfFixedExpenses, { name: "", amount: "" }])
-            }
-            className="text-[9px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-full hover:bg-slate-200 transition-colors cursor-pointer flex items-center gap-0.5"
-          >
-            <Icon path={mdiPlus} size={0.667} />
-            Thêm
-          </button>
-        </div>
-        {cfFixedExpenses.map((fe, idx) => (
-          <div key={idx} className="flex items-center gap-2 min-w-0">
-            <input
-              type="text"
-              value={fe.name}
-              onChange={(e) => {
-                const c = [...cfFixedExpenses];
-                c[idx].name = e.target.value;
-                setCfFixedExpenses(c);
-              }}
-              placeholder="VD: Tiền nhà"
-              className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-lg px-2.5 py-2 text-[10px] font-semibold outline-none dark:text-white"
-            />
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={fe.amount}
-              onKeyDown={handleAmountKeyDown}
-              onChange={(e) => {
-                const c = [...cfFixedExpenses];
-                c[idx].amount = numFmt(e.target.value);
-                setCfFixedExpenses(c);
-              }}
-              placeholder="3,000,000"
-              className="w-20 bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-lg px-2 py-2 text-[10px] font-semibold text-right outline-none dark:text-white"
-            />
-            <button
-              onClick={() =>
-                setCfFixedExpenses(cfFixedExpenses.filter((_, i) => i !== idx))
-              }
-              className="p-1 rounded-full hover:bg-rose-50 text-slate-300 hover:text-rose-500 cursor-pointer shrink-0"
-            >
-              <Icon path={mdiClose} size={0.667} />
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[24px] p-4 shadow-sm space-y-2">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-          Dự kiến trả nợ tháng này
-        </span>
-        <div className="text-xs font-bold text-rose-600">
-          {formatVND(debtPaymentsThisMonth)}
-        </div>
-        <div className="text-[10px] text-slate-400 font-medium space-y-0.5">
-          {debts
-            .filter((d) => d.status === "active")
-            .map((d) => (
-              <div key={d.id} className="flex justify-between py-0.5 gap-2">
-                <span className="truncate min-w-0">{d.name}</span>
-                <span className="font-semibold text-slate-600 dark:text-slate-300 shrink-0">
-                  {formatVND(d.monthlyPayment)}
-                </span>
-              </div>
-            ))}
-          {debts.filter((d) => d.status === "active").length === 0 && (
-            <span>Không có nợ cần trả</span>
-          )}
-        </div>
-      </div>
-      <div className="bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 rounded-[24px] p-5 space-y-3">
-        <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
-          Kết quả dự kiến
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <span className="text-[9px] font-bold text-slate-400 block">
-              Thu nhập
-            </span>
-            <span className="text-sm font-black text-slate-800 dark:text-white">
-              {formatVND(expectedIncomeNum)}
-            </span>
-          </div>
-          <div className="text-right">
-            <span className="text-[9px] font-bold text-slate-400 block">
-              Trả nợ
-            </span>
-            <span className="text-sm font-black text-rose-600">
-              -{formatVND(debtPaymentsThisMonth)}
-            </span>
-          </div>
-          <div>
-            <span className="text-[9px] font-bold text-slate-400 block">
-              Chi phí cố định
-            </span>
-            <span className="text-sm font-black text-rose-500">
-              -{formatVND(cfFixedTotal)}
-            </span>
-          </div>
-          <div className="text-right">
-            <span className="text-[9px] font-bold text-slate-400 block">
-              Còn lại
-            </span>
-            <span
-              className={`text-sm font-black ${remainingCash >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-            >
-              {formatVND(Math.max(0, remainingCash))}
-            </span>
-          </div>
-        </div>
-        {remainingCash < 0 && (
-          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 rounded-xl p-2.5 text-[10px] font-bold text-rose-600 flex items-center gap-1.5">
-            <Icon path={mdiAlertOutline} size={0.75} />
-            Thiếu {formatVND(-remainingCash)} — cần giảm chi phí!
-          </div>
-        )}
-        {/* <button
-          onClick={handleAiCashflowAdvice}
-          disabled={isAiLoading || expectedIncomeNum <= 0}
-          className="w-full bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[10px] py-2.5 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-2"
-        >
-          {isAiLoading ? (
-            <Icon path={mdiLoading} size={0.75} className="animate-spin" />
-          ) : (
-            <Icon path={mdiAutoFix} size={0.75} />
-          )}
-          {isAiLoading ? "AI đang phân tích..." : "Cố vấn AI phân bổ thu nhập"}
-        </button> */}
-      </div>
     </div>
   );
 
@@ -2075,11 +1837,6 @@ export default function FinanceBudget({
             label: "Cố định",
             icon: mdiFormatListBulletedSquare,
           },
-          {
-            key: "cashflow" as ViewTab,
-            label: "Dòng tiền",
-            icon: mdiCashMultiple,
-          },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -2101,7 +1858,6 @@ export default function FinanceBudget({
           transition={{ duration: 0.15 }}
         >
           {activeTab === "debts" && renderDebtDashboard()}
-          {activeTab === "cashflow" && renderCashflow()}
           {activeTab === "salary" && renderSalary()}
           {activeTab === "fixed" && renderFixed()}
         </motion.div>
