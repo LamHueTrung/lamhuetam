@@ -51,7 +51,7 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const { transactions, budgets, debts, savings, promptType, customMessage } =
+    const { transactions, budgets, debts, savings, promptType, customMessage, userProfile } =
       JSON.parse(event.body || "{}");
 
     const now = new Date();
@@ -112,15 +112,127 @@ export const handler: Handler = async (event) => {
       )
       .join(", ");
 
-    // ── MASTER SYSTEM PROMPT (SKILL CHUYÊN GIA TÀI CHÍNH) ──
-    const MASTER_SYSTEM_PROMPT = `Bạn là Cố vấn Tài chính Cá nhân AI cấp cao. Nhiệm vụ của bạn là đưa ra tư vấn quản lý tiền bạc ngắn gọn, sắc bén và thực tế.
+    // Tạo thông tin cá nhân (Profile MD)
+    let profileMd = "";
+    if (userProfile) {
+      profileMd += `## 👤 THÔNG TIN CÁ NHÂN (PROFILE NGƯỜI DÙNG)\n`;
+      profileMd += `- **Họ & Tên:** ${userProfile.fullName || "Lâm Huệ Trung"}\n`;
+      if (userProfile.dob) profileMd += `- **Ngày sinh:** ${userProfile.dob}\n`;
+      if (userProfile.hometown) profileMd += `- **Quê quán:** ${userProfile.hometown}\n`;
+      if (userProfile.livingContext) profileMd += `- **Hoàn cảnh sống hiện tại:** ${userProfile.livingContext}\n`;
+      if (userProfile.currentJob) profileMd += `- **Công việc hiện tại:** ${userProfile.currentJob}\n`;
+      if (userProfile.position) profileMd += `- **Vị trí công việc:** ${userProfile.position}\n`;
+      if (userProfile.skills) {
+        profileMd += `- **Kỹ năng mạnh nhất:** ${userProfile.skills.strongest || ""}\n`;
+        profileMd += `- **Kỹ năng nền tảng:** ${userProfile.skills.foundation || ""}\n`;
+        if (userProfile.skills.usedTech && userProfile.skills.usedTech.length > 0) {
+          profileMd += `- **Công nghệ đã dùng:** ${userProfile.skills.usedTech.join(", ")}\n`;
+        }
+        if (userProfile.skills.companyTech && userProfile.skills.companyTech.length > 0) {
+          profileMd += `- **Công nghệ tại công ty:** ${userProfile.skills.companyTech.join(", ")}\n`;
+        }
+        if (userProfile.skills.currentWorry) profileMd += `- **Nỗi lo lắng lớn nhất hiện tại:** ${userProfile.skills.currentWorry}\n`;
+      }
+      if (userProfile.education) {
+        profileMd += `- **Trường học:** ${userProfile.education.school || ""}\n`;
+        profileMd += `- **Trạng thái học vấn:** ${userProfile.education.status || ""}\n`;
+      }
+      if (userProfile.customFields && userProfile.customFields.length > 0) {
+        profileMd += `### Thông tin bổ sung:\n`;
+        userProfile.customFields.forEach((field: any) => {
+          profileMd += `- **${field.label}:** ${field.value} (${field.category})\n`;
+        });
+      }
+    }
 
-QUY TẮC BẮT BUỘC (CRITICAL RULES):
-1. ĐỊNH DẠNG SỐ: Luôn dùng đơn vị tiền tệ viết tắt Việt Nam (ví dụ: 500k, 2.5tr, 10tr).
-2. TRẢ LỜI ĐI THẲNG VÀO VẤN ĐỀ: Không chào hỏi xã giao, không mở đầu rườm rà, không kết luận chung chung.
-3. CÂU HỎI YES/NO: Luôn bắt đầu ngay bằng "Có." hoặc "Không." ở đầu câu nếu câu hỏi dạng nghi vấn.
-4. TRÌNH BÀY SẮC NÉT: Dùng gạch đầu dòng (-), in đậm con số và từ khóa quan trọng.
-5. HÀNH ĐỘNG CỤ THỂ: Kết thúc câu trả lời bằng 1 hành động thực thi được ngay.`;
+    // Tạo báo cáo tài chính Markdown
+    const numFmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' VNĐ';
+    let financeMd = `# 📊 BÁO CÁO TÀI CHÍNH TỔNG QUAN\n\n`;
+    
+    financeMd += `## 1. 💵 DÒNG TIỀN THÁNG NÀY\n`;
+    financeMd += `- **Tổng thu nhập tháng này:** ${numFmt(monthIncome)}\n`;
+    financeMd += `- **Tổng chi tiêu tháng này:** ${numFmt(monthExpense)}\n`;
+    financeMd += `- **Tiền trả nợ bắt buộc hàng tháng:** ${numFmt(totalMonthlyDebtPayment)}\n`;
+    financeMd += `- **Dòng tiền khả dụng còn lại (Thu - Chi - Nợ):** ${numFmt(freeCashflow)}\n\n`;
+
+    financeMd += `## 2. 📁 NGÂN SÁCH CÁC DANH MỤC\n`;
+    if (budgets && budgets.length > 0) {
+      budgets.filter((b: any) => b.limit > 0).forEach((b: any) => {
+        financeMd += `- **${b.category}:** Đã tiêu ${numFmt(b.spent)} / Hạn mức ${numFmt(b.limit)} (${Math.round((b.spent / b.limit) * 100)}%)\n`;
+      });
+    } else {
+      financeMd += `*Chưa thiết lập ngân sách danh mục*\n`;
+    }
+    financeMd += `\n`;
+
+    financeMd += `## 3. 💳 DỰ NỢ & TRẢ GÓP\n`;
+    financeMd += `- **Tổng dư nợ còn lại:** ${numFmt(totalDebt)}\n`;
+    if (activeDebts.length > 0) {
+      activeDebts.forEach((d: any, i: number) => {
+        const typeLabel = d.type === 'credit_card' ? 'Thẻ tín dụng' : d.type === 'installment' ? 'Trả góp' : 'Vay nợ';
+        financeMd += `### ${i + 1}. ${d.name} (${typeLabel})\n`;
+        financeMd += `- Dư nợ còn lại: ${numFmt(d.currentBalance || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
+        if (d.type === 'installment') {
+          financeMd += `- Trả hàng tháng: ${numFmt(d.monthlyPayment || 0)} (Kỳ hạn: ${d.paidInstallments || 0}/${d.totalInstallments || 0})\n`;
+        }
+        if (d.notes) financeMd += `- Ghi chú: ${d.notes}\n`;
+      });
+    } else {
+      financeMd += `*Không có khoản vay nợ nào active*\n`;
+    }
+    financeMd += `\n`;
+
+    financeMd += `## 4. 📈 LỊCH SỬ GIAO DỊCH THU CHI GẦN ĐÂY\n`;
+    if (recentTx.length > 0) {
+      recentTx.forEach((t: any) => {
+        const typeSign = t.type === 'income' ? '+' : '-';
+        financeMd += `- [${t.date}] **${t.type === 'income' ? 'Thu' : 'Chi'}**: ${typeSign}${numFmt(t.amount)} | Danh mục: ${t.category} | Ví: ${t.wallet || 'Mặc định'}${t.description ? ` | Ghi chú: ${t.description}` : ''}\n`;
+      });
+    } else {
+      financeMd += `*Chưa có lịch sử giao dịch*\n`;
+    }
+
+    // ── MASTER SYSTEM PROMPT ──
+    const MASTER_SYSTEM_PROMPT = `Bạn là “Lâm Huệ Trung của 10 năm sau” — phiên bản trưởng thành hơn, tỉnh táo hơn, đã đi qua giai đoạn khó khăn hiện tại và quay về để đồng hành với chính bản thân mình (người dùng, tên là Lâm Huệ Trung).
+
+Vai trò và tính cách của bạn:
+- Luôn xưng hô "tao" (bạn) - "mày" (người dùng).
+- Bạn là người chí cốt, cố vấn cá nhân, người anh em thân thiết và thực tế nhất.
+- Giúp người dùng ra quyết định tốt hơn trong công việc, tài chính, các mối quan hệ, sức khỏe, học tập và định hướng dài hạn.
+- Không tâng bốc sáo rỗng, không nói lời khuyên chung chung.
+- Luôn nói thật, nói thẳng nhưng không dập tắt tinh thần.
+- Ưu tiên hành động thực tế, khả thi với hoàn cảnh thật của người dùng.
+- Khi người dùng rối, bạn phải giúp họ nhìn ra gốc vấn đề.
+- Khi họ yếu lòng, bạn phải nhắc họ nhớ mình là ai, đang mắc kẹt ở đâu, và phải làm gì tiếp theo.
+
+## Nguyên tắc phản hồi của bạn:
+
+1. Luôn trung thực và thực tế:
+   - Không nói kiểu động viên hời hợt.
+   - Không “cứ cố lên là được”.
+   - Không né tránh sự thật khó nghe.
+
+2. Ưu tiên nhìn gốc rễ:
+   Khi người dùng đưa ra một vấn đề, hãy giúp họ bóc tách:
+   - Đây là vấn đề bề mặt hay gốc rễ?
+   - Nó thuộc nhóm: tài chính, sức khỏe, nghề nghiệp, quan hệ hay tâm lý?
+   - Cơ chế nào đang lặp lại?
+   - Họ đang tự lừa mình ở đâu?
+   - Quyết định nào đang tạo hậu quả dây chuyền?
+
+3. Nhìn theo tư duy hệ thống:
+   Hãy chỉ ra:
+   - Vòng lặp xấu đang kéo họ xuống.
+   - Vòng lặp tốt cần xây.
+   - Tác động ngắn hạn và dài hạn.
+   - Đâu là đòn bẩy lớn nhất.
+   - Đâu là hành động nhỏ nhưng hiệu quả cao.
+
+4. Nói như người anh em chí cốt:
+   Giọng điệu: Gần gũi, sâu sắc, tỉnh táo, có tình người, đôi khi nghiêm khắc khi cần. Bảo vệ họ khỏi các quyết định ngu ngốc do cảm xúc nhất thời.
+
+5. Không tiếp tay cho tự hủy:
+   If họ định: vay chỗ này đắp chỗ kia, tiêu tiền vì sĩ diện, tiếp tục “nổ hũ”, trì hoãn việc lấy bằng vô thời hạn, thức khuya triền miên làm hỏng sức khỏe, bỏ mặc định hướng nghề nghiệp,... thì bạn phải chặn lại ngay lập tức, nói rõ hậu quả, và đưa ra phương án thay thế thực tế hơn.`;
 
     let userPrompt = "";
     let maxTokens = 4000;
@@ -159,48 +271,37 @@ QUY TẮC BẮT BUỘC (CRITICAL RULES):
       temperature = 0.1;
     } else if (promptType === "insights") {
       // Skill: Đánh giá sức khỏe tài chính tháng
-      userPrompt = `${dataSummary}\nTop chi tiêu: ${topCategory.join(", ")}\nNgân sách: ${budgetSummary}\n\nĐưa ra 3 nhận xét ngắn gọn về sức khỏe tài chính tháng này. Mỗi nhận xét 1 dòng có số liệu.`;
+      userPrompt = `Dữ liệu tài chính:\n${financeMd}\n\nMày hãy đánh giá sức khỏe tài chính tháng này cho tao. Viết dưới giọng điệu "Lâm Huệ Trung 10 năm sau", phân tích sắc nét 3 điểm và đưa ra lời khuyên thực tế nhất.`;
       maxTokens = 4000;
       temperature = 0.3;
     } else if (promptType === "debt") {
       // Skill: Tối ưu công nợ theo chiến lược Debt Avalanche (Trả nợ lãi cao trước)
-      userPrompt = `Danh sách nợ hiện tại: ${JSON.stringify(
-        activeDebts.map((d: any) => ({
-          Tên: d.name,
-          Loại:
-            d.type === "credit_card"
-              ? "Thẻ TD"
-              : d.type === "installment"
-                ? "Trả góp"
-                : "Vay ngoài",
-          Dư_nợ: formatVND(d.currentBalance),
-          Trả_hàng_tháng: formatVND(d.monthlyPayment),
-          Lãi_suất: d.interestRate + "%/năm",
-        })),
-      )}\n${dataSummary}\n\nYêu cầu phân tích:\n1. Chỉ ra khoản nợ nguy hiểm nhất (dựa trên lãi suất và áp lực dòng tiền).\n2. Gợi ý thứ tự trả nợ tối ưu (Ưu tiên nợ lãi cao).\n3. 1 Hành động dứt điểm nợ ngay tháng này.`;
+      userPrompt = `Dữ liệu tài chính:\n${financeMd}\n\nMày hãy phân tích các khoản nợ của tao, chỉ ra khoản nguy hiểm và lập lộ trình dứt điểm tối ưu dưới góc nhìn của mày (Lâm Huệ Trung 10 năm sau).`;
       maxTokens = 4000;
       temperature = 0.2;
     } else if (promptType === "balance") {
       // Skill: Tối ưu dòng tiền & Cân bằng chi tiêu
-      userPrompt = `${dataSummary}\nTop chi tiêu lớn nhất: ${topCategory.join(", ")}\nTrạng thái Ngân sách: ${budgetSummary}\n\nPhân tích dòng tiền:\n1. Tỷ lệ Chi tiêu & Trả nợ so với Thu nhập (Có an toàn không?).\n2. Đánh giá Dòng tiền tự do còn lại (${formatVND(freeCashflow)}).\n3. 2 vị trí có thể cắt giảm chi tiêu ngay lập tức.`;
+      userPrompt = `Dữ liệu tài chính:\n${financeMd}\n\nMày hãy đánh giá chi tiêu, dòng tiền khả dụng và chỉ ra các vị trí tao có thể tối ưu/cắt giảm ngay dưới góc nhìn của mày.`;
       maxTokens = 4000;
       temperature = 0.3;
     } else if (promptType === "savings") {
       // Skill: Lập kế hoạch & dự báo hoàn thành mục tiêu tiết kiệm
-      userPrompt = `${dataSummary}\nMục tiêu tiết kiệm: ${JSON.stringify(
-        (savings || []).map((s: any) => ({
-          Mục_tiêu: s.title,
-          Cần_đạt: formatVND(s.goalAmount),
-          Đã_có: formatVND(s.currentAmount),
-        })),
-      )}\nDòng tiền dư có thể tích lũy: ${formatVND(freeCashflow)}/tháng.\n\nPhân tích:\n1. Với mức dư ${formatVND(freeCashflow)}/tháng, bao lâu sẽ đạt mục tiêu?\n2. Lộ trình phân bổ tiền tích lũy hợp lý.\n3. 1 Lời khuyên để tăng tốc độ hoàn thành.`;
+      userPrompt = `Dữ liệu tài chính:\n${financeMd}\n\nMày hãy phân tích lộ trình tiết kiệm và khuyên tao cách phân bổ dòng tiền dư để đạt mục tiêu nhanh nhất dưới góc nhìn của mày.`;
       maxTokens = 4000;
       temperature = 0.3;
     } else {
-      // Skill: Tư vấn & Giải đáp thắc mắc tài chính tổng quát
-      userPrompt = `${dataSummary}\nTop chi tiêu: ${topCategory.join(", ")}\n\nCâu hỏi người dùng: "${customMessage}"\n\nTrả lời chính xác, ngắn gọn dựa trên dữ liệu tài chính ở trên.`;
+      // Skill: Trò chuyện & Giải đáp thắc mắc đa năng (General Chat Assistant)
+      userPrompt = `Dưới đây là thông tin cá nhân hiện tại của tao (người dùng):
+${profileMd || "Chưa cập nhật thông tin cá nhân."}
+
+Dưới đây là báo cáo tài chính chi tiết của tao:
+${financeMd}
+
+Tin nhắn/Câu hỏi của tao gửi cho mày: "${customMessage}"
+
+Mày hãy trả lời tao theo đúng tính cách và nguyên tắc phản hồi của "Lâm Huệ Trung 10 năm sau". Dựa vào thông tin cá nhân và báo cáo tài chính ở trên để đưa ra những lời khuyên chuẩn xác nhất khi tao hỏi về tài chính hay cuộc sống của tao.`;
       maxTokens = 4000;
-      temperature = 0.4;
+      temperature = 0.5;
     }
 
     // Thiết lập Controller Timeout (15 giây) để xử lý mượt mà kể cả khi Render Proxy bị Cold Start

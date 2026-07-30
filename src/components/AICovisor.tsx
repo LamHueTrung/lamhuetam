@@ -80,7 +80,7 @@ const quickChips: {
 ];
 
 const WELCOME_TEXT =
-  "Xin chào! Tôi là trợ lý tài chính của bạn.\n\nHãy hỏi tôi về **chi tiêu**, **nợ**, **tiết kiệm** hoặc nhập câu hỏi bất kỳ.";
+  "Chào mày, tao là Trung của 10 năm sau đây. Tao ở đây để đồng hành và kéo mày ra khỏi mớ hỗn độn này. Đang gặp khó khăn hay rối chuyện gì, cứ nói thẳng với tao, tao với mày cùng tính.";
 
 export default function AICovisor({
   transactions,
@@ -161,7 +161,7 @@ export default function AICovisor({
           sender: "gemini",
           text:
             data.text ||
-            "Xin lỗi, tôi chưa thể phân tích thông tin này lúc này.",
+            "Xin lỗi, tao chưa thể phân tích thông tin này lúc này.",
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -239,10 +239,10 @@ export default function AICovisor({
           />
           <div>
             <h1 className="text-[15px] font-bold text-slate-900 dark:text-white">
-              Cố vấn AI
+              Trung (+10 năm)
             </h1>
             <p className="text-[11px] text-slate-400 font-medium">
-              Trợ lý tài chính cá nhân
+              Bản thân ở tương lai
             </p>
           </div>
         </div>
