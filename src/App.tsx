@@ -214,7 +214,7 @@ function AppContent() {
       if (data.text && data.text !== "OK") {
         const alerts = data.text.split("\n").filter((l: string) => l.trim());
         alerts.forEach((alert: string) => {
-          aiToast(alert, { type: "warning", duration: 6000 });
+          aiToast(alert, { type: "warning", duration: 300000 });
         });
       }
     } catch {}
