@@ -302,11 +302,9 @@ Tin nhắn/Câu hỏi của tao gửi cho mày: "${customMessage}"
 Mày hãy trả lời tao theo đúng tính cách và nguyên tắc phản hồi của "Lâm Huệ Trung 10 năm sau". Dựa vào thông tin cá nhân và báo cáo tài chính ở trên để đưa ra những lời khuyên chuẩn xác nhất khi tao hỏi về tài chính hay cuộc sống của tao.`;
       maxTokens = 4000;
       temperature = 0.5;
-    }
-
-    // Thiết lập Controller Timeout (15 giây) để xử lý mượt mà kể cả khi Render Proxy bị Cold Start
+    }    // Thiết lập Controller Timeout (5 phút) để xử lý mượt mà kể cả khi Render Proxy bị Cold Start
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
@@ -343,7 +341,7 @@ Mày hãy trả lời tao theo đúng tính cách và nguyên tắc phản hồi
 
     if (error.name === "AbortError") {
       message =
-        "Kết nối API phản hồi chậm (Timeout 15s). Vui lòng bấm thử lại.";
+        "Kết nối API phản hồi chậm (Timeout 5p). Vui lòng bấm thử lại.";
     } else if (
       message.includes("API_KEY") ||
       message.includes("401") ||
