@@ -361,7 +361,7 @@ export default function Dashboard({
   // }, [fetchAiInsight, aiLoaded, aiLoading]);
 
   return (
-    <div className="space-y-6 pb-40">
+    <div className="space-y-6 pb-10">
       {/* Personal Profile Summary Card */}
       <div
         id="header-section"

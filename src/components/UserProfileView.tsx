@@ -468,6 +468,27 @@ export default function UserProfileView({
         </div>
       </div>
 
+      {/* Version info */}
+      <div className="bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-2xl px-4 py-2.5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+            <Icon path={mdiClockOutline} size={0.65} />
+            <span>
+              Phiên bản: <b className="text-slate-500 dark:text-slate-300">{__APP_VERSION__}</b>
+            </span>
+          </div>
+          {needRefresh && (
+            <button
+              onClick={() => updateServiceWorker(true)}
+              className="bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm cursor-pointer flex items-center gap-1 hover:opacity-90 transition-all"
+            >
+              <Icon path={mdiPackageUp} size={0.65} />
+              <span>Cập nhật mới</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* SECTION 1: Hồ sơ nhân vật của tôi */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
         <div
@@ -1516,27 +1537,6 @@ export default function UserProfileView({
             <span>{isSaving ? "Đang lưu..." : "Lưu toàn bộ hồ sơ"}</span>
           </button>
         )}
-      </div>
-
-      {/* Version info */}
-      <div className="border-t border-slate-100 dark:border-slate-700 pt-4 mt-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[11px] text-slate-400">
-            <Icon path={mdiClockOutline} size={0.65} />
-            <span>
-              Phiên bản: <b className="text-slate-500 dark:text-slate-300">{__APP_VERSION__}</b>
-            </span>
-          </div>
-          {needRefresh && (
-            <button
-              onClick={() => updateServiceWorker(true)}
-              className="bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm cursor-pointer flex items-center gap-1 hover:opacity-90 transition-all"
-            >
-              <Icon path={mdiPackageUp} size={0.65} />
-              <span>Cập nhật mới</span>
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -65,7 +65,11 @@ import {
 } from "../types";
 import { useSalary } from "../hooks/useSalary";
 import { useFixedExpenses } from "../hooks/useFixedExpenses";
-import { calcRemainingBalance, calcInstallmentAmount, calcPaidPercent } from "../lib/debtUtils";
+import {
+  calcRemainingBalance,
+  calcInstallmentAmount,
+  calcPaidPercent,
+} from "../lib/debtUtils";
 
 interface FinanceBudgetProps {
   debts: DebtAccount[];
@@ -323,7 +327,9 @@ export default function FinanceBudget({
     .reduce((s, d) => s + d.monthlyPayment, 0);
   const activeDebtCount = debts.filter((d) => d.status === "active").length;
 
-  const generateInstallments = (eachPeriodAmt: number): Omit<DebtInstallment, "status">[] => {
+  const generateInstallments = (
+    eachPeriodAmt: number,
+  ): Omit<DebtInstallment, "status">[] => {
     const total = parseInt(totalInstallments) || 1;
     const paid = parseInt(paidInstallments) || 0;
     const day = parseInt(paymentDay) || 5;
@@ -360,13 +366,17 @@ export default function FinanceBudget({
     }
 
     // Tự động tính số tiền phải trả mỗi kỳ đã bao gồm lãi suất phẳng (flat rate)
-    const calculatedMonthlyPayment = calcInstallmentAmount(rawAmount, rate, totalInst);
+    const calculatedMonthlyPayment = calcInstallmentAmount(
+      rawAmount,
+      rate,
+      totalInst,
+    );
     const instData = generateInstallments(calculatedMonthlyPayment);
-    
+
     // Tính số dư nợ dựa trên các kỳ chưa trả
     const unpaidInstallments = instData.slice(paidInst);
     const balance = unpaidInstallments.reduce((s, i) => s + i.amount, 0);
-    
+
     const maturityDate =
       instData.length > 0 ? instData[instData.length - 1].dueDate : startDate;
 
@@ -684,9 +694,7 @@ export default function FinanceBudget({
           },
           {
             label: "Nợ còn lại",
-            val: formatVND(
-              Math.max(0, totalDebt - totalMonthlyPayment),
-            ),
+            val: formatVND(Math.max(0, totalDebt - totalMonthlyPayment)),
             sub: "Sau trả kỳ này",
             color: "text-emerald-600",
           },
@@ -897,8 +905,10 @@ export default function FinanceBudget({
                   className="bg-white/95 dark:bg-slate-800/95 border border-slate-100 dark:border-slate-700 rounded-[24px] shadow-sm overflow-hidden"
                 >
                   {/* Collapsible Header */}
-                  <div 
-                    onClick={() => setOpenDebtId(openDebtId === debt.id ? null : debt.id)}
+                  <div
+                    onClick={() =>
+                      setOpenDebtId(openDebtId === debt.id ? null : debt.id)
+                    }
                     className="p-4 flex items-center justify-between cursor-pointer select-none"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -910,7 +920,9 @@ export default function FinanceBudget({
                           {debt.name}
                         </h3>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.color}`}>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${meta.color}`}
+                          >
                             {meta.label}
                           </span>
                           <span className="text-[10px] font-black text-slate-800 dark:text-white">
@@ -936,9 +948,13 @@ export default function FinanceBudget({
                       >
                         <Icon path={mdiDeleteOutline} size={0.75} />
                       </button>
-                      <Icon 
-                        path={openDebtId === debt.id ? mdiChevronDown : mdiChevronRight} 
-                        size={0.875} 
+                      <Icon
+                        path={
+                          openDebtId === debt.id
+                            ? mdiChevronDown
+                            : mdiChevronRight
+                        }
+                        size={0.875}
                         className="text-slate-400"
                       />
                     </div>
@@ -956,17 +972,25 @@ export default function FinanceBudget({
                       >
                         <div className="flex items-center justify-between gap-2 min-w-0">
                           <div className="min-w-0">
-                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Dư nợ / Gốc</span>
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                              Dư nợ / Gốc
+                            </span>
                             <span className="text-sm font-black text-slate-800 dark:text-white truncate block">
-                              {formatVND(debt.currentBalance)} <span className="text-[10px] text-slate-400 font-medium font-normal">/ {formatVND(debt.originalAmount)}</span>
+                              {formatVND(debt.currentBalance)}{" "}
+                              <span className="text-[10px] text-slate-400 font-medium font-normal">
+                                / {formatVND(debt.originalAmount)}
+                              </span>
                             </span>
                           </div>
                           <div className="text-right min-w-0">
-                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Trả mỗi kỳ</span>
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                              Trả mỗi kỳ
+                            </span>
                             <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate block">
                               {formatVND(debt.monthlyPayment)}
                               <span className="text-[9px] text-slate-400 font-medium">
-                                /kỳ ({debt.paidInstallments}/{debt.totalInstallments} kỳ)
+                                /kỳ ({debt.paidInstallments}/
+                                {debt.totalInstallments} kỳ)
                               </span>
                             </span>
                           </div>
@@ -1000,8 +1024,11 @@ export default function FinanceBudget({
                               </>
                             ) : (
                               <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                                <Icon path={mdiCheckCircleOutline} size={0.75} /> Đã
-                                trả xong
+                                <Icon
+                                  path={mdiCheckCircleOutline}
+                                  size={0.75}
+                                />{" "}
+                                Đã trả xong
                               </span>
                             )}
                           </div>
@@ -1015,10 +1042,13 @@ export default function FinanceBudget({
                         </div>
 
                         {debt.installments.filter(
-                          (i) => i.status === "pending" || i.status === "partial",
+                          (i) =>
+                            i.status === "pending" || i.status === "partial",
                         ).length > 0 && (
                           <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
-                            <span className="text-[9px] font-bold text-slate-400 block uppercase mb-1.5">Các kỳ hạn tiếp theo</span>
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase mb-1.5">
+                              Các kỳ hạn tiếp theo
+                            </span>
                             <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                               {debt.installments
                                 .filter(
@@ -1744,13 +1774,16 @@ export default function FinanceBudget({
               📊 Đối Chiếu Chi Tiêu Cố Định
             </h3>
             <p className="text-[10px] text-slate-400 font-medium">
-              So sánh mức thiết lập cố định định kỳ với Sổ Cái thực tế (Tháng {fixedMonth})
+              So sánh mức thiết lập cố định định kỳ với Sổ Cái thực tế (Tháng{" "}
+              {fixedMonth})
             </p>
           </div>
 
           <div className="space-y-4">
             {fixedCats.map((cat) => {
-              const catTasks = fixedTasks.filter((t) => t.categoryId === cat.id);
+              const catTasks = fixedTasks.filter(
+                (t) => t.categoryId === cat.id,
+              );
               const projected = catTasks.reduce((s, t) => s + t.amount, 0);
               const actual = calcActualSpendForCategory(cat.name, fixedMonth);
 
@@ -1762,9 +1795,14 @@ export default function FinanceBudget({
               const actualPct = (actual / maxVal) * 100;
 
               return (
-                <div key={cat.id} className="space-y-1.5 pb-2 border-b border-slate-50 dark:border-slate-700/50 last:border-b-0">
+                <div
+                  key={cat.id}
+                  className="space-y-1.5 pb-2 border-b border-slate-50 dark:border-slate-700/50 last:border-b-0"
+                >
                   <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-slate-700 dark:text-slate-200">{cat.name}</span>
+                    <span className="text-slate-700 dark:text-slate-200">
+                      {cat.name}
+                    </span>
                     <div className="flex items-center gap-1.5">
                       {diff > 0 ? (
                         <span className="text-[9px] text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-full font-bold">
@@ -1785,26 +1823,34 @@ export default function FinanceBudget({
                   <div className="space-y-1">
                     {/* Thanh dự kiến */}
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-slate-400 font-semibold w-12 shrink-0">Dự kiến:</span>
+                      <span className="text-[9px] text-slate-400 font-semibold w-12 shrink-0">
+                        Dự kiến:
+                      </span>
                       <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-slate-400 dark:bg-slate-500 rounded-full transition-all"
                           style={{ width: `${projectedPct}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-slate-500 font-bold w-12 text-right">{formatVND(projected)}</span>
+                      <span className="text-[10px] text-slate-500 font-bold w-12 text-right">
+                        {formatVND(projected)}
+                      </span>
                     </div>
 
                     {/* Thanh thực tế */}
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-slate-400 font-semibold w-12 shrink-0">Thực tế:</span>
+                      <span className="text-[9px] text-slate-400 font-semibold w-12 shrink-0">
+                        Thực tế:
+                      </span>
                       <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${diff > 0 ? "bg-rose-500" : "bg-emerald-500"}`}
                           style={{ width: `${actualPct}%` }}
                         />
                       </div>
-                      <span className={`text-[10px] font-black w-12 text-right ${diff > 0 ? "text-rose-500" : "text-emerald-600"}`}>
+                      <span
+                        className={`text-[10px] font-black w-12 text-right ${diff > 0 ? "text-rose-500" : "text-emerald-600"}`}
+                      >
                         {formatVND(actual)}
                       </span>
                     </div>
@@ -1822,7 +1868,7 @@ export default function FinanceBudget({
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="space-y-6 pb-40 min-w-0">
+    <div className="space-y-6 pb-10 min-w-0">
       {/* Tab bar */}
       <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[20px] p-1 shadow-sm">
         {[
@@ -1917,92 +1963,95 @@ export default function FinanceBudget({
                             Thanh toán
                           </h3>
                           <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-                            {debt.name} — {formatVND(debt.currentBalance)} còn lại
+                            {debt.name} — {formatVND(debt.currentBalance)} còn
+                            lại
                           </p>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2">
-                    <div className="space-y-2 mb-5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Chọn kỳ thanh toán
-                      </p>
-                      {unpaid.map((inst) => (
-                        <label
-                          key={inst.index}
-                          className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:border-slate-200"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedInstallments.includes(inst.index)}
-                            onChange={() =>
-                              setSelectedInstallments((prev) =>
-                                prev.includes(inst.index)
-                                  ? prev.filter((i) => i !== inst.index)
-                                  : [...prev, inst.index],
-                              )
-                            }
-                            className="w-4 h-4 rounded border-slate-300 focus:ring-slate-900"
-                          />
-                          <div className="flex-1 flex items-center justify-between">
-                            <div>
-                              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                Kỳ {inst.index + 1}
-                              </span>
-                              <span className="text-[9px] text-slate-400 ml-2">
-                                Hạn:{" "}
-                                {new Date(
-                                  inst.dueDate + "T00:00:00",
-                                ).toLocaleDateString("vi-VN", {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
+                      <div className="space-y-2 mb-5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Chọn kỳ thanh toán
+                        </p>
+                        {unpaid.map((inst) => (
+                          <label
+                            key={inst.index}
+                            className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:border-slate-200"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedInstallments.includes(
+                                inst.index,
+                              )}
+                              onChange={() =>
+                                setSelectedInstallments((prev) =>
+                                  prev.includes(inst.index)
+                                    ? prev.filter((i) => i !== inst.index)
+                                    : [...prev, inst.index],
+                                )
+                              }
+                              className="w-4 h-4 rounded border-slate-300 focus:ring-slate-900"
+                            />
+                            <div className="flex-1 flex items-center justify-between">
+                              <div>
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                  Kỳ {inst.index + 1}
+                                </span>
+                                <span className="text-[9px] text-slate-400 ml-2">
+                                  Hạn:{" "}
+                                  {new Date(
+                                    inst.dueDate + "T00:00:00",
+                                  ).toLocaleDateString("vi-VN", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
+                              </div>
+                              <span className="text-xs font-extrabold text-slate-800 dark:text-white">
+                                {formatVND(inst.amount)}
                               </span>
                             </div>
-                            <span className="text-xs font-extrabold text-slate-800 dark:text-white">
-                              {formatVND(inst.amount)}
-                            </span>
-                          </div>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mb-5 space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Ghi chú
                         </label>
-                      ))}
+                        <input
+                          type="text"
+                          value={paymentNote}
+                          onChange={(e) => setPaymentNote(e.target.value)}
+                          placeholder="VD: Chuyển khoản ACB..."
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-2.5 text-sm font-semibold outline-none dark:text-white"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 mb-5">
+                        <span className="text-xs font-semibold text-slate-500">
+                          Tổng thanh toán:
+                        </span>
+                        <span className="text-sm font-extrabold text-slate-900 dark:text-white">
+                          {formatVND(
+                            selectedInstallments.reduce((s, idx) => {
+                              const inst = debt.installments.find(
+                                (i) => i.index === idx,
+                              );
+                              return s + (inst?.amount || 0);
+                            }, 0),
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        onClick={handlePaySubmit}
+                        disabled={selectedInstallments.length === 0}
+                        className="w-full bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-40 cursor-pointer transition-all shadow-md"
+                      >
+                        Xác nhận thanh toán {selectedInstallments.length} kỳ
+                      </button>
                     </div>
-                    <div className="mb-5 space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Ghi chú
-                      </label>
-                      <input
-                        type="text"
-                        value={paymentNote}
-                        onChange={(e) => setPaymentNote(e.target.value)}
-                        placeholder="VD: Chuyển khoản ACB..."
-                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-2.5 text-sm font-semibold outline-none dark:text-white"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 mb-5">
-                      <span className="text-xs font-semibold text-slate-500">
-                        Tổng thanh toán:
-                      </span>
-                      <span className="text-sm font-extrabold text-slate-900 dark:text-white">
-                        {formatVND(
-                          selectedInstallments.reduce((s, idx) => {
-                            const inst = debt.installments.find(
-                              (i) => i.index === idx,
-                            );
-                            return s + (inst?.amount || 0);
-                          }, 0),
-                        )}
-                      </span>
-                    </div>
-                    <button
-                      onClick={handlePaySubmit}
-                      disabled={selectedInstallments.length === 0}
-                      className="w-full bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-40 cursor-pointer transition-all shadow-md"
-                    >
-                      Xác nhận thanh toán {selectedInstallments.length} kỳ
-                    </button>
-                  </div>
-                </motion.div>
+                  </motion.div>
                 </motion.div>
               );
             })()}
