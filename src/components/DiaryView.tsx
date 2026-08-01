@@ -30,6 +30,7 @@ import type {
   DiaryReply,
   DiaryViewMode,
 } from "../types";
+import { getLocalDateString, getLocalMonthString } from "../utils/date";
 import { useDiary } from "../hooks/useDiary";
 import { MOOD_CONFIG } from "./DiaryMoodConfig";
 import DiaryHeader from "./DiaryHeader";
@@ -395,11 +396,11 @@ export default function DiaryView() {
   const [selectedMood, setSelectedMood] = useState<DiaryMood | "all">("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [calendarMonth, setCalendarMonth] = useState(
-    new Date().toISOString().slice(0, 7),
+    getLocalMonthString(),
   );
 
   // Form state
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getLocalDateString());
   const [content, setContent] = useState("");
   const [mood, setMood] = useState<DiaryMood>("neutral");
   const [location, setLocation] = useState("");
@@ -422,7 +423,7 @@ export default function DiaryView() {
 
   // Tree expanded months
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(
-    new Set([new Date().toISOString().slice(0, 7)]),
+    new Set([getLocalMonthString()]),
   );
 
   const filteredEntries = getFilteredEntries(
@@ -526,7 +527,7 @@ export default function DiaryView() {
   }, [fetchCurrentLocation]);
 
   const resetForm = () => {
-    setDate(new Date().toISOString().split("T")[0]);
+    setDate(getLocalDateString());
     setContent("");
     setMood("neutral");
     setLocation("");

@@ -54,7 +54,7 @@ export const handler: Handler = async (event) => {
     const { transactions, budgets, debts, savings, promptType, customMessage, userProfile } =
       JSON.parse(event.body || "{}");
 
-    const now = new Date();
+    const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
     const thisMonth = now.toISOString().slice(0, 7);
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       .toISOString()

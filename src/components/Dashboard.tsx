@@ -31,6 +31,7 @@ import {
   SavingsGoal,
   UserProfile,
 } from "../types";
+import { getLocalDateString } from "../utils/date";
 import {
   LineChart,
   Line,
@@ -220,7 +221,7 @@ export default function Dashboard({
     let runningBalance = 0;
     for (let i = daysAgo - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const key = d.toISOString().split("T")[0];
+      const key = getLocalDateString(d);
       // Get all transactions up to this date to calculate running balance
       const upToDate = sorted.filter((t) => t.date <= key);
       runningBalance = upToDate.reduce(
@@ -324,7 +325,7 @@ export default function Dashboard({
   const fetchAiInsight = useCallback(async () => {
     const cached = localStorage.getItem("ai_insight_cache");
     const cachedDate = localStorage.getItem("ai_insight_date");
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
     if (cached && cachedDate === today) {
       setAiInsight(cached);
       setAiLoaded(true);

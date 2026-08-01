@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { Icon } from "@mdi/react";
 import { mdiChevronLeft, mdiChevronRight, mdiFire } from "@mdi/js";
 import { motion } from "motion/react";
-import type { DiaryEntry, DiaryMood } from "../types";
 import { MOOD_CONFIG } from "./DiaryMoodConfig";
+import { getLocalDateString } from "../utils/date";
 
 interface Props {
   entries: DiaryEntry[];
@@ -83,10 +83,10 @@ export default function CalendarView({ entries, month, onMonthChange, onSelectDa
     const dateSet = new Set(sorted.map((e) => e.date));
     let count = 0;
     const d = new Date();
-    const today = d.toISOString().split("T")[0];
+    const today = getLocalDateString(d);
     if (!dateSet.has(today)) d.setDate(d.getDate() - 1);
     while (true) {
-      const key = d.toISOString().split("T")[0];
+      const key = getLocalDateString(d);
       if (dateSet.has(key)) {
         count++;
         d.setDate(d.getDate() - 1);
@@ -95,7 +95,7 @@ export default function CalendarView({ entries, month, onMonthChange, onSelectDa
     return count;
   }, [entries]);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   return (
     <motion.div

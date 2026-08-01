@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DiaryEntry, DiaryMood, DiaryMoodStat, DiaryStreakData } from '../types';
 import { api } from '../api/client';
 import { getFromCache, setToCache, clearCache } from '../utils/cache';
+import { getLocalDateString } from '../utils/date';
 
 const CACHE_KEY = 'diary_entries_cache';
 
@@ -123,7 +124,7 @@ export function useDiary() {
     if (entries.length === 0) return { current: 0, longest: 0, todayWritten: false };
 
     const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     const todayWritten = sorted[0]?.date === today;
 
     const dateSet = new Set(sorted.map(e => e.date));
@@ -132,7 +133,7 @@ export function useDiary() {
     if (!todayWritten) d.setDate(d.getDate() - 1);
 
     while (true) {
-      const key = d.toISOString().split('T')[0];
+      const key = getLocalDateString(d);
       if (dateSet.has(key)) {
         current++;
         d.setDate(d.getDate() - 1);

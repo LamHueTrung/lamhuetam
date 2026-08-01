@@ -23,6 +23,7 @@ import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
 import EditTransactionModal from "./EditTransactionModal";
+import { getLocalDateString } from "../utils/date";
 
 interface LedgerProps {
   transactions: Transaction[];
@@ -34,8 +35,8 @@ interface LedgerProps {
 const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 function getDateLabel(dateStr: string) {
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  const today = getLocalDateString();
+  const yesterday = getLocalDateString(new Date(Date.now() - 86400000));
   if (dateStr === today) return "Hôm nay";
   if (dateStr === yesterday) return "Hôm qua";
   const d = new Date(dateStr + "T00:00:00");
@@ -111,7 +112,7 @@ export default function Ledger({
     setSelectedDate(null);
   };
 
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = getLocalDateString(today);
 
   const pad = (n: number) => n.toString().padStart(2, "0");
   const makeDateStr = (day: number) =>

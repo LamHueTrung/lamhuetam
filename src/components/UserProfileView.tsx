@@ -37,19 +37,22 @@ import {
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
-import { useRegisterSW } from "virtual:pwa-register/react";
 import { UserProfile, CustomProfileField } from "../types";
 
 interface UserProfileViewProps {
   profile: UserProfile;
   onUpdateProfile: (data: Partial<UserProfile>) => Promise<UserProfile>;
   onNavigateToTab?: (tab: number) => void;
+  needRefresh?: boolean;
+  updateServiceWorker?: (reloadPage?: boolean) => Promise<void>;
 }
 
 export default function UserProfileView({
   profile,
   onUpdateProfile,
   onNavigateToTab,
+  needRefresh = false,
+  updateServiceWorker = async () => {},
 }: UserProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -154,7 +157,6 @@ export default function UserProfileView({
     }
   };
 
-  const { needRefresh, updateServiceWorker } = useRegisterSW();
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleUpdate = async () => {

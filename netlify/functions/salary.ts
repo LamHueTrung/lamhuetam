@@ -26,7 +26,7 @@ export const handler: Handler = async (event) => {
 
       // Auto-add salary for current month
       if (action === 'auto_add') {
-        const currentMonth = new Date().toISOString().slice(0, 7);
+        const currentMonth = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 7);
         const config = await SalaryConfig.findOne();
         if (!config || config.netSalary <= 0) {
           return { statusCode: 400, headers, body: JSON.stringify({ error: 'Chưa có config lương hoặc lương = 0' }) };
@@ -35,7 +35,7 @@ export const handler: Handler = async (event) => {
           return { statusCode: 200, headers, body: JSON.stringify({ skipped: true, message: 'Đã cộng lương tháng này rồi' }) };
         }
 
-        const now = new Date();
+        const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
         const receiveDay = config.receiveDay || 1;
         const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const actualDay = Math.min(receiveDay, maxDay);

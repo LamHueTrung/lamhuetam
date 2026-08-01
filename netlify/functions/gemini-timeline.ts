@@ -148,7 +148,7 @@ export const handler: Handler = async (event) => {
       event.body || "{}",
     );
     const fallback = generateDefaultTimeline(
-      startDate || new Date().toISOString().split("T")[0],
+      startDate || new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split("T")[0],
       parseInt(installments) || 1,
       parseInt(amtPerPeriod) || 0,
       parseInt(paymentDueDay) || 5,

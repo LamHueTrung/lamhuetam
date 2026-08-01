@@ -9,6 +9,8 @@ import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
 
+import { getLocalDateString } from "../utils/date";
+
 interface EditTransactionModalProps {
   isOpen: boolean;
   transaction: Transaction | null;
@@ -26,7 +28,7 @@ const wallets = [
 export default function EditTransactionModal({ isOpen, transaction, categories: propCategories, onClose, onUpdateTransaction }: EditTransactionModalProps) {
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amountStr, setAmountStr] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [wallet, setWallet] = useState("Ngân hàng");

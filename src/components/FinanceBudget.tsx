@@ -70,6 +70,7 @@ import {
   calcInstallmentAmount,
   calcPaidPercent,
 } from "../lib/debtUtils";
+import { getLocalDateString, getLocalMonthString } from "../utils/date";
 
 interface FinanceBudgetProps {
   debts: DebtAccount[];
@@ -248,7 +249,7 @@ export default function FinanceBudget({
 }: FinanceBudgetProps) {
   const [activeTab, setActiveTab] = useState<ViewTab>("debts");
   const [showSalary, setShowSalary] = useState(false);
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = getLocalMonthString();
   const [fixedMonth, setFixedMonth] = useState(currentMonth);
 
   const {
@@ -283,7 +284,7 @@ export default function FinanceBudget({
   const [totalInstallments, setTotalInstallments] = useState("1");
   const [paidInstallments, setPaidInstallments] = useState("0");
   const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0],
+    getLocalDateString(),
   );
   const [notes, setNotes] = useState("");
   const [paymentDebtId, setPaymentDebtId] = useState<string | null>(null);
@@ -410,7 +411,7 @@ export default function FinanceBudget({
     setPaymentDay("5");
     setTotalInstallments("1");
     setPaidInstallments("0");
-    setStartDate(new Date().toISOString().split("T")[0]);
+    setStartDate(getLocalDateString());
     setNotes("");
     toast.success("Đã thêm khoản nợ!");
   };

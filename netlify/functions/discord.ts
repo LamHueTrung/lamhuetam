@@ -111,7 +111,7 @@ async function getBalanceContent(): Promise<string> {
     const collection = db.connection.collection('transactions');
     const transactions = await collection.find({}).toArray() as any[];
 
-    const now = new Date();
+    const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
     const monthStr = now.toISOString().slice(0, 7);
 
     const income = transactions

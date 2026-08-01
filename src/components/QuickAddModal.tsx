@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
+import { getLocalDateString } from "../utils/date";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export default function QuickAddModal({
   const [amountStr, setAmountStr] = useState("");
   const [description, setDescription] = useState("");
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0],
+    getLocalDateString(),
   );
   const [category, setCategory] = useState("Ăn uống");
   const [wallet, setWallet] = useState("Ngân hàng");
@@ -163,7 +164,7 @@ export default function QuickAddModal({
     // Reset Form
     setAmountStr("");
     setDescription("");
-    setSelectedDate(new Date().toISOString().split("T")[0]);
+    setSelectedDate(getLocalDateString());
     onClose();
   };
 

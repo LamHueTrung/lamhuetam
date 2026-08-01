@@ -27,6 +27,8 @@ import RegisterPage from "./components/RegisterPage";
 import SyncStatus from "./components/SyncStatus";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { scheduleSync } from "./services/syncService";
+import { getLocalMonthString } from "./utils/date";
+
 import { useTransactions } from "./hooks/useTransactions";
 import { useBudgets } from "./hooks/useBudgets";
 import { useDebts } from "./hooks/useDebts";
@@ -124,7 +126,7 @@ function AppContent() {
 
   const isOnline = useOnlineStatus();
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = getLocalMonthString();
   const { categories: fixedCats, tasks: fixedTasks, totalFixed } = useFixedExpenses(currentMonth);
   const { salaryConfig } = useSalary();
   const { profile: userProfile, updateProfile } = useUserProfile();
@@ -426,8 +428,17 @@ function AppContent() {
           {needRefresh && (
             <button
               onClick={async () => {
-                toast.loading("Đang cập nhật phiên bản mới...");
-                await updateServiceWorker(true);
+                const loadingToast = toast.loading("Đang cập nhật phiên bản mới...");
+                try {
+                  await updateServiceWorker(true);
+                  setTimeout(() => {
+                    toast.dismiss(loadingToast);
+                    window.location.reload();
+                  }, 2000);
+                } catch (e) {
+                  toast.dismiss(loadingToast);
+                  window.location.reload();
+                }
               }}
               className="flex items-center gap-1 text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-md text-[10px] font-black cursor-pointer animate-pulse border border-amber-200/50"
               title="Có phiên bản mới, click để cập nhật ngay"
@@ -540,6 +551,8 @@ function AppContent() {
                   profile={userProfile}
                   onUpdateProfile={updateProfile}
                   onNavigateToTab={setCurrentTab}
+                  needRefresh={needRefresh}
+                  updateServiceWorker={updateServiceWorker}
                 />
               )}
 

@@ -15,7 +15,7 @@ export const handler: Handler = async (event) => {
     await connectDB();
     const params = event.queryStringParameters || {};
     const type = params.type || 'tasks'; // 'categories' | 'tasks'
-    const month = params.month || new Date().toISOString().slice(0, 7);
+    const month = params.month || new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 7);
 
     // ── GET ──────────────────────────────────────────────
     if (event.httpMethod === 'GET') {

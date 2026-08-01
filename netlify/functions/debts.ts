@@ -59,7 +59,7 @@ export const handler: Handler = async (event) => {
       }
 
       let totalPaid = 0;
-      const nowStr = date || new Date().toISOString().split('T')[0];
+      const nowStr = date || new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0];
       const desc = note ? `${debt.name} - ${note}` : debt.name;
 
       for (const idx of indices) {
