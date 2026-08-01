@@ -159,11 +159,12 @@ export default function UserProfileView({
 
   const handleUpdate = async () => {
     setIsUpdating(true);
+    const checkingToast = toast.loading("Đang kiểm tra phiên bản mới...");
     try {
       if ("serviceWorker" in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
         if (registrations.length === 0) {
-          // Nếu không có Service Worker nào được đăng ký, thông báo phiên bản mới nhất
+          toast.dismiss(checkingToast);
           toast.success("Phiên bản hiện tại là phiên bản mới nhất!");
           setIsUpdating(false);
           return;
@@ -172,6 +173,7 @@ export default function UserProfileView({
           await registration.update();
         }
       } else {
+        toast.dismiss(checkingToast);
         toast.success("Phiên bản hiện tại là phiên bản mới nhất!");
         setIsUpdating(false);
         return;
@@ -181,13 +183,25 @@ export default function UserProfileView({
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       if (needRefresh) {
-        toast.loading("Đang tải phiên bản mới...");
-        await updateServiceWorker(true);
+        toast.dismiss(checkingToast);
+        const loadingToast = toast.loading("Đang tải phiên bản mới...");
+        try {
+          await updateServiceWorker(true);
+          setTimeout(() => {
+            toast.dismiss(loadingToast);
+            window.location.reload();
+          }, 2000);
+        } catch (e) {
+          toast.dismiss(loadingToast);
+          window.location.reload();
+        }
       } else {
+        toast.dismiss(checkingToast);
         toast.success("Phiên bản hiện tại là phiên bản mới nhất!");
       }
     } catch (err: any) {
       console.error("Lỗi cập nhật:", err);
+      toast.dismiss(checkingToast);
       toast.error("Không thể kiểm tra cập nhật");
     } finally {
       setIsUpdating(false);

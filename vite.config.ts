@@ -54,6 +54,7 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,png,svg,ico,json,woff2}'],
+          clientsClaim: true,
           runtimeCaching: [
             {
               urlPattern: /^https?:\/\/.*\/\.netlify\/functions\/.*/i,

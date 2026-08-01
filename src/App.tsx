@@ -64,8 +64,19 @@ function AppContent() {
               <button
                 onClick={async () => {
                   toast.dismiss(t.id);
-                  toast.loading("Đang cập nhật phiên bản mới...");
-                  await updateServiceWorker(true);
+                  const loadingToast = toast.loading("Đang cập nhật phiên bản mới...");
+                  try {
+                    await updateServiceWorker(true);
+                    // Fallback đề phòng sự kiện controlling của service worker không reload trang
+                    setTimeout(() => {
+                      toast.dismiss(loadingToast);
+                      window.location.reload();
+                    }, 2000);
+                  } catch (err) {
+                    console.error("Lỗi cập nhật SW:", err);
+                    toast.dismiss(loadingToast);
+                    window.location.reload();
+                  }
                 }}
                 className="text-[9px] px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-950 font-bold cursor-pointer"
               >
