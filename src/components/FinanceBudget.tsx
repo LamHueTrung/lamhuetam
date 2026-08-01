@@ -437,6 +437,9 @@ export default function FinanceBudget({
       paymentNote || undefined,
     );
     setPaymentDebtId(null);
+    if (onTransactionAdded) {
+      onTransactionAdded();
+    }
     toast.success(`Đã thanh toán ${selectedInstallments.length} kỳ!`);
   };
 

@@ -33,6 +33,7 @@ import {
   mdiAlert,
   mdiPackageUp,
   mdiClockOutline,
+  mdiLoading,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
@@ -154,6 +155,44 @@ export default function UserProfileView({
   };
 
   const { needRefresh, updateServiceWorker } = useRegisterSW();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    try {
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length === 0) {
+          // Nếu không có Service Worker nào được đăng ký, thông báo phiên bản mới nhất
+          toast.success("Phiên bản hiện tại là phiên bản mới nhất!");
+          setIsUpdating(false);
+          return;
+        }
+        for (let registration of registrations) {
+          await registration.update();
+        }
+      } else {
+        toast.success("Phiên bản hiện tại là phiên bản mới nhất!");
+        setIsUpdating(false);
+        return;
+      }
+
+      // Đợi một khoảng thời gian ngắn để kiểm tra trạng thái
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      if (needRefresh) {
+        toast.loading("Đang tải phiên bản mới...");
+        await updateServiceWorker(true);
+      } else {
+        toast.success("Phiên bản hiện tại là phiên bản mới nhất!");
+      }
+    } catch (err: any) {
+      console.error("Lỗi cập nhật:", err);
+      toast.error("Không thể kiểm tra cập nhật");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   useEffect(() => {
     setFullName(profile.fullName || "");
@@ -474,18 +513,24 @@ export default function UserProfileView({
           <div className="flex items-center gap-2 text-[11px] text-slate-400">
             <Icon path={mdiClockOutline} size={0.65} />
             <span>
-              Phiên bản: <b className="text-slate-500 dark:text-slate-300">{__APP_VERSION__}</b>
+              Phiên bản:{" "}
+              <b className="text-slate-500 dark:text-slate-300">
+                {__APP_VERSION__}
+              </b>
             </span>
           </div>
-          {needRefresh && (
-            <button
-              onClick={() => updateServiceWorker(true)}
-              className="bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm cursor-pointer flex items-center gap-1 hover:opacity-90 transition-all"
-            >
-              <Icon path={mdiPackageUp} size={0.65} />
-              <span>Cập nhật mới</span>
-            </button>
-          )}
+          <button
+            onClick={handleUpdate}
+            disabled={isUpdating}
+            className="bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm cursor-pointer flex items-center gap-1 hover:opacity-90 transition-all disabled:opacity-60"
+          >
+            <Icon
+              path={isUpdating ? mdiLoading : mdiPackageUp}
+              size={0.65}
+              className={isUpdating ? "animate-spin" : ""}
+            />
+            <span>{isUpdating ? "Đang kiểm tra..." : "Cập nhật mới"}</span>
+          </button>
         </div>
       </div>
 

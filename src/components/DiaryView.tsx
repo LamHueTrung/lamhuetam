@@ -409,6 +409,11 @@ export default function DiaryView() {
   const [isSaving, setIsSaving] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
+  // Location search state
+  const [locSearchResults, setLocSearchResults] = useState<any[]>([]);
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
+  const [selectedLocName, setSelectedLocName] = useState("");
+
   // Reply state
   const [replyText, setReplyText] = useState("");
   const [isSavingReply, setIsSavingReply] = useState(false);
@@ -429,6 +434,47 @@ export default function DiaryView() {
   );
   const grouped = groupByMonth(filteredEntries);
   const months = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  const searchLocation = async (query: string) => {
+    if (!query.trim()) {
+      setLocSearchResults([]);
+      return;
+    }
+    setIsSearchingLoc(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`
+      );
+      const data = await res.json();
+      setLocSearchResults(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearchingLoc(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (location.trim() && location !== selectedLocName) {
+        searchLocation(location);
+      } else if (!location.trim()) {
+        setLocSearchResults([]);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [location, selectedLocName]);
+
+  const handleSelectLocation = (item: any) => {
+    const name = item.display_name;
+    const latitude = item.lat;
+    const longitude = item.lon;
+    setLocation(name);
+    setSelectedLocName(name);
+    setLat(String(parseFloat(latitude).toFixed(5)));
+    setLng(String(parseFloat(longitude).toFixed(5)));
+    setLocSearchResults([]);
+  };
 
   const fetchCurrentLocation = useCallback((autoFillLocationText = true) => {
     if (!navigator.geolocation) return;
@@ -488,6 +534,8 @@ export default function DiaryView() {
     setLng("");
     setTags("");
     setEditId(null);
+    setLocSearchResults([]);
+    setSelectedLocName("");
     fetchCurrentLocation(true);
   };
 
@@ -496,7 +544,9 @@ export default function DiaryView() {
     setDate(entry.date);
     setContent(entry.content);
     setMood(entry.mood);
-    setLocation(entry.location || "");
+    const loc = entry.location || "";
+    setLocation(loc);
+    setSelectedLocName(loc);
     setLat(
       entry.lat !== null && entry.lat !== undefined ? String(entry.lat) : "",
     );
@@ -1129,7 +1179,7 @@ export default function DiaryView() {
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-3 text-sm font-medium outline-none resize-none dark:text-white leading-relaxed min-w-0"
                     />
                   </div>
-                  <div>
+                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">
                       Địa điểm
                     </label>
@@ -1144,7 +1194,7 @@ export default function DiaryView() {
                           type="text"
                           value={location}
                           onChange={(e) => setLocation(e.target.value)}
-                          placeholder="Tự động điền địa chỉ hoặc nhập thủ công..."
+                          placeholder="Nhập tên địa điểm để tự động tìm tọa độ..."
                           className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] text-sm font-medium outline-none dark:text-white min-w-0"
                         />
                       </div>
@@ -1165,6 +1215,47 @@ export default function DiaryView() {
                         {isGettingLocation ? "Đang lấy..." : "Vị trí"}
                       </button>
                     </div>
+
+                    {isSearchingLoc && (
+                      <div className="mt-1.5 text-[10px] text-slate-400 font-bold flex items-center gap-1 px-1">
+                        <Icon path={mdiLoading} size={0.5} className="animate-spin" />
+                        Đang tìm kiếm vị trí...
+                      </div>
+                    )}
+
+                    {locSearchResults.length > 0 && (
+                      <div className="mt-2 bg-white dark:bg-slate-800 border border-slate-150 dark:border-slate-700 rounded-2xl shadow-lg max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/50 z-20 relative">
+                        {locSearchResults.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectLocation(item)}
+                            className="p-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors flex flex-col gap-0.5"
+                          >
+                            <span className="truncate">{item.display_name}</span>
+                            <span className="text-[9px] text-slate-400 font-medium">
+                              Tọa độ: {parseFloat(item.lat).toFixed(5)}, {parseFloat(item.lon).toFixed(5)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {(lat || lng) && (
+                      <div className="mt-2 text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                        <span>📍 Tọa độ: {lat || "0"}, {lng || "0"}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLat("");
+                            setLng("");
+                            toast.success("Đã xóa tọa độ");
+                          }}
+                          className="text-[9px] font-black text-rose-500 hover:text-rose-600 uppercase"
+                        >
+                          Xóa tọa độ
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">

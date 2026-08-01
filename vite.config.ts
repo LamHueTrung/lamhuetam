@@ -4,12 +4,23 @@ import path from 'path';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
 
-const __buildTime__ = new Date().toISOString().slice(0, 10);
+const now = new Date();
+const __buildVersion__ =
+  "v" +
+  String(now.getHours()).padStart(2, "0") +
+  "." +
+  String(now.getMinutes()).padStart(2, "0") +
+  "." +
+  String(now.getDate()).padStart(2, "0") +
+  "." +
+  String(now.getMonth() + 1).padStart(2, "0") +
+  "." +
+  String(now.getFullYear()).slice(-2);
 
 export default defineConfig(() => {
   return {
     define: {
-      __APP_VERSION__: JSON.stringify(__buildTime__),
+      __APP_VERSION__: JSON.stringify(__buildVersion__),
     },
     plugins: [
       react(),

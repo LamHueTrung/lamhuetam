@@ -189,15 +189,17 @@ async function deleteDebt(id: string) {
 }
 
 async function payDebtInstallments(debtId: string, installmentIndices: number[], partialAmounts?: Record<number, number>, note?: string) {
+  const offset = new Date().getTimezoneOffset();
+  const date = new Date(Date.now() - offset * 60 * 1000).toISOString().split('T')[0];
   if (navigator.onLine) {
     try {
-      const result = await apiFetch(`${BASE}/debts`, { method: 'PUT', body: JSON.stringify({ debtId, installmentIndices, partialAmounts, note }) });
+      const result = await apiFetch(`${BASE}/debts`, { method: 'PUT', body: JSON.stringify({ debtId, installmentIndices, partialAmounts, note, date }) });
       return cachePut(db.debts, result);
     } catch (err: any) {
       if (!isNetworkError(err)) throw err;
     }
   }
-  await enqueue('debts', 'update', `${BASE}/debts`, 'PUT', { debtId, installmentIndices, partialAmounts, note });
+  await enqueue('debts', 'update', `${BASE}/debts`, 'PUT', { debtId, installmentIndices, partialAmounts, note, date });
   throw new Error('Không có kết nối mạng. Vui lòng thử lại sau.');
 }
 

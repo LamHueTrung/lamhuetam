@@ -37,7 +37,7 @@ export const handler: Handler = async (event) => {
     }
 
     if (event.httpMethod === 'PUT' && event.body) {
-      const { debtId, installmentIndices, partialAmounts, note, updateData } = JSON.parse(event.body);
+      const { debtId, installmentIndices, partialAmounts, note, date, updateData } = JSON.parse(event.body);
 
       if (updateData) {
         const updated = await Debt.findOneAndUpdate(
@@ -59,7 +59,8 @@ export const handler: Handler = async (event) => {
       }
 
       let totalPaid = 0;
-      const nowStr = new Date().toISOString().split('T')[0];
+      const nowStr = date || new Date().toISOString().split('T')[0];
+      const desc = note ? `${debt.name} - ${note}` : debt.name;
 
       for (const idx of indices) {
         const target = debt.installments.find((i: any) => i.index === idx);
@@ -76,6 +77,16 @@ export const handler: Handler = async (event) => {
           target.status = 'partial';
         }
         totalPaid += payAmount;
+
+        // Tạo phiếu chi cho mỗi kỳ nợ
+        await Transaction.create({
+          type: 'expense',
+          amount: payAmount,
+          category: 'Trả nợ',
+          date: nowStr,
+          description: desc,
+          wallet: 'Ngân hàng'
+        });
       }
 
       if (totalPaid === 0) {
@@ -96,17 +107,7 @@ export const handler: Handler = async (event) => {
         debt.status = 'active';
       }
 
-      const desc = note || `Trả nợ ${debt.name}`;
-      await Transaction.create({
-        type: 'expense',
-        amount: totalPaid,
-        category: debt.type === 'credit_card' ? 'Thẻ tín dụng' : 'Hóa đơn',
-        date: nowStr,
-        description: desc,
-        wallet: 'Ngân hàng'
-      });
-
-      const budgetCat = debt.type === 'credit_card' ? 'Thẻ tín dụng' : 'Hóa đơn';
+      const budgetCat = 'Trả nợ';
       const budget = await Budget.findOne({ category: budgetCat } as any);
       if (budget) {
         budget.spent += totalPaid;
