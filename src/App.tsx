@@ -45,55 +45,7 @@ function AppContent() {
   const { isAuthenticated, loading: authLoading, username, logout } = useAuth();
   const { needRefresh, updateServiceWorker } = useRegisterSW();
 
-  useEffect(() => {
-    if (needRefresh) {
-      toast(
-        (t) => (
-          <div className="flex flex-col gap-2 p-1">
-            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-              <span>🚀 Có phiên bản mới!</span>
-            </div>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-              Ứng dụng có bản cập nhật mới. Nhấn Cập nhật để áp dụng phiên bản mới ngay lập tức.
-            </p>
-            <div className="flex gap-2 justify-end mt-1">
-              <button
-                onClick={() => toast.dismiss(t.id)}
-                className="text-[9px] px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400 font-bold cursor-pointer"
-              >
-                Để sau
-              </button>
-              <button
-                onClick={async () => {
-                  toast.dismiss(t.id);
-                  const loadingToast = toast.loading("Đang cập nhật phiên bản mới...");
-                  try {
-                    await updateServiceWorker(true);
-                    // Fallback đề phòng sự kiện controlling của service worker không reload trang
-                    setTimeout(() => {
-                      toast.dismiss(loadingToast);
-                      window.location.reload();
-                    }, 2000);
-                  } catch (err) {
-                    console.error("Lỗi cập nhật SW:", err);
-                    toast.dismiss(loadingToast);
-                    window.location.reload();
-                  }
-                }}
-                className="text-[9px] px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-950 font-bold cursor-pointer"
-              >
-                Cập nhật
-              </button>
-            </div>
-          </div>
-        ),
-        {
-          duration: Infinity,
-          id: "pwa-update-toast",
-        }
-      );
-    }
-  }, [needRefresh, updateServiceWorker]);
+
 
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
