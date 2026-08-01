@@ -377,28 +377,7 @@ function AppContent() {
         </button>
         <div className="flex items-center gap-2">
           <SyncStatus />
-          {needRefresh && (
-            <button
-              onClick={async () => {
-                const loadingToast = toast.loading("Đang cập nhật phiên bản mới...");
-                try {
-                  await updateServiceWorker(true);
-                  setTimeout(() => {
-                    toast.dismiss(loadingToast);
-                    window.location.reload();
-                  }, 2000);
-                } catch (e) {
-                  toast.dismiss(loadingToast);
-                  window.location.reload();
-                }
-              }}
-              className="flex items-center gap-1 text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-md text-[10px] font-black cursor-pointer animate-pulse border border-amber-200/50"
-              title="Có phiên bản mới, click để cập nhật ngay"
-            >
-              <Icon path={mdiPackageUp} size={0.65} />
-              <span>Có bản mới</span>
-            </button>
-          )}
+
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md hover:bg-slate-200 transition-colors text-[10px] font-black cursor-pointer"
