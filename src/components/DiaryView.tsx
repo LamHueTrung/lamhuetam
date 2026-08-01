@@ -78,9 +78,13 @@ const VN_BOUNDS: [[number, number], [number, number]] = [
 function LeafletMap({
   entries,
   onSelectEntryDetail,
+  isFullScreen = false,
+  onBack,
 }: {
   entries: DiaryEntry[];
   onSelectEntryDetail: (entry: DiaryEntry) => void;
+  isFullScreen?: boolean;
+  onBack?: () => void;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -336,6 +340,31 @@ function LeafletMap({
   }, [entries.length]);
 
   if (validEntries.length === 0) {
+    if (isFullScreen) {
+      return (
+        <div className="fixed inset-0 z-[100] bg-white dark:bg-slate-900 flex flex-col w-screen h-screen">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 px-3 py-1.5 rounded-lg transition-all text-xs font-bold cursor-pointer border border-slate-200/50 dark:border-slate-750"
+            >
+              <Icon path={mdiClose} size={0.7} />
+              <span>Quay lại</span>
+            </button>
+            <div className="text-center">
+              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Bản đồ nhật ký</h3>
+              <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">0 địa điểm</p>
+            </div>
+            <div className="w-[84px] invisible" />
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-2 min-w-0">
+            <Icon path={mdiEarth} size={2} className="text-slate-300 animate-bounce" />
+            <p className="text-sm font-semibold text-slate-400">Chưa có nhật ký có tọa độ</p>
+            <p className="text-[10px] text-slate-400">Khi thêm nhật ký, ứng dụng tự động gắn vị trí vào bản đồ</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="bg-white/60 dark:bg-slate-800/60 border border-dashed border-slate-200 dark:border-slate-600 rounded-[24px] p-8 text-center space-y-2 min-w-0">
         <Icon path={mdiEarth} size={2} className="mx-auto text-slate-300" />
@@ -345,6 +374,36 @@ function LeafletMap({
         <p className="text-[10px] text-slate-400">
           Khi thêm nhật ký, ứng dụng tự động gắn vị trí vào bản đồ
         </p>
+      </div>
+    );
+  }
+
+  if (isFullScreen) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-white dark:bg-slate-900 flex flex-col w-screen h-screen">
+        {/* Fullscreen Header */}
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg transition-all text-xs font-bold cursor-pointer border border-slate-200/50 dark:border-slate-750"
+          >
+            <Icon path={mdiClose} size={0.7} />
+            <span>Quay lại</span>
+          </button>
+          <div className="text-center">
+            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Bản đồ nhật ký</h3>
+            <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">{validEntries.length} địa điểm</p>
+          </div>
+          <div className="w-[84px] invisible" /> {/* Spacer to balance header */}
+        </div>
+
+        {/* Map Area */}
+        <div className="flex-1 w-full h-full relative min-h-0 min-w-0">
+          <div
+            ref={mapRef}
+            className="w-full h-full"
+          />
+        </div>
       </div>
     );
   }
@@ -833,12 +892,12 @@ export default function DiaryView() {
         return renderTree();
       case "map":
         return (
-          <div className="space-y-3 min-w-0">
-            <LeafletMap
-              entries={filteredEntries}
-              onSelectEntryDetail={setDetailEntry}
-            />
-          </div>
+          <LeafletMap
+            entries={filteredEntries}
+            onSelectEntryDetail={setDetailEntry}
+            isFullScreen={true}
+            onBack={() => setViewMode("timeline")}
+          />
         );
       case "calendar":
         return (
