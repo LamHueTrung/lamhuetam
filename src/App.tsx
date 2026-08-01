@@ -6,7 +6,9 @@ import {
   mdiLogout,
   mdiWeatherNight,
   mdiWeatherSunny,
+  mdiPackageUp,
 } from "@mdi/js";
+import { useRegisterSW } from "virtual:pwa-register/react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -39,6 +41,46 @@ type Debt = DebtAccount;
 
 function AppContent() {
   const { isAuthenticated, loading: authLoading, username, logout } = useAuth();
+  const { needRefresh, updateServiceWorker } = useRegisterSW();
+
+  useEffect(() => {
+    if (needRefresh) {
+      toast(
+        (t) => (
+          <div className="flex flex-col gap-2 p-1">
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+              <span>🚀 Có phiên bản mới!</span>
+            </div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+              Ứng dụng có bản cập nhật mới. Nhấn Cập nhật để áp dụng phiên bản mới ngay lập tức.
+            </p>
+            <div className="flex gap-2 justify-end mt-1">
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="text-[9px] px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400 font-bold cursor-pointer"
+              >
+                Để sau
+              </button>
+              <button
+                onClick={async () => {
+                  toast.dismiss(t.id);
+                  toast.loading("Đang cập nhật phiên bản mới...");
+                  await updateServiceWorker(true);
+                }}
+                className="text-[9px] px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-950 font-bold cursor-pointer"
+              >
+                Cập nhật
+              </button>
+            </div>
+          </div>
+        ),
+        {
+          duration: Infinity,
+          id: "pwa-update-toast",
+        }
+      );
+    }
+  }, [needRefresh, updateServiceWorker]);
 
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
@@ -370,6 +412,19 @@ function AppContent() {
         </button>
         <div className="flex items-center gap-2">
           <SyncStatus />
+          {needRefresh && (
+            <button
+              onClick={async () => {
+                toast.loading("Đang cập nhật phiên bản mới...");
+                await updateServiceWorker(true);
+              }}
+              className="flex items-center gap-1 text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-md text-[10px] font-black cursor-pointer animate-pulse border border-amber-200/50"
+              title="Có phiên bản mới, click để cập nhật ngay"
+            >
+              <Icon path={mdiPackageUp} size={0.65} />
+              <span>Có bản mới</span>
+            </button>
+          )}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md hover:bg-slate-200 transition-colors text-[10px] font-black cursor-pointer"
