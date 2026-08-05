@@ -112,7 +112,16 @@ function AppContent() {
     md += `---\n\n`;
 
     // 1. Dòng tiền & Lương
+    const totalIncomeAllTime = transactions
+      .filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenseAllTime = transactions
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const accumulatedBalance = totalIncomeAllTime - totalExpenseAllTime;
+
     md += `## 1. 💵 DÒNG TIỀN & LƯƠNG\n`;
+    md += `- **Số dư khả dụng (Số dư tích lũy):** ${numFmt(accumulatedBalance)}\n`;
     if (salaryConfig && (salaryConfig.netSalary > 0 || salaryConfig.grossSalary > 0)) {
       md += `- **Lương thực nhận (Net):** ${numFmt(salaryConfig.netSalary || 0)}\n`;
       md += `- **Lương Gross:** ${numFmt(salaryConfig.grossSalary || 0)}\n`;
