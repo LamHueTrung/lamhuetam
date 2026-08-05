@@ -471,6 +471,10 @@ function AppContent() {
                   debts={debts}
                   savings={savings}
                   userProfile={userProfile}
+                  salaryConfig={salaryConfig}
+                  fixedCats={fixedCats}
+                  fixedTasks={fixedTasks}
+                  totalFixed={totalFixed}
                   onBack={() => setCurrentTab(1)}
                 />
               )}

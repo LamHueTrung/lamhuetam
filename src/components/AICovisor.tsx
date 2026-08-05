@@ -21,6 +21,9 @@ import {
   SavingsGoal,
   Message,
   UserProfile,
+  SalaryConfig,
+  FixedExpenseCategory,
+  FixedExpenseTask,
 } from "../types";
 type Debt = DebtAccount;
 
@@ -30,6 +33,10 @@ interface AICovisorProps {
   debts: Debt[];
   savings: SavingsGoal[];
   userProfile?: UserProfile;
+  salaryConfig?: SalaryConfig;
+  fixedCats?: FixedExpenseCategory[];
+  fixedTasks?: FixedExpenseTask[];
+  totalFixed?: number;
   onBack: () => void;
 }
 
@@ -87,6 +94,10 @@ export default function AICovisor({
   debts,
   savings,
   userProfile,
+  salaryConfig,
+  fixedCats,
+  fixedTasks,
+  totalFixed,
   onBack,
 }: AICovisorProps) {
   const [messages, setMessages] = useState<Message[]>([
@@ -149,6 +160,10 @@ export default function AICovisor({
           promptType,
           customMessage: promptType === "custom" ? userText : undefined,
           userProfile,
+          salaryConfig,
+          fixedCats,
+          fixedTasks,
+          totalFixed,
         }),
       });
 

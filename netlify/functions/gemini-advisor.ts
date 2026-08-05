@@ -51,8 +51,19 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const { transactions, budgets, debts, savings, promptType, customMessage, userProfile } =
-      JSON.parse(event.body || "{}");
+    const {
+      transactions,
+      budgets,
+      debts,
+      savings,
+      promptType,
+      customMessage,
+      userProfile,
+      salaryConfig,
+      fixedCats,
+      fixedTasks,
+      totalFixed,
+    } = JSON.parse(event.body || "{}");
 
     const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
     const thisMonth = now.toISOString().slice(0, 7);
@@ -145,44 +156,88 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // Tạo báo cáo tài chính Markdown
+    // Tính số dư tích luỹ (tổng thu - tổng chi từ trước tới nay)
+    const totalIncomeAllTime = (transactions || [])
+      .filter((t: any) => t.type === "income")
+      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    const totalExpenseAllTime = (transactions || [])
+      .filter((t: any) => t.type === "expense")
+      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    const accumulatedBalance = totalIncomeAllTime - totalExpenseAllTime;
+
+    // Dòng tiền khả dụng còn lại = tổng thu tháng - tổng chi tháng - tiền trả nợ bắt buộc
+    const freeCashflowComputed = monthIncome - monthExpense - totalMonthlyDebtPayment;
+
+    // Tạo báo cáo tài chính Markdown chuẩn xác (dựa theo App.tsx)
     const numFmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' VNĐ';
     let financeMd = `# 📊 BÁO CÁO TÀI CHÍNH TỔNG QUAN\n\n`;
-    
-    financeMd += `## 1. 💵 DÒNG TIỀN THÁNG NÀY\n`;
+
+    // 1. Dòng tiền & Lương
+    financeMd += `## 1. 💵 DÒNG TIỀN & LƯƠNG\n`;
+    financeMd += `- **Số dư tích lũy (Số dư khả dụng):** ${numFmt(accumulatedBalance)}\n`;
     financeMd += `- **Tổng thu nhập tháng này:** ${numFmt(monthIncome)}\n`;
     financeMd += `- **Tổng chi tiêu tháng này:** ${numFmt(monthExpense)}\n`;
-    financeMd += `- **Tiền trả nợ bắt buộc hàng tháng:** ${numFmt(totalMonthlyDebtPayment)}\n`;
-    financeMd += `- **Dòng tiền khả dụng còn lại (Thu - Chi - Nợ):** ${numFmt(freeCashflow)}\n\n`;
+    financeMd += `- **Tiền trả nợ bắt buộc tháng này:** ${numFmt(totalMonthlyDebtPayment)}\n`;
+    financeMd += `- **Dòng tiền khả dụng còn lại (Thu - Chi - Nợ):** ${numFmt(freeCashflowComputed)}\n`;
 
-    financeMd += `## 2. 📁 NGÂN SÁCH CÁC DANH MỤC\n`;
-    if (budgets && budgets.length > 0) {
-      budgets.filter((b: any) => b.limit > 0).forEach((b: any) => {
-        financeMd += `- **${b.category}:** Đã tiêu ${numFmt(b.spent)} / Hạn mức ${numFmt(b.limit)} (${Math.round((b.spent / b.limit) * 100)}%)\n`;
-      });
+    if (salaryConfig && (salaryConfig.netSalary > 0 || salaryConfig.grossSalary > 0)) {
+      financeMd += `- **Lương thực nhận (Net):** ${numFmt(salaryConfig.netSalary || 0)}\n`;
+      financeMd += `- **Lương Gross:** ${numFmt(salaryConfig.grossSalary || 0)}\n`;
+      financeMd += `- **Ngày nhận lương:** Ngày ${salaryConfig.receiveDay || '—'} hàng tháng\n`;
+      financeMd += `- **Số ngày công:** ${salaryConfig.workDays || 0} ngày\n`;
+      const totalLeaveDays = (salaryConfig.leaveDays || []).reduce((s: number, l: any) => s + (l.count || 0), 0);
+      financeMd += `- **Tổng số ngày nghỉ:** ${totalLeaveDays} ngày\n`;
+      if (salaryConfig.notes) financeMd += `- **Ghi chú lương:** ${salaryConfig.notes}\n`;
     } else {
-      financeMd += `*Chưa thiết lập ngân sách danh mục*\n`;
+      financeMd += `*Chưa có thông tin cấu hình lương*\n`;
     }
     financeMd += `\n`;
 
+    // 2. Chi tiêu cố định
+    const currentMonthLabel = thisMonth.slice(5) + "/" + thisMonth.slice(0, 4);
+    financeMd += `## 2. 📌 CHI TIÊU CỐ ĐỊNH (Tháng ${currentMonthLabel})\n`;
+    financeMd += `- **Tổng Chi Cố Định:** ${numFmt(totalFixed || 0)}\n`;
+    if (fixedCats && fixedCats.length > 0) {
+      fixedCats.forEach((cat: any) => {
+        const catTasks = (fixedTasks || []).filter((t: any) => t.categoryId === cat.id);
+        const catTotal = catTasks.reduce((s: number, t: any) => s + t.amount, 0);
+        financeMd += `### 📁 ${cat.name} (Tổng: ${numFmt(catTotal)})\n`;
+        if (catTasks.length === 0) {
+          financeMd += `- *(Chưa có khoản chi)*\n`;
+        } else {
+          catTasks.forEach((t: any) => {
+            financeMd += `- **${t.name}**: ${numFmt(t.amount)}${t.note ? ` *(Ghi chú: ${t.note})*` : ''}\n`;
+          });
+        }
+      });
+    } else {
+      financeMd += `*Chưa có danh mục chi tiêu cố định*\n`;
+    }
+    financeMd += `\n`;
+
+    // 3. Dự nợ & trả góp
     financeMd += `## 3. 💳 DỰ NỢ & TRẢ GÓP\n`;
     financeMd += `- **Tổng dư nợ còn lại:** ${numFmt(totalDebt)}\n`;
     if (activeDebts.length > 0) {
       activeDebts.forEach((d: any, i: number) => {
         const typeLabel = d.type === 'credit_card' ? 'Thẻ tín dụng' : d.type === 'installment' ? 'Trả góp' : 'Vay nợ';
         financeMd += `### ${i + 1}. ${d.name} (${typeLabel})\n`;
-        financeMd += `- Dư nợ còn lại: ${numFmt(d.currentBalance || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
+        financeMd += `- **Dư nợ còn lại:** ${numFmt(d.currentBalance || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
         if (d.type === 'installment') {
-          financeMd += `- Trả hàng tháng: ${numFmt(d.monthlyPayment || 0)} (Kỳ hạn: ${d.paidInstallments || 0}/${d.totalInstallments || 0})\n`;
+          financeMd += `- **Tiến độ trả góp:** Đã trả ${d.paidInstallments || 0}/${d.totalInstallments || 0} kỳ\n`;
+          financeMd += `- **Số tiền trả hàng tháng:** ${numFmt(d.monthlyPayment || 0)} (Hạn trả: Ngày ${d.paymentDay || '—'})\n`;
+        } else if (d.type === 'credit_card') {
+          financeMd += `- **Hạn mức:** ${numFmt(d.currentBalance || 0)} (Hạn thanh toán: Ngày ${d.paymentDay || '—'})\n`;
         }
-        if (d.notes) financeMd += `- Ghi chú: ${d.notes}\n`;
+        if (d.notes) financeMd += `- **Ghi chú:** ${d.notes}\n`;
       });
     } else {
       financeMd += `*Không có khoản vay nợ nào active*\n`;
     }
     financeMd += `\n`;
 
-    financeMd += `## 4. 📈 LỊCH SỬ GIAO DỊCH THU CHI GẦN ĐÂY\n`;
+    // 4. Giao dịch thu chi gần đây
+    financeMd += `## 4. 📈 LỊCH SỬ GIAO DỊCH THU CHI (Gần đây)\n`;
     if (recentTx.length > 0) {
       recentTx.forEach((t: any) => {
         const typeSign = t.type === 'income' ? '+' : '-';
