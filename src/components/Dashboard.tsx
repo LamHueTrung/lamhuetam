@@ -47,6 +47,11 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from "recharts";
 import Markdown from "react-markdown";
 import { calcRemainingBalance, calcPaidPercent } from "../lib/debtUtils";
@@ -80,6 +85,10 @@ export default function Dashboard({
     if (Math.abs(num) < 1000) return num + "đ";
     const valueInK = Math.round(num / 1000);
     return new Intl.NumberFormat("vi-VN").format(valueInK) + "k";
+  };
+
+  const formatFullVND = (num: number) => {
+    return new Intl.NumberFormat("vi-VN").format(num) + "đ";
   };
 
   // ── Tính toán tài chính theo tháng hiện tại ──
@@ -316,6 +325,46 @@ export default function Dashboard({
         new Date(aNext.dueDate).getTime() - new Date(bNext.dueDate).getTime()
       );
     });
+    
+  // ── Tính toán dữ liệu so sánh Tháng này vs Tháng trước (MoM Radar) ──
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, "0")}`;
+
+  const lastMonthExpenses = transactions.filter(
+    (t) => t.type === "expense" && t.date.startsWith(lastMonthStr)
+  );
+
+  const momRadarData = useMemo(() => {
+    const categoriesSet = new Set<string>();
+    const thisMonthMap: Record<string, number> = {};
+    const lastMonthMap: Record<string, number> = {};
+
+    thisMonthExpenses.forEach((t) => {
+      const cat = t.category?.trim() || "Khác";
+      categoriesSet.add(cat);
+      thisMonthMap[cat] = (thisMonthMap[cat] || 0) + t.amount;
+    });
+
+    lastMonthExpenses.forEach((t) => {
+      const cat = t.category?.trim() || "Khác";
+      categoriesSet.add(cat);
+      lastMonthMap[cat] = (lastMonthMap[cat] || 0) + t.amount;
+    });
+
+    return Array.from(categoriesSet)
+      .map((cat) => ({
+        category: cat,
+        "Tháng trước": Math.round((lastMonthMap[cat] || 0) / 1000), // đơn vị 'k'
+        "Tháng này": Math.round((thisMonthMap[cat] || 0) / 1000), // đơn vị 'k'
+      }))
+      .sort((a, b) => (b["Tháng này"] + b["Tháng trước"]) - (a["Tháng này"] + a["Tháng trước"]))
+      .slice(0, 6); // Lấy tối đa 6 danh mục lớn nhất để biểu đồ radar gọn gàng
+  }, [thisMonthExpenses, lastMonthExpenses]);
+
+  const totalExpenseLastMonth = lastMonthExpenses.reduce((sum, t) => sum + t.amount, 0);
+  const expenseChangePercent = totalExpenseLastMonth > 0 
+    ? Math.round(((expenseThisMonth - totalExpenseLastMonth) / totalExpenseLastMonth) * 100)
+    : 0;
 
   // AI Insights
   const [aiInsight, setAiInsight] = useState<string | null>(null);
@@ -1032,67 +1081,110 @@ export default function Dashboard({
         )}
       </div>
 
-      {urgentDebts.length > 0 && (
-        <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-6 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+      {/* SO SÁNH CHI TIÊU THÁNG NÀY VS THÁNG TRƯỚC (RADAR CHART) */}
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/40 dark:border-slate-800/80 rounded-[28px] p-6 shadow-[0_12px_36px_rgba(0,0,0,0.03)] space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
               <Icon
-                path={mdiAlertCircleOutline}
-                size={1}
-                className="text-rose-500"
+                path={mdiChartTimelineVariant}
+                size={0.875}
+                className="text-indigo-500"
               />
-              Hồ Sơ Nợ Khẩn Cấp
+              Cấu Trúc Chi Tiêu MoM
             </h3>
-            <button
-              onClick={() => onNavigateToTab(4)}
-              className="text-xs font-bold text-slate-500 flex items-center hover:text-slate-800 transition-colors cursor-pointer"
-            >
-              Xem tất cả <Icon path={mdiChevronRight} size={1} />
-            </button>
+            <p className="text-[10px] text-slate-400 font-medium">
+              So sánh cơ cấu chi tiêu với tháng trước (đơn vị: nghìn đồng)
+            </p>
           </div>
-
-          <div className="space-y-3">
-            {urgentDebts.slice(0, 2).map((debt) => {
-              const typeLabel: Record<string, string> = {
-                installment: "Trả góp",
-                credit_card: "Thẻ TD",
-                friend: "Bạn bè",
-              };
-              const percentPaid = calcPaidPercent(debt);
-
-              return (
-                <div
-                  key={debt.id}
-                  className="bg-white/40 border border-white/60 rounded-2xl p-4 flex items-center justify-between"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600">
-                        {typeLabel[debt.type] || "Nợ"}
-                      </span>
-                      <span className="text-xs font-bold text-slate-800">
-                        {debt.name}
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      Còn {debt.totalInstallments - debt.paidInstallments}/
-                      {debt.totalInstallments} kỳ
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-slate-800 block">
-                      {formatVND(debt.currentBalance)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
-                      Đã trả {percentPaid}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/80 p-1 rounded-xl">
+            <span className={`text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 ${expenseChangePercent <= 0 ? "bg-emerald-500 text-white shadow-sm" : "bg-rose-500 text-white shadow-sm"}`}>
+              {expenseChangePercent <= 0 ? "Giảm" : "Tăng"} {Math.abs(expenseChangePercent)}%
+            </span>
           </div>
         </div>
-      )}
+
+        {momRadarData.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
+            {/* Chart Area */}
+            <div className="md:col-span-3 h-52 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={momRadarData}>
+                  <PolarGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+                  <PolarAngleAxis
+                    dataKey="category"
+                    tick={{ fill: "#64748b", fontSize: 9, fontWeight: 600 }}
+                  />
+                  <PolarRadiusAxis
+                    angle={30}
+                    domain={[0, "auto"]}
+                    tick={{ fill: "#94a3b8", fontSize: 8 }}
+                  />
+                  <Radar
+                    name="Tháng trước"
+                    dataKey="Tháng trước"
+                    stroke="#94a3b8"
+                    fill="#cbd5e1"
+                    fillOpacity={0.2}
+                  />
+                  <Radar
+                    name="Tháng này"
+                    dataKey="Tháng này"
+                    stroke="#8b5cf6"
+                    fill="#c084fc"
+                    fillOpacity={0.35}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(255, 255, 255, 0.9)",
+                      borderRadius: "16px",
+                      border: "1px solid rgba(255, 255, 255, 0.6)",
+                      backdropFilter: "blur(12px)",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: "#1e293b",
+                    }}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Quick stats and micro-insights */}
+            <div className="md:col-span-2 space-y-3.5">
+              <div className="bg-white/40 dark:bg-slate-800/40 border border-white/60 dark:border-slate-700/50 rounded-2xl p-3.5 space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                  Tổng chi tháng này
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-black text-slate-800 dark:text-slate-100">
+                    {formatFullVND(expenseThisMonth)}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-semibold block">
+                  Tháng trước: {formatFullVND(totalExpenseLastMonth)}
+                </span>
+              </div>
+
+              <div className="bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100/30 rounded-2xl p-3.5">
+                <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 block mb-1">
+                  Nhận xét nhanh
+                </span>
+                <p className="text-[10.5px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  {expenseChangePercent <= 0
+                    ? `Chi tiêu của bạn đang kiểm soát tốt, giảm ${Math.abs(expenseChangePercent)}% so với tháng trước. Hãy tiếp tục duy trì!`
+                    : `Bạn đã chi nhiều hơn tháng trước ${Math.abs(expenseChangePercent)}%. Hãy xem lại các hạng mục có vùng phủ lớn trên biểu đồ để cân đối.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-40 flex flex-col items-center justify-center text-slate-400 gap-1.5">
+            <Icon path={mdiChartTimelineVariant} size={1.5} className="opacity-40" />
+            <span className="text-xs font-semibold">Chưa có đủ dữ liệu giao dịch để so sánh</span>
+          </div>
+        )}
+      </div>
 
       {/* AI INSIGHTS CARD */}
       {/* <div
