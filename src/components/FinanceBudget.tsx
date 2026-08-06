@@ -200,9 +200,9 @@ function getNextInstallment(
 }
 
 function getOverdueCount(inst: DebtInstallment[]): number {
-  const now = new Date();
+  const todayStr = getLocalDateString();
   return inst.filter(
-    (i) => i.status === "pending" && new Date(i.dueDate + "T00:00:00") < now,
+    (i) => i.status === "pending" && i.dueDate < todayStr,
   ).length;
 }
 
@@ -418,11 +418,10 @@ export default function FinanceBudget({
 
   const handlePayOpen = (debt: DebtAccount) => {
     setPaymentDebtId(debt.id);
-    setSelectedInstallments(
-      debt.installments
-        .filter((i) => i.status === "pending" || i.status === "partial")
-        .map((i) => i.index),
+    const nextUnpaid = debt.installments.find(
+      (i) => i.status === "pending" || i.status === "partial",
     );
+    setSelectedInstallments(nextUnpaid ? [nextUnpaid.index] : []);
     setPaymentNote("");
   };
 
@@ -1062,9 +1061,7 @@ export default function FinanceBudget({
                                 )
                                 .slice(0, 8)
                                 .map((inst) => {
-                                  const isOverdue =
-                                    new Date(inst.dueDate + "T00:00:00") <
-                                    new Date();
+                                  const isOverdue = inst.dueDate < getLocalDateString();
                                   return (
                                     <span
                                       key={inst.index}
