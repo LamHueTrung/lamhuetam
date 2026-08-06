@@ -336,8 +336,15 @@ export default function FinanceBudget({
     const paid = parseInt(paidInstallments) || 0;
     const day = parseInt(paymentDay) || 5;
     const start = new Date(startDate);
+
+    // Xác định xem kỳ đầu tiên có thuộc tháng tiếp theo hay không
+    // Ví dụ: Bắt đầu vay 17/07, hạn thanh toán là ngày 5 hàng tháng.
+    // Ngày vay (17) >= Ngày hạn (5) -> kỳ 1 bắt đầu từ 05/08 (Tháng tiếp theo).
+    // Ngày vay (2) < Ngày hạn (5) -> kỳ 1 bắt đầu từ 05/07 (Tháng hiện tại).
+    const startMonthOffset = start.getDate() >= day ? 1 : 0;
+
     return Array.from({ length: total }, (_, i) => {
-      const m = start.getMonth() + 1 + i;
+      const m = start.getMonth() + startMonthOffset + i;
       const y = start.getFullYear() + Math.floor(m / 12);
       const month = m % 12;
       const maxDay = new Date(y, month + 1, 0).getDate();
