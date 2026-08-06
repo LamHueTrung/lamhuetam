@@ -293,6 +293,7 @@ export default function FinanceBudget({
     [],
   );
   const [paymentNote, setPaymentNote] = useState("");
+  const [editDebtId, setEditDebtId] = useState<string | null>(null);
   const dragControlsPayment = useDragControls();
 
   // ── Salary states ─────────────────────────────────────────────────────────
@@ -336,7 +337,7 @@ export default function FinanceBudget({
     const day = parseInt(paymentDay) || 5;
     const start = new Date(startDate);
     return Array.from({ length: total }, (_, i) => {
-      const m = start.getMonth() + i;
+      const m = start.getMonth() + 1 + i;
       const y = start.getFullYear() + Math.floor(m / 12);
       const month = m % 12;
       const maxDay = new Date(y, month + 1, 0).getDate();
@@ -352,6 +353,20 @@ export default function FinanceBudget({
         paidDate: i < paid ? dueDate : undefined,
       };
     });
+  };
+
+  const resetDebtForm = () => {
+    setDebtName("");
+    setOriginalAmount("");
+    setMonthlyPayment("");
+    setInterestRate("0");
+    setPaymentDay("5");
+    setTotalInstallments("1");
+    setPaidInstallments("0");
+    setStartDate(getLocalDateString());
+    setNotes("");
+    setEditDebtId(null);
+    setShowAddForm(false);
   };
 
   const handleCreateDebt = (e: React.FormEvent) => {
@@ -381,7 +396,7 @@ export default function FinanceBudget({
     const maturityDate =
       instData.length > 0 ? instData[instData.length - 1].dueDate : startDate;
 
-    onAddDebt({
+    const debtData = {
       type: debtType,
       name: debtName.trim(),
       originalAmount: rawAmount,
@@ -393,7 +408,7 @@ export default function FinanceBudget({
       maturityDate,
       totalInstallments: totalInst,
       paidInstallments: paidInst,
-      status: balance > 0 ? "active" : "settled",
+      status: balance > 0 ? ("active" as const) : ("settled" as const),
       installments: instData.map((inst) => ({
         ...inst,
         status:
@@ -402,18 +417,31 @@ export default function FinanceBudget({
             : ("pending" as const),
       })),
       notes,
-    });
-    setShowAddForm(false);
-    setDebtName("");
-    setOriginalAmount("");
-    setMonthlyPayment("");
-    setInterestRate("0");
-    setPaymentDay("5");
-    setTotalInstallments("1");
-    setPaidInstallments("0");
-    setStartDate(getLocalDateString());
-    setNotes("");
-    toast.success("Đã thêm khoản nợ!");
+    };
+
+    if (editDebtId) {
+      onUpdateDebt(editDebtId, debtData);
+      toast.success("Đã cập nhật khoản nợ!");
+    } else {
+      onAddDebt(debtData);
+      toast.success("Đã thêm khoản nợ!");
+    }
+    resetDebtForm();
+  };
+
+  const handleEditOpen = (debt: DebtAccount) => {
+    setEditDebtId(debt.id);
+    setDebtType(debt.type);
+    setDebtName(debt.name);
+    setOriginalAmount(numFmt(String(debt.originalAmount)));
+    setMonthlyPayment(numFmt(String(debt.monthlyPayment)));
+    setInterestRate(String(debt.interestRate));
+    setPaymentDay(String(debt.paymentDay));
+    setTotalInstallments(String(debt.totalInstallments));
+    setPaidInstallments(String(debt.paidInstallments));
+    setStartDate(debt.startDate);
+    setNotes(debt.notes || "");
+    setShowAddForm(true);
   };
 
   const handlePayOpen = (debt: DebtAccount) => {
@@ -725,7 +753,7 @@ export default function FinanceBudget({
           className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700 rounded-[24px] p-5 shadow-lg space-y-4"
         >
           <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-            Thêm khoản nợ
+            {editDebtId ? "Sửa khoản nợ" : "Thêm khoản nợ"}
           </h3>
           <div className="grid grid-cols-3 gap-2">
             {(["installment", "credit_card", "friend"] as const).map((t) => (
@@ -869,7 +897,7 @@ export default function FinanceBudget({
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={resetDebtForm}
               className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-3 py-2 cursor-pointer"
             >
               Hủy
@@ -941,6 +969,16 @@ export default function FinanceBudget({
                           Quá hạn {overdue}
                         </span>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditOpen(debt);
+                        }}
+                        className="p-1.5 rounded-full hover:bg-slate-100 text-slate-300 hover:text-slate-600 transition-all cursor-pointer"
+                        title="Sửa khoản nợ"
+                      >
+                        <Icon path={mdiPencil} size={0.75} />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
