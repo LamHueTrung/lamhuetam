@@ -124,21 +124,22 @@ function LeafletMap({
         minZoom: 5,
         tap: false,
       }).setView(center, 12);
+      const mapTilerKey = "odL8F5mMYH7APbT24t4Q"; // Free MapTiler Key
       const adminLayer = L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${mapTilerKey}`,
         {
           maxZoom: 19,
-          subdomains: "abcd",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        }
+          attribution:
+            '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        },
       ).addTo(map);
       const satLayer = L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        `https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${mapTilerKey}`,
         {
           maxZoom: 19,
-          subdomains: "abcd",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        }
+          attribution:
+            '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        },
       );
       const MapStyleControl = L.Control.extend({
         onAdd() {
@@ -152,7 +153,7 @@ function LeafletMap({
             </button>
             <button data-layer="sat" style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:transparent;color:#64748b;transition:all 0.2s">
               <svg viewBox="0 0 24 24" width="13" height="13" style="fill:currentColor"><path d="${mdiSatelliteVariant}"/></svg>
-              Theme tối
+              Vệ tinh
             </button>
           `;
           const btns = div.querySelectorAll("button");
@@ -339,15 +340,27 @@ function LeafletMap({
               <span>Quay lại</span>
             </button>
             <div className="text-center">
-              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Bản đồ nhật ký</h3>
-              <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">0 địa điểm</p>
+              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                Bản đồ nhật ký
+              </h3>
+              <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">
+                0 địa điểm
+              </p>
             </div>
             <div className="w-[84px] invisible" />
           </div>
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-2 min-w-0">
-            <Icon path={mdiEarth} size={2} className="text-slate-300 animate-bounce" />
-            <p className="text-sm font-semibold text-slate-400">Chưa có nhật ký có tọa độ</p>
-            <p className="text-[10px] text-slate-400">Khi thêm nhật ký, ứng dụng tự động gắn vị trí vào bản đồ</p>
+            <Icon
+              path={mdiEarth}
+              size={2}
+              className="text-slate-300 animate-bounce"
+            />
+            <p className="text-sm font-semibold text-slate-400">
+              Chưa có nhật ký có tọa độ
+            </p>
+            <p className="text-[10px] text-slate-400">
+              Khi thêm nhật ký, ứng dụng tự động gắn vị trí vào bản đồ
+            </p>
           </div>
         </div>
       );
@@ -378,18 +391,20 @@ function LeafletMap({
             <span>Quay lại</span>
           </button>
           <div className="text-center">
-            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Bản đồ nhật ký</h3>
-            <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">{validEntries.length} địa điểm</p>
+            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+              Bản đồ nhật ký
+            </h3>
+            <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">
+              {validEntries.length} địa điểm
+            </p>
           </div>
-          <div className="w-[84px] invisible" /> {/* Spacer to balance header */}
+          <div className="w-[84px] invisible" />{" "}
+          {/* Spacer to balance header */}
         </div>
 
         {/* Map Area */}
         <div className="flex-1 w-full h-full relative min-h-0 min-w-0 z-0">
-          <div
-            ref={mapRef}
-            className="w-full h-full"
-          />
+          <div ref={mapRef} className="w-full h-full" />
         </div>
       </div>
     );
@@ -441,9 +456,7 @@ export default function DiaryView() {
   const [search, setSearch] = useState("");
   const [selectedMood, setSelectedMood] = useState<DiaryMood | "all">("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
-  const [calendarMonth, setCalendarMonth] = useState(
-    getLocalMonthString(),
-  );
+  const [calendarMonth, setCalendarMonth] = useState(getLocalMonthString());
 
   // Form state
   const [date, setDate] = useState(getLocalDateString());
@@ -490,7 +503,7 @@ export default function DiaryView() {
     setIsSearchingLoc(true);
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
       );
       const data = await res.json();
       setLocSearchResults(data || []);
@@ -1226,7 +1239,7 @@ export default function DiaryView() {
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-3 text-sm font-medium outline-none resize-none dark:text-white leading-relaxed min-w-0"
                     />
                   </div>
-                   <div>
+                  <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">
                       Địa điểm
                     </label>
@@ -1265,7 +1278,11 @@ export default function DiaryView() {
 
                     {isSearchingLoc && (
                       <div className="mt-1.5 text-[10px] text-slate-400 font-bold flex items-center gap-1 px-1">
-                        <Icon path={mdiLoading} size={0.5} className="animate-spin" />
+                        <Icon
+                          path={mdiLoading}
+                          size={0.5}
+                          className="animate-spin"
+                        />
                         Đang tìm kiếm vị trí...
                       </div>
                     )}
@@ -1278,9 +1295,12 @@ export default function DiaryView() {
                             onClick={() => handleSelectLocation(item)}
                             className="p-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors flex flex-col gap-0.5"
                           >
-                            <span className="truncate">{item.display_name}</span>
+                            <span className="truncate">
+                              {item.display_name}
+                            </span>
                             <span className="text-[9px] text-slate-400 font-medium">
-                              Tọa độ: {parseFloat(item.lat).toFixed(5)}, {parseFloat(item.lon).toFixed(5)}
+                              Tọa độ: {parseFloat(item.lat).toFixed(5)},{" "}
+                              {parseFloat(item.lon).toFixed(5)}
                             </span>
                           </div>
                         ))}
@@ -1289,7 +1309,9 @@ export default function DiaryView() {
 
                     {(lat || lng) && (
                       <div className="mt-2 text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                        <span>📍 Tọa độ: {lat || "0"}, {lng || "0"}</span>
+                        <span>
+                          📍 Tọa độ: {lat || "0"}, {lng || "0"}
+                        </span>
                         <button
                           type="button"
                           onClick={() => {
