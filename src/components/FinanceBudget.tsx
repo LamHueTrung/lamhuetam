@@ -792,7 +792,6 @@ export default function FinanceBudget({
               <input
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]*"
                 required
                 value={originalAmount}
                 onKeyDown={handleAmountKeyDown}
@@ -808,7 +807,6 @@ export default function FinanceBudget({
               <input
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]*"
                 required
                 value={monthlyPayment}
                 onKeyDown={handleAmountKeyDown}
