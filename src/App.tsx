@@ -324,6 +324,8 @@ function AppContent() {
     const target = e.target as HTMLElement;
     if (
       target.closest(".no-swipe") ||
+      target.closest(".leaflet-container") ||
+      target.closest(".leaflet-control") ||
       target.closest("[drag]") ||
       target.closest("button") ||
       target.closest("input") ||

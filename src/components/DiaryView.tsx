@@ -124,14 +124,21 @@ function LeafletMap({
         minZoom: 5,
         tap: false,
       }).setView(center, 12);
-      const apiKey = "4d0b5b164d23088c30476f3893ccaf470f2d6bcaa641174c";
       const adminLayer = L.tileLayer(
-        `https://maps.vietmap.vn/maps/tiles/tm/{z}/{x}/{y}.png?apikey=${apiKey}`,
-        { maxZoom: 19, tms: false },
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        {
+          maxZoom: 19,
+          subdomains: "abcd",
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        }
       ).addTo(map);
       const satLayer = L.tileLayer(
-        `https://maps.vietmap.vn/maps/tiles/st/{z}/{x}/{y}.png?apikey=${apiKey}`,
-        { maxZoom: 19, tms: false },
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+          maxZoom: 19,
+          subdomains: "abcd",
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        }
       );
       const MapStyleControl = L.Control.extend({
         onAdd() {
@@ -145,7 +152,7 @@ function LeafletMap({
             </button>
             <button data-layer="sat" style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:transparent;color:#64748b;transition:all 0.2s">
               <svg viewBox="0 0 24 24" width="13" height="13" style="fill:currentColor"><path d="${mdiSatelliteVariant}"/></svg>
-              Vệ tinh
+              Theme tối
             </button>
           `;
           const btns = div.querySelectorAll("button");
@@ -236,32 +243,12 @@ function LeafletMap({
 
         if (!isMulti) {
           const e = firstEntry;
-          const emoji = mood.emoji || "😐";
-          const snippet =
-            e.content.length > 50 ? e.content.slice(0, 50) + "..." : e.content;
-
-          marker.bindPopup(`
-            <div style="font-family:sans-serif;padding:5px;min-width:180px;max-width:220px">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
-                <span style="font-size:10px;font-weight:800;color:${hex};background:${hex}18;padding:2px 10px;border-radius:12px;border:1.5px solid ${hex}40;display:inline-flex;align-items:center;gap:4px">
-                  ${emoji} ${mood.label}
-                </span>
-                <span style="font-size:9px;color:#94a3b8;font-weight:600">${e.date}</span>
-              </div>
-              ${e.location ? `<div style="font-size:9.5px;color:#64748b;font-weight:600;margin-bottom:4px">📍 ${e.location}</div>` : ""}
-              <p style="font-size:10.5px;color:#334155;margin:0 0 7px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${snippet}</p>
-              <div style="display:flex;gap:4px">
-                <button data-id="${e.id}" class="btn-view-diary-detail" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 0;background:linear-gradient(to right,#06b6d4,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:9px;font-weight:700;cursor:pointer">
-                  <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="${mdiEyeOutline}"/></svg>
-                  Chi tiết
-                </button>
-                <button data-lat="${e.lat}" data-lng="${e.lng}" class="btn-directions" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 0;background:#fff;color:#3b82f6;border:1.5px solid #3b82f6;border-radius:10px;font-size:9px;font-weight:700;cursor:pointer">
-                  <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="${mdiNavigation}"/></svg>
-                  Đường đi
-                </button>
-              </div>
-            </div>
-          `);
+          // Click vào marker đơn lẻ sẽ mở trực tiếp modal chi tiết
+          marker.on("click", () => {
+            if (onSelectEntryDetail) {
+              onSelectEntryDetail(e);
+            }
+          });
         } else {
           const locName = firstEntry.location || "Vị trí này";
           const storiesHtml = group.entries
@@ -398,7 +385,7 @@ function LeafletMap({
         </div>
 
         {/* Map Area */}
-        <div className="flex-1 w-full h-full relative min-h-0 min-w-0">
+        <div className="flex-1 w-full h-full relative min-h-0 min-w-0 z-0">
           <div
             ref={mapRef}
             className="w-full h-full"
