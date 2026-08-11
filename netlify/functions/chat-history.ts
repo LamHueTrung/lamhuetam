@@ -96,15 +96,25 @@ export const handler: Handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Content-Type": "application/json",
   };
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers, body: "" };
-  if (event.httpMethod !== "GET") return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
   const { sessionDate } = event.queryStringParameters || {};
   try {
-    const msgs = await getRecentMessages({ sessionDate, limit: 30 });
-    return { statusCode: 200, headers, body: JSON.stringify({ messages: compressMessages(msgs) }) };
+    if (event.httpMethod === "GET") {
+      const msgs = await getRecentMessages({ sessionDate, limit: 30 });
+      return { statusCode: 200, headers, body: JSON.stringify({ messages: compressMessages(msgs) }) };
+    }
+    if (event.httpMethod === "DELETE") {
+      if (sessionDate) {
+        await ChatMessage.deleteMany({ sessionDate });
+      } else {
+        await ChatMessage.deleteMany({});
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+    }
+    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
   } catch (e: any) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
   }

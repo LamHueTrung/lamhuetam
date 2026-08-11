@@ -1,0 +1,15 @@
+name: Daily Knowledge Crawler
+on:
+  schedule:
+    - cron: '0 23 * * *'   # 6:00 SA Việt Nam (UTC+7)
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger crawler
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRAWLER_SECRET }}" \
+            https://lamhuetam.netlify.app/.netlify/functions/knowledge-crawler

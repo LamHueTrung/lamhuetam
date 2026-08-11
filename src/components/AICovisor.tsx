@@ -100,6 +100,7 @@ export default function AICovisor({
   totalFixed,
   onBack,
 }: AICovisorProps) {
+  const todayStr = new Date().toISOString().slice(0, 10);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -117,6 +118,31 @@ export default function AICovisor({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Load chat history on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(`/.netlify/functions/chat-history?sessionDate=${todayStr}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && data.messages.length > 0) {
+            const mapped = data.messages.map((m: any) => ({
+              id: Math.random().toString(),
+              sender: m.role === "user" ? "user" : "gemini",
+              text: m.content,
+              timestamp: new Date().toISOString(),
+            }));
+            setMessages([
+              { id: "welcome", sender: "gemini", text: WELCOME_TEXT, timestamp: new Date().toISOString() },
+              ...mapped
+            ]);
+          }
+        }
+      } catch (_) {}
+    };
+    loadHistory();
+  }, [todayStr]);
 
   const sendMessageToGemini = async (
     promptType: "debt" | "balance" | "savings" | "custom",
@@ -218,15 +244,28 @@ export default function AICovisor({
     sendMessageToGemini("custom");
   };
 
-  const clearChat = () => {
-    setMessages([
-      {
-        id: "welcome",
-        sender: "gemini",
-        text: WELCOME_TEXT,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+  const clearChat = async () => {
+    if (window.confirm("Bạn có chắc muốn xóa lịch sử trò chuyện của hôm nay?")) {
+      try {
+        const res = await fetch(`/.netlify/functions/chat-history?sessionDate=${todayStr}`, {
+          method: "DELETE"
+        });
+        if (res.ok) {
+          setMessages([
+            {
+              id: "welcome",
+              sender: "gemini",
+              text: WELCOME_TEXT,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+          setSessionSummary("");
+          toast.success("Đã xóa lịch sử trò chuyện");
+        }
+      } catch (_) {
+        toast.error("Không thể xóa lịch sử");
+      }
+    }
   };
 
   const handleCopy = async (text: string, id: string) => {
@@ -282,6 +321,13 @@ export default function AICovisor({
           <Icon path={mdiDeleteOutline} size={1} />
         </button>
       </div>
+
+      {sessionSummary && (
+        <div className="shrink-0 bg-blue-50/70 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/30 px-4 py-2 text-[12px] text-blue-700 dark:text-blue-300 italic flex gap-1">
+          <span className="font-bold shrink-0">🗒️ Tóm tắt:</span>
+          <span>{sessionSummary}</span>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 px-4 py-3 overscroll-behavior-contain bg-[#F2F2F7] dark:bg-[#1C1C1E]">
