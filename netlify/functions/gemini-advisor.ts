@@ -1,6 +1,7 @@
 import { Handler } from "@netlify/functions";
 import { connectDB, AIConfig, ChatMessage, PersonalDNA, AIKnowledge } from "./_db";
 import fetch from "node-fetch";
+import { getRecentMessages, summarizeSession } from "./chat-history";
 
 const DEFAULT_BASE_URL = "https://trungsaas-beta.onrender.com/v1";
 const DEFAULT_MODEL = "gemini-2.0-flash";
@@ -337,6 +338,8 @@ export const handler: Handler = async (event) => {
       knowledgeSection,
       sessionSummary
     );
+
+
     const compressedHist = compressHistory(conversationHistory);
 
     // ── LLM call ──
@@ -398,8 +401,18 @@ export const handler: Handler = async (event) => {
       } catch (_) { /* non-critical */ }
     }
 
+    // Summarize session for future context
+    const recentMsgs = await getRecentMessages({ sessionDate, limit: 30 });
+    const summary = await summarizeSession({
+      sessionDate,
+      messages: recentMsgs,
+      apiKey,
+      baseUrl,
+      model,
+    });
+
     const cleanText = rawText.replace(/\[INSIGHT:.*?\]/gi, "").trim();
-    return { statusCode: 200, headers, body: JSON.stringify({ text: cleanText }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ text: cleanText, summary }) };
   } catch (error: any) {
     console.error("gemini-advisor error:", error);
     let message = error.message || "";

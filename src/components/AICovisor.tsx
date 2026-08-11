@@ -183,6 +183,9 @@ export default function AICovisor({
       if (!response.ok)
         throw new Error(data.message || "Không thể kết nối với máy chủ AI");
 
+      // Lưu tóm tắt phiên nếu có
+      if (data.summary) setSessionSummary(data.summary);
+
       setMessages((prev) => [
         ...prev,
         {
