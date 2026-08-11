@@ -123,7 +123,7 @@ const UserSchema = new mongoose.Schema(
 
 const ChatMessageSchema = new mongoose.Schema(
   {
-    role: { type: String, enum: ["user", "assistant"], required: true },
+    role: { type: String, enum: ["user", "assistant", "summary"], required: true },
     content: { type: String, required: true },
     sessionDate: { type: String, default: "" }, // "YYYY-MM-DD"
     isCompressed: { type: Boolean, default: false },

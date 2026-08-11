@@ -402,14 +402,17 @@ export const handler: Handler = async (event) => {
     }
 
     // Summarize session for future context
-    const recentMsgs = await getRecentMessages({ sessionDate, limit: 30 });
-    const summary = await summarizeSession({
-      sessionDate,
-      messages: recentMsgs,
-      apiKey,
-      baseUrl,
-      model,
-    });
+    let summary = "";
+    try {
+      const recentMsgs = await getRecentMessages({ sessionDate, limit: 30 });
+      summary = await summarizeSession({
+        sessionDate,
+        messages: recentMsgs,
+        apiKey,
+        baseUrl,
+        model,
+      });
+    } catch (_) { /* non-critical */ }
 
     const cleanText = rawText.replace(/\[INSIGHT:.*?\]/gi, "").trim();
     return { statusCode: 200, headers, body: JSON.stringify({ text: cleanText, summary }) };

@@ -80,7 +80,10 @@ export async function summarizeSession(params: {
       signal: controller.signal as any,
     });
     const data: any = await res.json();
-    const summary = data.choices?.[0]?.message?.content?.trim() ?? "";
+    let summary = data.choices?.[0]?.message?.content?.trim() ?? "";
+    if (!summary) {
+      summary = "Không có tóm tắt cho phiên làm việc này.";
+    }
     // store summary for later retrieval
     await ChatMessage.create({ role: "summary", content: summary, sessionDate });
     return summary;
