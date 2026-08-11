@@ -125,6 +125,8 @@ const ChatMessageSchema = new mongoose.Schema(
   {
     role: { type: String, enum: ["user", "assistant"], required: true },
     content: { type: String, required: true },
+    sessionDate: { type: String, default: "" }, // "YYYY-MM-DD"
+    isCompressed: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
   },
   { versionKey: false },
@@ -325,3 +327,82 @@ const AIConfigSchema = new mongoose.Schema(
 
 export const AIConfig =
   mongoose.models.AIConfig || mongoose.model("AIConfig", AIConfigSchema);
+
+// ─── PERSONAL DNA — DNA sống, tự cập nhật theo hành vi người dùng ────────
+const PersonalDNASchema = new mongoose.Schema(
+  {
+    behavioralInsights: [
+      {
+        insight: { type: String },
+        confidence: { type: Number, default: 0.3 }, // 0.0 - 1.0
+        evidenceCount: { type: Number, default: 1 },
+        lastUpdated: { type: Date, default: Date.now },
+        source: { type: String, default: "conversation" }, // "conversation"|"transaction_analysis"|"manual"
+      },
+    ],
+    hardConstraints: [
+      {
+        name: { type: String },       // "Ăn uống tối thiểu"
+        minAmount: { type: Number, default: 0 },
+        reason: { type: String, default: "" },
+      },
+    ],
+    keyDecisions: [
+      {
+        date: { type: String },
+        decision: { type: String },
+        lesson: { type: String, default: "" },
+      },
+    ],
+    lastUpdated: { type: Date, default: Date.now },
+    version: { type: Number, default: 1 },
+  },
+  { versionKey: false },
+);
+
+export const PersonalDNA =
+  mongoose.models.PersonalDNA ||
+  mongoose.model("PersonalDNA", PersonalDNASchema);
+
+// ─── AI KNOWLEDGE — Kho kiến thức tài chính crawl + AI-verified ───────────
+const AIKnowledgeSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["rule", "tip", "warning", "insight"],
+      default: "tip",
+    },
+    title: { type: String, required: true },
+    content: { type: String, required: true },   // Tóm tắt ≤ 150 từ
+    tags: [{ type: String }],                     // ["nợ","tiết_kiệm","lãi_suất"]
+    source: { type: String, default: "" },        // URL nguồn
+    accuracyScore: { type: Number, default: 0 },  // 0-10
+    vietnamFitScore: { type: Number, default: 0 },
+    userFitScore: { type: Number, default: 0 },
+    relevanceScore: { type: Number, default: 0 }, // avg(3 scores)
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+    expiresAt: { type: Date, default: null },
+  },
+  { versionKey: false },
+);
+
+export const AIKnowledge =
+  mongoose.models.AIKnowledge ||
+  mongoose.model("AIKnowledge", AIKnowledgeSchema);
+
+// ─── CHAT SESSION — Session memory nén để tiết kiệm token ────────────────
+const ChatSessionSchema = new mongoose.Schema(
+  {
+    sessionDate: { type: String, required: true }, // "2026-08-11"
+    summary: { type: String, default: "" },        // AI tóm tắt ≤ 300 chars
+    keyDecisions: [{ type: String }],
+    messageCount: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { versionKey: false },
+);
+
+export const ChatSession =
+  mongoose.models.ChatSession ||
+  mongoose.model("ChatSession", ChatSessionSchema);

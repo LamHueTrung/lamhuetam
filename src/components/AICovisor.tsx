@@ -108,6 +108,7 @@ export default function AICovisor({
       timestamp: new Date().toISOString(),
     },
   ]);
+  const [sessionSummary, setSessionSummary] = useState("");
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -149,6 +150,15 @@ export default function AICovisor({
     input?.focus();
 
     try {
+      // Compress conversation history (bỏ welcome message, max 6 tin gần nhất)
+      const conversationHistory = messages
+        .filter((m) => m.id !== "welcome")
+        .slice(-6)
+        .map((m) => ({
+          role: m.sender === "user" ? "user" : "assistant",
+          content: m.text.length > 120 ? m.text.slice(0, 117) + "..." : m.text,
+        }));
+
       const response = await fetch("/.netlify/functions/gemini-advisor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,6 +174,8 @@ export default function AICovisor({
           fixedCats,
           fixedTasks,
           totalFixed,
+          conversationHistory,
+          sessionSummary,
         }),
       });
 
