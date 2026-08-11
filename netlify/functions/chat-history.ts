@@ -105,6 +105,8 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers, body: "" };
   const { sessionDate } = event.queryStringParameters || {};
   try {
+    const { connectDB } = require("./_db");
+    await connectDB();
     if (event.httpMethod === "GET") {
       const msgs = await getRecentMessages({ sessionDate, limit: 30 });
       return { statusCode: 200, headers, body: JSON.stringify({ messages: compressMessages(msgs) }) };

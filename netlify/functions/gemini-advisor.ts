@@ -17,11 +17,11 @@ function fmt(n: number): string {
 type Intent = "calculate" | "query" | "advice" | "plan" | "motivation";
 
 const TOKEN_BUDGET: Record<Intent, number> = {
-  calculate: 200,
-  query: 300,
-  advice: 500,
-  plan: 900,
-  motivation: 350,
+  calculate: 1000,
+  query: 1200,
+  advice: 1800,
+  plan: 2500,
+  motivation: 1200,
 };
 
 function detectIntent(msg: string): Intent {
