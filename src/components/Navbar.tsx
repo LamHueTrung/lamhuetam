@@ -69,19 +69,19 @@ export default function Navbar({
               className="flex-1 flex flex-col items-center justify-center py-2 relative cursor-pointer group"
             >
               <div
-                className={`p-1.5 rounded-xl transition-all duration-300 ${isActive ? "bg-slate-100/80 dark:bg-slate-700/80 text-slate-900 dark:text-white scale-110" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
+                className={`p-1.5 rounded-xl transition-all duration-300 ${isActive ? "bg-accent-light text-accent-primary scale-110 font-bold" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
               >
                 <Icon path={tab.icon} size={1.25} />
               </div>
               <span
-                className={`text-[10px] font-medium mt-0.5 transition-all ${isActive ? "text-slate-900 dark:text-white scale-105" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
+                className={`text-[10px] font-medium mt-0.5 transition-all ${isActive ? "text-accent-primary font-bold scale-105" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
               >
                 {tab.label}
               </span>
               {isActive && (
                 <motion.span
                   layoutId="active-tab-indicator"
-                  className="absolute bottom-0 w-1.5 h-1.5 bg-slate-900 dark:bg-white rounded-full"
+                  className="absolute bottom-0 w-1.5 h-1.5 bg-accent-primary rounded-full"
                 />
               )}
             </motion.button>
@@ -96,7 +96,7 @@ export default function Navbar({
           onClick={() => setCurrentTab(5)}
           whileHover={{ scale: 1.12 }}
           whileTap={{ scale: 0.88 }}
-          className="fixed bottom-44 right-5 md:right-[calc(50%-12.75rem)] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 bg-gradient-to-br from-cyan-40 border-0 shadow-[0_4px_20px_rgba(6,182,212,0.4)]"
+          className="fixed bottom-44 right-5 md:right-[calc(50%-12.75rem)] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 bg-accent-gradient glow-accent border-0"
           title="Cố vấn AI"
         >
           <img src="/logo_chat.png" alt="AI" className="w-8 h-8 rounded-full" />

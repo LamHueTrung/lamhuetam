@@ -115,6 +115,22 @@ function AppContent() {
     root.classList.add(`theme-${accentTheme}`);
   }, [accentTheme]);
 
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEv = e as CustomEvent<AccentTheme>;
+      const newTheme = customEv.detail || (localStorage.getItem("app_accent_theme") as AccentTheme);
+      if (["blue", "green", "red", "purple"].includes(newTheme)) {
+        setAccentTheme(newTheme);
+      }
+    };
+    window.addEventListener("accent-theme-change", handleThemeChange);
+    window.addEventListener("storage", handleThemeChange);
+    return () => {
+      window.removeEventListener("accent-theme-change", handleThemeChange);
+      window.removeEventListener("storage", handleThemeChange);
+    };
+  }, []);
+
   const handleCopyFinancialMarkdown = useCallback(() => {
     const nowStr = new Date().toLocaleString('vi-VN', {
       hour: '2-digit', minute: '2-digit', second: '2-digit',
@@ -420,10 +436,10 @@ function AppContent() {
           <div className="relative">
             <button
               onClick={() => setShowThemePicker(!showThemePicker)}
-              className="flex items-center gap-1 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-black cursor-pointer"
+              className="flex items-center gap-1 text-accent-primary bg-accent-light px-2 py-0.5 rounded-md hover:opacity-80 transition-colors text-[10px] font-black cursor-pointer"
               title="Màu chủ đề (Blue, Green, Red, Purple)"
             >
-              <Icon path={mdiPalette} size={0.75} className="text-cyan-500 dark:text-cyan-400" />
+              <Icon path={mdiPalette} size={0.75} className="text-accent-primary" />
             </button>
             {showThemePicker && (
               <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-2.5 shadow-2xl z-50 flex items-center gap-2">
@@ -436,8 +452,10 @@ function AppContent() {
                   <button
                     key={t.key}
                     onClick={() => {
-                      setAccentTheme(t.key as AccentTheme);
+                      const newTheme = t.key as AccentTheme;
+                      setAccentTheme(newTheme);
                       setShowThemePicker(false);
+                      window.dispatchEvent(new CustomEvent("accent-theme-change", { detail: newTheme }));
                     }}
                     className={`w-6 h-6 rounded-full ${t.color} flex items-center justify-center transition-transform cursor-pointer ${
                       accentTheme === t.key

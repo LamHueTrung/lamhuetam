@@ -1,6 +1,6 @@
 {
   "name": "Tài Chính Cá Nhân",
-  "short_name": "TCP",
+  "short_name": "LHT-Finance",
   "description": "Ứng dụng quản lý tài chính cá nhân với AI Advisor",
   "start_url": "/",
   "display": "standalone",

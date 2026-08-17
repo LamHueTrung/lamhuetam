@@ -91,6 +91,23 @@ export default function UserProfileView({
   const [newUsedTechInput, setNewUsedTechInput] = useState("");
   const [newCompanyTechInput, setNewCompanyTechInput] = useState("");
 
+  // Theme state
+  const [activeTheme, setActiveTheme] = useState(() => localStorage.getItem("app_accent_theme") || "blue");
+
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEv = e as CustomEvent<string>;
+      const newTheme = customEv.detail || localStorage.getItem("app_accent_theme") || "blue";
+      setActiveTheme(newTheme);
+    };
+    window.addEventListener("accent-theme-change", handleThemeChange);
+    window.addEventListener("storage", handleThemeChange);
+    return () => {
+      window.removeEventListener("accent-theme-change", handleThemeChange);
+      window.removeEventListener("storage", handleThemeChange);
+    };
+  }, []);
+
   // Education states
   const [school, setSchool] = useState(profile.education?.school || "");
   const [eduStatus, setEduStatus] = useState(profile.education?.status || "");
@@ -1619,8 +1636,7 @@ export default function UserProfileView({
                 { id: "red", name: "Đỏ cá tính", bg: "bg-rose-500", border: "border-rose-200 dark:border-rose-900", activeBg: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400" },
                 { id: "purple", name: "Tím sang trọng", bg: "bg-purple-500", border: "border-purple-200 dark:border-purple-900", activeBg: "bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400" },
               ].map((theme) => {
-                const currentTheme = localStorage.getItem("app_accent_theme") || "blue";
-                const isSelected = currentTheme === theme.id;
+                const isSelected = activeTheme === theme.id;
                 return (
                   <button
                     key={theme.id}
@@ -1630,7 +1646,8 @@ export default function UserProfileView({
                       const root = document.documentElement;
                       root.classList.remove("theme-blue", "theme-green", "theme-red", "theme-purple");
                       root.classList.add(`theme-${theme.id}`);
-                      window.dispatchEvent(new Event("storage"));
+                      setActiveTheme(theme.id);
+                      window.dispatchEvent(new CustomEvent("accent-theme-change", { detail: theme.id }));
                     }}
                     className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
                       isSelected
