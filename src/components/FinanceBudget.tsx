@@ -69,6 +69,12 @@ import {
   calcRemainingBalance,
   calcInstallmentAmount,
   calcPaidPercent,
+  calcInterestRate,
+  calcInstallmentDueDate,
+  generateDebtInstallments,
+  getNextUnpaidInstallment,
+  calcTotalDue,
+  calcTotalPaid,
 } from "../lib/debtUtils";
 import { getLocalDateString, getLocalMonthString } from "../utils/date";
 
@@ -201,9 +207,8 @@ function getNextInstallment(
 
 function getOverdueCount(inst: DebtInstallment[]): number {
   const todayStr = getLocalDateString();
-  return inst.filter(
-    (i) => i.status === "pending" && i.dueDate < todayStr,
-  ).length;
+  return inst.filter((i) => i.status === "pending" && i.dueDate < todayStr)
+    .length;
 }
 
 function numFmt(val: string) {
@@ -283,9 +288,7 @@ export default function FinanceBudget({
   const [paymentDay, setPaymentDay] = useState("5");
   const [totalInstallments, setTotalInstallments] = useState("1");
   const [paidInstallments, setPaidInstallments] = useState("0");
-  const [startDate, setStartDate] = useState(
-    getLocalDateString(),
-  );
+  const [startDate, setStartDate] = useState(getLocalDateString());
   const [notes, setNotes] = useState("");
   const [paymentDebtId, setPaymentDebtId] = useState<string | null>(null);
   const [openDebtId, setOpenDebtId] = useState<string | null>(null);
@@ -329,37 +332,56 @@ export default function FinanceBudget({
     .reduce((s, d) => s + d.monthlyPayment, 0);
   const activeDebtCount = debts.filter((d) => d.status === "active").length;
 
-  const generateInstallments = (
-    eachPeriodAmt: number,
-  ): Omit<DebtInstallment, "status">[] => {
-    const total = parseInt(totalInstallments) || 1;
-    const paid = parseInt(paidInstallments) || 0;
-    const day = parseInt(paymentDay) || 5;
-    const start = new Date(startDate);
+  // ── Debt reactive input handlers ──────────────────────────
+  const handleOriginalAmountInput = (val: string) => {
+    const formatted = numFmt(val);
+    setOriginalAmount(formatted);
+    const rawAmt = parseInt(formatted.replace(/\D/g, "")) || 0;
+    const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
+    const totalInst = parseInt(totalInstallments) || 0;
+    if (rawAmt > 0 && totalInst > 0 && rawMonthly > 0) {
+      const rate = calcInterestRate(rawAmt, rawMonthly, totalInst);
+      setInterestRate(String(rate));
+    }
+  };
 
-    // Xác định xem kỳ đầu tiên có thuộc tháng tiếp theo hay không
-    // Ví dụ: Bắt đầu vay 17/07, hạn thanh toán là ngày 5 hàng tháng.
-    // Ngày vay (17) >= Ngày hạn (5) -> kỳ 1 bắt đầu từ 05/08 (Tháng tiếp theo).
-    // Ngày vay (2) < Ngày hạn (5) -> kỳ 1 bắt đầu từ 05/07 (Tháng hiện tại).
-    const startMonthOffset = start.getDate() >= day ? 1 : 0;
+  const handleMonthlyPaymentInput = (val: string) => {
+    const formatted = numFmt(val);
+    setMonthlyPayment(formatted);
+    const rawMonthly = parseInt(formatted.replace(/\D/g, "")) || 0;
+    const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
+    const totalInst = parseInt(totalInstallments) || 0;
+    if (rawAmt > 0 && totalInst > 0 && rawMonthly > 0) {
+      const rate = calcInterestRate(rawAmt, rawMonthly, totalInst);
+      setInterestRate(String(rate));
+    }
+  };
 
-    return Array.from({ length: total }, (_, i) => {
-      const m = start.getMonth() + startMonthOffset + i;
-      const y = start.getFullYear() + Math.floor(m / 12);
-      const month = m % 12;
-      const maxDay = new Date(y, month + 1, 0).getDate();
-      const d = Math.min(day, maxDay);
-      const dueDate = new Date(Date.UTC(y, month, d))
-        .toISOString()
-        .split("T")[0];
-      return {
-        index: i,
-        dueDate,
-        amount: eachPeriodAmt,
-        paidAmount: i < paid ? eachPeriodAmt : 0,
-        paidDate: i < paid ? dueDate : undefined,
-      };
-    });
+  const handleTotalInstallmentsInput = (val: string) => {
+    setTotalInstallments(val);
+    const totalInst = parseInt(val) || 0;
+    const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
+    const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
+    if (rawAmt > 0 && totalInst > 0 && rawMonthly > 0) {
+      const rate = calcInterestRate(rawAmt, rawMonthly, totalInst);
+      setInterestRate(String(rate));
+    } else if (rawAmt > 0 && totalInst > 0 && parseFloat(interestRate) > 0) {
+      const calcMonthly = calcInstallmentAmount(rawAmt, parseFloat(interestRate), totalInst);
+      setMonthlyPayment(numFmt(String(calcMonthly)));
+    }
+  };
+
+  const handleInterestRateInput = (val: string) => {
+    setInterestRate(val);
+    const rate = parseFloat(val) || 0;
+    const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
+    const totalInst = parseInt(totalInstallments) || 0;
+    if (rawAmt > 0 && totalInst > 0) {
+      const calcMonthly = calcInstallmentAmount(rawAmt, rate, totalInst);
+      if (calcMonthly > 0) {
+        setMonthlyPayment(numFmt(String(calcMonthly)));
+      }
+    }
   };
 
   const resetDebtForm = () => {
@@ -367,7 +389,7 @@ export default function FinanceBudget({
     setOriginalAmount("");
     setMonthlyPayment("");
     setInterestRate("0");
-    setPaymentDay("5");
+    setPaymentDay("12");
     setTotalInstallments("1");
     setPaidInstallments("0");
     setStartDate(getLocalDateString());
@@ -379,26 +401,37 @@ export default function FinanceBudget({
   const handleCreateDebt = (e: React.FormEvent) => {
     e.preventDefault();
     const rawAmount = parseInt(originalAmount.replace(/\D/g, "")) || 0;
+    const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
     const totalInst = parseInt(totalInstallments) || 1;
     const paidInst = parseInt(paidInstallments) || 0;
     const rate = parseFloat(interestRate) || 0;
+    const day = parseInt(paymentDay) || 12;
 
     if (!debtName.trim() || rawAmount <= 0) {
       toast.error("Nhập tên khoản nợ và số tiền!");
       return;
     }
 
-    // Tự động tính số tiền phải trả mỗi kỳ đã bao gồm lãi suất phẳng (flat rate)
-    const calculatedMonthlyPayment = calcInstallmentAmount(
+    const calculatedMonthlyPayment = rawMonthly > 0
+      ? rawMonthly
+      : calcInstallmentAmount(rawAmount, rate, totalInst);
+
+    const autoRate = rawMonthly > 0
+      ? calcInterestRate(rawAmount, rawMonthly, totalInst)
+      : rate;
+
+    const instData = generateDebtInstallments(
       rawAmount,
-      rate,
+      calculatedMonthlyPayment,
       totalInst,
+      paidInst,
+      startDate,
+      day
     );
-    const instData = generateInstallments(calculatedMonthlyPayment);
 
     // Tính số dư nợ dựa trên các kỳ chưa trả
     const unpaidInstallments = instData.slice(paidInst);
-    const balance = unpaidInstallments.reduce((s, i) => s + i.amount, 0);
+    const balance = unpaidInstallments.reduce((s, i) => s + (i.amount - (i.paidAmount || 0)), 0);
 
     const maturityDate =
       instData.length > 0 ? instData[instData.length - 1].dueDate : startDate;
@@ -409,20 +442,14 @@ export default function FinanceBudget({
       originalAmount: rawAmount,
       currentBalance: Math.max(0, balance),
       monthlyPayment: calculatedMonthlyPayment,
-      interestRate: rate,
-      paymentDay: parseInt(paymentDay) || 5,
+      interestRate: autoRate,
+      paymentDay: day,
       startDate,
       maturityDate,
       totalInstallments: totalInst,
       paidInstallments: paidInst,
       status: balance > 0 ? ("active" as const) : ("settled" as const),
-      installments: instData.map((inst) => ({
-        ...inst,
-        status:
-          inst.paidAmount >= inst.amount
-            ? ("paid" as const)
-            : ("pending" as const),
-      })),
+      installments: instData,
       notes,
     };
 
@@ -442,7 +469,8 @@ export default function FinanceBudget({
     setDebtName(debt.name);
     setOriginalAmount(numFmt(String(debt.originalAmount)));
     setMonthlyPayment(numFmt(String(debt.monthlyPayment)));
-    setInterestRate(String(debt.interestRate));
+    const computedRate = calcInterestRate(debt.originalAmount, debt.monthlyPayment, debt.totalInstallments);
+    setInterestRate(String(computedRate || debt.interestRate || 0));
     setPaymentDay(String(debt.paymentDay));
     setTotalInstallments(String(debt.totalInstallments));
     setPaidInstallments(String(debt.paidInstallments));
@@ -802,14 +830,14 @@ export default function FinanceBudget({
                 required
                 value={originalAmount}
                 onKeyDown={handleAmountKeyDown}
-                onChange={(e) => setOriginalAmount(numFmt(e.target.value))}
+                onChange={(e) => handleOriginalAmountInput(e.target.value)}
                 placeholder="30,000,000"
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
               />
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block mb-1">
-                Trả mỗi kỳ
+                Trả mỗi kỳ (VND)
               </label>
               <input
                 type="text"
@@ -817,7 +845,7 @@ export default function FinanceBudget({
                 required
                 value={monthlyPayment}
                 onKeyDown={handleAmountKeyDown}
-                onChange={(e) => setMonthlyPayment(numFmt(e.target.value))}
+                onChange={(e) => handleMonthlyPaymentInput(e.target.value)}
                 placeholder="2,000,000"
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
               />
@@ -831,7 +859,7 @@ export default function FinanceBudget({
                 min="0"
                 step="0.1"
                 value={interestRate}
-                onChange={(e) => setInterestRate(e.target.value)}
+                onChange={(e) => handleInterestRateInput(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
               />
             </div>
@@ -858,7 +886,7 @@ export default function FinanceBudget({
                 min="1"
                 required
                 value={totalInstallments}
-                onChange={(e) => setTotalInstallments(e.target.value)}
+                onChange={(e) => handleTotalInstallmentsInput(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
               />
             </div>
@@ -898,6 +926,59 @@ export default function FinanceBudget({
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
               />
             </div>
+
+            {/* Live Interest & Installment Schedule Previews */}
+            {(() => {
+              const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
+              const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
+              const totalInst = parseInt(totalInstallments) || 0;
+              const paidInst = parseInt(paidInstallments) || 0;
+              const day = parseInt(paymentDay) || 12;
+              const totalPay = rawMonthly * totalInst;
+              const interestAmt = totalPay - rawAmt;
+              const hasAmount = rawAmt > 0 && totalInst > 0;
+              if (!hasAmount) return null;
+
+              const tempInsts = generateDebtInstallments(
+                rawAmt,
+                rawMonthly,
+                totalInst,
+                paidInst,
+                startDate,
+                day
+              );
+              const firstDueDate = tempInsts[0]?.dueDate;
+              const lastDueDate = tempInsts[tempInsts.length - 1]?.dueDate;
+
+              const fmtDate = (dStr?: string) => {
+                if (!dStr) return "—";
+                const p = dStr.split("-");
+                return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : dStr;
+              };
+
+              return (
+                <div className="col-span-2 space-y-2 pt-1">
+                  {rawMonthly > 0 && (
+                    <div className="text-[10px] bg-slate-100 dark:bg-slate-700/60 rounded-xl p-2.5 flex items-center justify-between text-slate-600 dark:text-slate-300 font-semibold border border-slate-200/50 dark:border-slate-600/50">
+                      <span>Tổng phải trả: <strong className="text-slate-900 dark:text-white font-extrabold">{formatVND(totalPay)}</strong></span>
+                      <span>Lãi tự động: <strong className={interestAmt > 0 ? "text-rose-500 dark:text-rose-400 font-black" : "text-emerald-600 font-bold"}>{interestAmt > 0 ? `+${formatVND(interestAmt)} (${interestRate}%)` : "0% (Không lãi)"}</strong></span>
+                    </div>
+                  )}
+
+                  {startDate && day > 0 && (
+                    <div className="text-[10px] bg-blue-50/80 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 rounded-xl p-2.5 space-y-1">
+                      <div className="flex items-center justify-between font-bold text-blue-900 dark:text-blue-200">
+                        <span>Kỳ 1 ({paidInst > 0 ? "Đã trả" : "Hạn đóng"}): <strong className="text-blue-700 dark:text-blue-300">{fmtDate(firstDueDate)}</strong></span>
+                        <span>Tất toán: <strong className="text-blue-700 dark:text-blue-300">{fmtDate(lastDueDate)}</strong></span>
+                      </div>
+                      <p className="text-[9px] text-blue-700/80 dark:text-blue-300/80 leading-normal">
+                        💡 Bắt đầu vay: {fmtDate(startDate)} | Hạn ngày {day} hàng tháng {"->"} Kỳ 1 là ngày {fmtDate(firstDueDate)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
             <button
@@ -1049,23 +1130,40 @@ export default function FinanceBudget({
                           />
                         </div>
 
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <div className="bg-white/60 dark:bg-slate-800/60 rounded-xl p-2 border border-slate-100 dark:border-slate-700/60">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                              Ngày bắt đầu
+                            </span>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              {debt.startDate ? debt.startDate.split('-').reverse().join('/') : '—'}
+                            </span>
+                          </div>
+                          <div className="bg-white/60 dark:bg-slate-800/60 rounded-xl p-2 border border-slate-100 dark:border-slate-700/60">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                              Lãi suất tự động
+                            </span>
+                            <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                              {debt.interestRate > 0 ? `${debt.interestRate}%` : '0% (Không lãi)'}
+                            </span>
+                          </div>
+                        </div>
+
                         <div className="flex items-center justify-between pt-1">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
                             {nextInst ? (
                               <>
                                 <Icon
                                   path={mdiCalendarMonth}
                                   size={0.75}
-                                  className="text-slate-400"
+                                  className="text-slate-400 shrink-0"
                                 />
-                                <span className="text-[10px] text-slate-500 font-medium">
+                                <span className="text-[10px] text-slate-600 dark:text-slate-300 font-bold truncate">
                                   Kỳ {nextInst.index + 1}:{" "}
-                                  {new Date(
-                                    nextInst.dueDate + "T00:00:00",
-                                  ).toLocaleDateString("vi-VN", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
+                                  <span className="text-slate-900 dark:text-white">
+                                    {nextInst.dueDate.split('-').reverse().join('/')}
+                                  </span>{" "}
+                                  ({formatVND(nextInst.amount)})
                                 </span>
                               </>
                             ) : (
@@ -1074,13 +1172,13 @@ export default function FinanceBudget({
                                   path={mdiCheckCircleOutline}
                                   size={0.75}
                                 />{" "}
-                                Đã trả xong
+                                Đã tất toán xong
                               </span>
                             )}
                           </div>
                           <button
                             onClick={() => handlePayOpen(debt)}
-                            className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[9px] px-3 py-1.5 rounded-lg hover:opacity-80 transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                            className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[9px] px-3 py-1.5 rounded-lg hover:opacity-80 transition-all cursor-pointer flex items-center gap-1 shadow-sm shrink-0"
                           >
                             <Icon path={mdiCurrencyUsd} size={0.667} />
                             Thanh toán
@@ -1093,30 +1191,25 @@ export default function FinanceBudget({
                         ).length > 0 && (
                           <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
                             <span className="text-[9px] font-bold text-slate-400 block uppercase mb-1.5">
-                              Các kỳ hạn tiếp theo
+                              Lịch thanh toán các kỳ tiếp theo (Hạn ngày {debt.paymentDay} hàng tháng)
                             </span>
-                            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
                               {debt.installments
                                 .filter(
                                   (i) =>
                                     i.status === "pending" ||
                                     i.status === "partial",
                                 )
-                                .slice(0, 8)
                                 .map((inst) => {
-                                  const isOverdue = inst.dueDate < getLocalDateString();
+                                  const isOverdue =
+                                    inst.dueDate < getLocalDateString();
                                   return (
                                     <span
                                       key={inst.index}
-                                      className={`text-[9px] font-bold px-2 py-1 rounded-lg border ${isOverdue ? "bg-rose-50 border-rose-100 text-rose-600" : "bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-500"}`}
+                                      className={`text-[9px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1 ${isOverdue ? "bg-rose-50 border-rose-100 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300" : "bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-600 dark:text-slate-300"}`}
                                     >
-                                      Kỳ {inst.index + 1}:{" "}
-                                      {new Date(
-                                        inst.dueDate + "T00:00:00",
-                                      ).toLocaleDateString("vi-VN", {
-                                        day: "numeric",
-                                        month: "short",
-                                      })}
+                                      <span>Kỳ {inst.index + 1}:</span>
+                                      <span>{inst.dueDate.split('-').reverse().join('/')}</span>
                                     </span>
                                   );
                                 })}
@@ -2044,13 +2137,7 @@ export default function FinanceBudget({
                                   Kỳ {inst.index + 1}
                                 </span>
                                 <span className="text-[9px] text-slate-400 ml-2">
-                                  Hạn:{" "}
-                                  {new Date(
-                                    inst.dueDate + "T00:00:00",
-                                  ).toLocaleDateString("vi-VN", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
+                                  Hạn: {inst.dueDate ? inst.dueDate.split('-').reverse().join('/') : '—'}
                                 </span>
                               </div>
                               <span className="text-xs font-extrabold text-slate-800 dark:text-white">

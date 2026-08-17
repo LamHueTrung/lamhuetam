@@ -21,6 +21,8 @@ import {
   mdiSatelliteVariant,
   mdiEyeOutline,
   mdiNavigation,
+  mdiArrowLeft,
+  mdiCrosshairsGps,
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import toast from "react-hot-toast";
@@ -99,6 +101,16 @@ function LeafletMap({
       e.lat !== 0,
   ) as (DiaryEntry & { lat: number; lng: number })[];
 
+  const handleFitAllBounds = useCallback(() => {
+    if (!mapInstanceRef.current || validEntries.length === 0) return;
+    const latLngs = validEntries.map((e) => [e.lat, e.lng]);
+    if (latLngs.length === 1) {
+      mapInstanceRef.current.setView(latLngs[0], 14);
+    } else {
+      mapInstanceRef.current.fitBounds(latLngs as any, { padding: [40, 40] });
+    }
+  }, [validEntries]);
+
   useEffect(() => {
     if (!mapRef.current) return;
     const link = document.createElement("link");
@@ -107,10 +119,15 @@ function LeafletMap({
     if (!document.querySelector('link[href*="leaflet"]'))
       document.head.appendChild(link);
 
+    let isMounted = true;
+
     const initMap = () => {
       const L = (window as any).L;
-      if (!L || !mapRef.current) return;
-      if (mapInstanceRef.current) return;
+      if (!L || !mapRef.current || !isMounted) return;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+        return;
+      }
 
       const center: [number, number] =
         validEntries.length > 0
@@ -182,6 +199,7 @@ function LeafletMap({
       new MapStyleControl({ position: "bottomleft" }).addTo(map);
       mapInstanceRef.current = map;
 
+      // Handle custom events on popup open
       map.on("popupopen", (evt: any) => {
         const popupEl = evt.popup.getElement();
         if (!popupEl) return;
@@ -244,12 +262,40 @@ function LeafletMap({
 
         if (!isMulti) {
           const e = firstEntry;
-          // Click vào marker đơn lẻ sẽ mở trực tiếp modal chi tiết
-          marker.on("click", () => {
-            if (onSelectEntryDetail) {
-              onSelectEntryDetail(e);
-            }
-          });
+          const locName = e.location || "Vị trí đã lưu";
+          const eMood = MOOD_CONFIG[e.mood] || MOOD_CONFIG.neutral;
+          const eSnippet =
+            e.content.length > 65 ? e.content.slice(0, 65) + "..." : e.content;
+
+          marker.bindPopup(`
+            <div style="font-family:system-ui,-apple-system,sans-serif;padding:6px 2px;min-width:220px;max-width:270px">
+              <div style="font-size:11.5px;font-weight:800;color:#0f172a;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:4px">
+                <span>📍</span>
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${locName}</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <span style="font-size:9px;font-weight:800;color:${eMood.hex};background:${eMood.hex}18;padding:2px 8px;border-radius:999px">
+                  ${eMood.emoji} ${eMood.label}
+                </span>
+                <span style="font-size:8.5px;color:#64748b;font-weight:600">${e.date}</span>
+              </div>
+              ${
+                e.content
+                  ? `<p style="font-size:10px;color:#334155;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;background:#f8fafc;padding:6px;border-radius:8px;border:1px solid #f1f5f9">${eSnippet}</p>`
+                  : ""
+              }
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <button data-lat="${e.lat}" data-lng="${e.lng}" class="btn-directions" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 8px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:9.5px;font-weight:700;cursor:pointer;box-shadow:0 1px 3px rgba(37,99,235,0.3)">
+                  <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="${mdiNavigation}"/></svg>
+                  Chỉ đường
+                </button>
+                <button data-id="${e.id}" class="btn-view-diary-detail" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 8px;background:linear-gradient(135deg,#06b6d4,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:9.5px;font-weight:700;cursor:pointer;box-shadow:0 1px 3px rgba(6,182,212,0.3)">
+                  <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="${mdiEyeOutline}"/></svg>
+                  Chi tiết
+                </button>
+              </div>
+            </div>
+          `);
         } else {
           const locName = firstEntry.location || "Vị trí này";
           const storiesHtml = group.entries
@@ -260,17 +306,17 @@ function LeafletMap({
                   ? e.content.slice(0, 45) + "..."
                   : e.content;
               return `
-              <div style="background:#f8fafc;padding:7px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:5px">
+              <div style="background:#f8fafc;padding:7px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:6px">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:3px">
                   <span style="font-size:9px;font-weight:800;color:${eMood.hex};background:${eMood.hex}15;padding:2px 7px;border-radius:10px">
                     ${eMood.emoji} ${eMood.label}
                   </span>
                   <span style="font-size:8px;color:#94a3b8;font-weight:600">${e.date}</span>
                 </div>
-                <p style="font-size:10px;color:#334155;margin:0 0 5px 0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${eSnippet}</p>
-                <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:4px 0;background:linear-gradient(to right,#06b6d4,#3b82f6);color:#fff;border:none;border-radius:7px;font-size:8px;font-weight:700;cursor:pointer">
+                ${e.content ? `<p style="font-size:10px;color:#334155;margin:0 0 5px 0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${eSnippet}</p>` : ""}
+                <button data-id="${e.id}" class="btn-view-diary-detail" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 0;background:linear-gradient(to right,#06b6d4,#3b82f6);color:#fff;border:none;border-radius:7px;font-size:8.5px;font-weight:700;cursor:pointer">
                   <svg viewBox="0 0 24 24" width="10" height="10" style="fill:currentColor"><path d="${mdiEyeOutline}"/></svg>
-                  Chi tiết
+                  Xem chi tiết nhật ký
                 </button>
               </div>
             `;
@@ -278,14 +324,14 @@ function LeafletMap({
             .join("");
 
           marker.bindPopup(`
-            <div style="font-family:sans-serif;padding:4px;min-width:210px;max-width:260px;max-height:270px;overflow-y:auto">
-              <div style="font-size:10.5px;font-weight:800;color:#0f172a;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
-                <span>📍 ${locName}</span>
-                <span style="font-size:9px;background:#06b6d4;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${group.entries.length} nhật ký</span>
+            <div style="font-family:system-ui,-apple-system,sans-serif;padding:6px 2px;min-width:220px;max-width:270px;max-height:290px;overflow-y:auto">
+              <div style="font-size:11.5px;font-weight:800;color:#0f172a;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📍 ${locName}</span>
+                <span style="font-size:9px;background:#06b6d4;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;flex-shrink:0">${group.entries.length} nhật ký</span>
               </div>
-              <button data-lat="${firstEntry.lat}" data-lng="${firstEntry.lng}" class="btn-directions" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 0;margin-bottom:5px;background:#fff;color:#3b82f6;border:1.5px solid #3b82f6;border-radius:8px;font-size:9px;font-weight:700;cursor:pointer">
-                <svg viewBox="0 0 24 24" width="11" height="11" style="fill:currentColor"><path d="${mdiNavigation}"/></svg>
-                Đường đi
+              <button data-lat="${firstEntry.lat}" data-lng="${firstEntry.lng}" class="btn-directions" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 0;margin-bottom:8px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:9.5px;font-weight:700;cursor:pointer;box-shadow:0 1px 3px rgba(37,99,235,0.3)">
+                <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="${mdiNavigation}"/></svg>
+                Chỉ đường đến vị trí này
               </button>
               <div>${storiesHtml}</div>
             </div>
@@ -303,8 +349,16 @@ function LeafletMap({
           opacity: 0.6,
           dashArray: "4 6",
         }).addTo(map);
-        map.fitBounds(latLngs as any, { padding: [24, 24] });
+        map.fitBounds(latLngs as any, { padding: [32, 32] });
       }
+
+      // Ensure map tiles load smoothly across viewports and PWA full screen
+      setTimeout(() => {
+        if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+      }, 100);
+      setTimeout(() => {
+        if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+      }, 350);
     };
 
     if ((window as any).L) {
@@ -318,7 +372,25 @@ function LeafletMap({
       else script.onload(null as any);
     }
 
+    const handleWindowResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    };
+    window.addEventListener("resize", handleWindowResize);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (mapRef.current && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        handleWindowResize();
+      });
+      resizeObserver.observe(mapRef.current);
+    }
+
     return () => {
+      isMounted = false;
+      window.removeEventListener("resize", handleWindowResize);
+      if (resizeObserver) resizeObserver.disconnect();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -329,40 +401,47 @@ function LeafletMap({
 
   if (validEntries.length === 0) {
     if (isFullScreen) {
-      return (
-        <div className="fixed inset-0 z-[100] bg-white dark:bg-slate-900 flex flex-col w-screen h-screen">
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
+      return createPortal(
+        <div className="fixed inset-0 z-[9999] bg-white dark:bg-slate-900 flex flex-col w-screen h-[100dvh] overflow-hidden select-none">
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 flex items-center justify-between z-20 shrink-0 shadow-xs">
             <button
               onClick={onBack}
-              className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 px-3 py-1.5 rounded-lg transition-all text-xs font-bold cursor-pointer border border-slate-200/50 dark:border-slate-750"
+              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 px-3.5 py-2 rounded-xl transition-all text-xs font-bold cursor-pointer border border-slate-200/60 dark:border-slate-700/80 shadow-xs"
+              title="Quay lại danh sách nhật ký"
             >
-              <Icon path={mdiClose} size={0.7} />
+              <Icon path={mdiArrowLeft} size={0.75} className="shrink-0" />
               <span>Quay lại</span>
             </button>
-            <div className="text-center">
-              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
-                Bản đồ nhật ký
-              </h3>
-              <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                  Bản đồ nhật ký
+                </h3>
+              </div>
+              <span className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400">
                 0 địa điểm
-              </p>
+              </span>
             </div>
-            <div className="w-[84px] invisible" />
+            <div className="w-[88px] invisible" />
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-2 min-w-0">
-            <Icon
-              path={mdiEarth}
-              size={2}
-              className="text-slate-300 animate-bounce"
-            />
-            <p className="text-sm font-semibold text-slate-400">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3 min-w-0">
+            <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-inner">
+              <Icon
+                path={mdiEarth}
+                size={2}
+                className="text-slate-400 animate-bounce"
+              />
+            </div>
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
               Chưa có nhật ký có tọa độ
             </p>
-            <p className="text-[10px] text-slate-400">
-              Khi thêm nhật ký, ứng dụng tự động gắn vị trí vào bản đồ
+            <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+              Khi thêm nhật ký và cho phép truy cập vị trí, ứng dụng sẽ tự động gắn vị trí vào bản đồ trực quan.
             </p>
           </div>
-        </div>
+        </div>,
+        document.body,
       );
     }
     return (
@@ -379,34 +458,45 @@ function LeafletMap({
   }
 
   if (isFullScreen) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-white dark:bg-slate-900 flex flex-col w-screen h-screen">
-        {/* Fullscreen Header */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] bg-white dark:bg-slate-950 flex flex-col w-screen h-[100dvh] overflow-hidden select-none">
+        {/* Modern Fullscreen Header */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 flex items-center justify-between z-20 shrink-0 shadow-xs">
           <button
             onClick={onBack}
-            className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg transition-all text-xs font-bold cursor-pointer border border-slate-200/50 dark:border-slate-750"
+            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 px-3.5 py-2 rounded-xl transition-all text-xs font-bold cursor-pointer border border-slate-200/60 dark:border-slate-700/80 shadow-xs"
+            title="Quay lại danh sách nhật ký"
           >
-            <Icon path={mdiClose} size={0.7} />
+            <Icon path={mdiArrowLeft} size={0.75} className="shrink-0" />
             <span>Quay lại</span>
           </button>
-          <div className="text-center">
-            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
-              Bản đồ nhật ký
-            </h3>
-            <p className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400">
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                Bản đồ nhật ký
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400">
               {validEntries.length} địa điểm
-            </p>
+            </span>
           </div>
-          <div className="w-[84px] invisible" />{" "}
-          {/* Spacer to balance header */}
+          <button
+            onClick={handleFitAllBounds}
+            className="flex items-center gap-1 bg-cyan-50 hover:bg-cyan-100 active:scale-95 dark:bg-cyan-950/50 dark:hover:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 px-2.5 py-2 rounded-xl transition-all text-xs font-bold cursor-pointer border border-cyan-200/60 dark:border-cyan-800/80 shadow-xs"
+            title="Xem toàn bộ địa điểm trên bản đồ"
+          >
+            <Icon path={mdiCrosshairsGps} size={0.75} />
+            <span className="hidden sm:inline">Toàn cảnh</span>
+          </button>
         </div>
 
         {/* Map Area */}
         <div className="flex-1 w-full h-full relative min-h-0 min-w-0 z-0">
           <div ref={mapRef} className="w-full h-full" />
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }
 

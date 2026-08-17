@@ -154,3 +154,29 @@ input, select, textarea, [contenteditable] {
   color: #64748b;
   font-style: italic;
 }
+
+/* Modern Leaflet map & popup overrides */
+.leaflet-popup-content-wrapper {
+  border-radius: 16px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  padding: 6px !important;
+  background: #ffffff !important;
+}
+.leaflet-popup-content {
+  margin: 8px 10px !important;
+  line-height: 1.4 !important;
+}
+.leaflet-popup-tip {
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+.leaflet-popup-close-button {
+  top: 8px !important;
+  right: 8px !important;
+  color: #94a3b8 !important;
+  font-size: 16px !important;
+}
+.leaflet-popup-close-button:hover {
+  color: #0f172a !important;
+}
+
