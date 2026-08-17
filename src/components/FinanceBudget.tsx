@@ -332,57 +332,12 @@ export default function FinanceBudget({
     .reduce((s, d) => s + d.monthlyPayment, 0);
   const activeDebtCount = debts.filter((d) => d.status === "active").length;
 
-  // ── Debt reactive input handlers ──────────────────────────
-  const handleOriginalAmountInput = (val: string) => {
-    const formatted = numFmt(val);
-    setOriginalAmount(formatted);
-    const rawAmt = parseInt(formatted.replace(/\D/g, "")) || 0;
-    const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
-    const totalInst = parseInt(totalInstallments) || 0;
-    if (rawAmt > 0 && totalInst > 0 && rawMonthly > 0) {
-      const rate = calcInterestRate(rawAmt, rawMonthly, totalInst);
-      setInterestRate(String(rate));
-    }
-  };
-
-  const handleMonthlyPaymentInput = (val: string) => {
-    const formatted = numFmt(val);
-    setMonthlyPayment(formatted);
-    const rawMonthly = parseInt(formatted.replace(/\D/g, "")) || 0;
-    const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
-    const totalInst = parseInt(totalInstallments) || 0;
-    if (rawAmt > 0 && totalInst > 0 && rawMonthly > 0) {
-      const rate = calcInterestRate(rawAmt, rawMonthly, totalInst);
-      setInterestRate(String(rate));
-    }
-  };
-
-  const handleTotalInstallmentsInput = (val: string) => {
-    setTotalInstallments(val);
-    const totalInst = parseInt(val) || 0;
-    const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
-    const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
-    if (rawAmt > 0 && totalInst > 0 && rawMonthly > 0) {
-      const rate = calcInterestRate(rawAmt, rawMonthly, totalInst);
-      setInterestRate(String(rate));
-    } else if (rawAmt > 0 && totalInst > 0 && parseFloat(interestRate) > 0) {
-      const calcMonthly = calcInstallmentAmount(rawAmt, parseFloat(interestRate), totalInst);
-      setMonthlyPayment(numFmt(String(calcMonthly)));
-    }
-  };
-
-  const handleInterestRateInput = (val: string) => {
-    setInterestRate(val);
-    const rate = parseFloat(val) || 0;
-    const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
-    const totalInst = parseInt(totalInstallments) || 0;
-    if (rawAmt > 0 && totalInst > 0) {
-      const calcMonthly = calcInstallmentAmount(rawAmt, rate, totalInst);
-      if (calcMonthly > 0) {
-        setMonthlyPayment(numFmt(String(calcMonthly)));
-      }
-    }
-  };
+  // ── Debt calculated properties ────────────────────────────
+  const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
+  const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
+  const totalInst = parseInt(totalInstallments) || 0;
+  const computedInterestRate = calcInterestRate(rawAmt, rawMonthly, totalInst);
+  const computedInterestAmount = Math.max(0, rawMonthly * totalInst - rawAmt);
 
   const resetDebtForm = () => {
     setDebtName("");
@@ -404,7 +359,6 @@ export default function FinanceBudget({
     const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
     const totalInst = parseInt(totalInstallments) || 1;
     const paidInst = parseInt(paidInstallments) || 0;
-    const rate = parseFloat(interestRate) || 0;
     const day = parseInt(paymentDay) || 12;
 
     if (!debtName.trim() || rawAmount <= 0) {
@@ -414,11 +368,9 @@ export default function FinanceBudget({
 
     const calculatedMonthlyPayment = rawMonthly > 0
       ? rawMonthly
-      : calcInstallmentAmount(rawAmount, rate, totalInst);
+      : calcInstallmentAmount(rawAmount, computedInterestRate, totalInst);
 
-    const autoRate = rawMonthly > 0
-      ? calcInterestRate(rawAmount, rawMonthly, totalInst)
-      : rate;
+    const autoRate = computedInterestRate;
 
     const instData = generateDebtInstallments(
       rawAmount,
@@ -830,7 +782,7 @@ export default function FinanceBudget({
                 required
                 value={originalAmount}
                 onKeyDown={handleAmountKeyDown}
-                onChange={(e) => handleOriginalAmountInput(e.target.value)}
+                onChange={(e) => setOriginalAmount(numFmt(e.target.value))}
                 placeholder="30,000,000"
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
               />
@@ -845,35 +797,8 @@ export default function FinanceBudget({
                 required
                 value={monthlyPayment}
                 onKeyDown={handleAmountKeyDown}
-                onChange={(e) => handleMonthlyPaymentInput(e.target.value)}
+                onChange={(e) => setMonthlyPayment(numFmt(e.target.value))}
                 placeholder="2,000,000"
-                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block mb-1">
-                Lãi suất (%)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={interestRate}
-                onChange={(e) => handleInterestRateInput(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block mb-1">
-                Ngày đến hạn
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="31"
-                required
-                value={paymentDay}
-                onChange={(e) => setPaymentDay(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
               />
             </div>
@@ -886,8 +811,48 @@ export default function FinanceBudget({
                 min="1"
                 required
                 value={totalInstallments}
-                onChange={(e) => handleTotalInstallmentsInput(e.target.value)}
+                onChange={(e) => setTotalInstallments(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block mb-1">
+                Ngày đến hạn (hàng tháng)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                required
+                value={paymentDay}
+                onChange={(e) => setPaymentDay(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1 flex items-center justify-between">
+                <span>Lãi suất (%)</span>
+                <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">Tự động</span>
+              </label>
+              <input
+                type="text"
+                readOnly
+                value={computedInterestRate > 0 ? `${computedInterestRate}%` : "0%"}
+                placeholder="0%"
+                className="w-full bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-xs font-black rounded-xl px-3 py-2.5 outline-none text-slate-700 dark:text-slate-200 cursor-not-allowed select-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1 flex items-center justify-between">
+                <span>Tiền lãi (VND)</span>
+                <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">Tự động</span>
+              </label>
+              <input
+                type="text"
+                readOnly
+                value={computedInterestAmount > 0 ? `+${numFmt(String(computedInterestAmount))}` : "0đ"}
+                placeholder="0đ"
+                className={`w-full bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-xs font-black rounded-xl px-3 py-2.5 outline-none cursor-not-allowed select-none ${computedInterestAmount > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"}`}
               />
             </div>
             <div>
@@ -961,7 +926,7 @@ export default function FinanceBudget({
                   {rawMonthly > 0 && (
                     <div className="text-[10px] bg-slate-100 dark:bg-slate-700/60 rounded-xl p-2.5 flex items-center justify-between text-slate-600 dark:text-slate-300 font-semibold border border-slate-200/50 dark:border-slate-600/50">
                       <span>Tổng phải trả: <strong className="text-slate-900 dark:text-white font-extrabold">{formatVND(totalPay)}</strong></span>
-                      <span>Lãi tự động: <strong className={interestAmt > 0 ? "text-rose-500 dark:text-rose-400 font-black" : "text-emerald-600 font-bold"}>{interestAmt > 0 ? `+${formatVND(interestAmt)} (${interestRate}%)` : "0% (Không lãi)"}</strong></span>
+                      <span>Lãi tự động: <strong className={interestAmt > 0 ? "text-rose-500 dark:text-rose-400 font-black" : "text-emerald-600 font-bold"}>{interestAmt > 0 ? `+${formatVND(interestAmt)} (${computedInterestRate}%)` : "0% (Không lãi)"}</strong></span>
                     </div>
                   )}
 
