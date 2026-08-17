@@ -27,7 +27,16 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: "prompt",
-        includeAssets: ["logo_192.png", "logo_chat.png", "logo_180.png"],
+        includeAssets: [
+          "favicon.png",
+          "favicon.svg",
+          "apple-touch-icon.png",
+          "icon-192x192.png",
+          "icon-512x512.png",
+          "logo_192.png",
+          "logo_chat.png",
+          "logo_180.png"
+        ],
         manifest: {
           name: "Tài Chính Cá Nhân",
           short_name: "LHT-Finance",
@@ -41,15 +50,35 @@ export default defineConfig(() => {
           lang: "vi-VN",
           icons: [
             {
-              src: "/logo_192.png",
+              src: "/icon-192x192.png",
               sizes: "192x192",
               type: "image/png",
+              purpose: "any"
+            },
+            {
+              src: "/icon-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "maskable"
+            },
+            {
+              src: "/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "any"
+            },
+            {
+              src: "/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable"
             },
             {
               src: "/logo_192.png",
-              sizes: "512x512",
+              sizes: "192x192",
               type: "image/png",
-            },
+              purpose: "any"
+            }
           ],
         },
         workbox: {
