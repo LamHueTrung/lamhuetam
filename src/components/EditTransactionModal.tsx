@@ -125,7 +125,7 @@ export default function EditTransactionModal({
     e.preventDefault();
     if (!transaction) return;
 
-    const amountNum = parseFloat(amountStr.replace(/[^0-9]/g, ""));
+    const amountNum = parseInt(amountStr.replace(/[^0-9]/g, ""), 10);
     if (!amountNum || amountNum <= 0) {
       toast.error("Vui lòng nhập số tiền hợp lệ!");
       return;
@@ -209,38 +209,24 @@ export default function EditTransactionModal({
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span>Số tiền (VNĐ)</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowKeypad(true)}
-                      className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Bàn phím số 🔢</span>
-                    </button>
+                    <span className="text-[9px] font-bold text-slate-400">Nhấn vào ô để nhập</span>
                   </label>
-                  <div className="relative flex items-center group">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={amountStr}
-                      onChange={(e) => handleAmountChange(e.target.value)}
-                      placeholder="0"
-                      className="w-full text-3xl font-extrabold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3.5 pr-20 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-300 dark:placeholder-slate-600 transition-all tracking-tight cursor-text"
-                    />
-                    <div className="absolute right-3 flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setShowKeypad(true)}
-                        className="px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-mono text-xs font-bold hover:bg-blue-200 transition-colors cursor-pointer"
-                        title="Mở bàn phím số"
-                      >
-                        123
-                      </button>
-                      <span className="text-xs font-bold text-slate-400 uppercase pointer-events-none">
-                        (đ)
-                      </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowKeypad(true)}
+                    className="w-full relative flex items-center cursor-pointer group"
+                  >
+                    <div className={`w-full text-left text-3xl font-extrabold bg-slate-50 dark:bg-slate-800/80 border rounded-2xl px-4 py-3.5 pr-16 transition-all tracking-tight select-none ${
+                      amountStr
+                        ? "text-slate-900 dark:text-white"
+                        : "text-slate-300 dark:text-slate-600"
+                    } ${showKeypad ? "border-blue-500 ring-2 ring-blue-500/20" : "border-slate-200 dark:border-slate-700 group-hover:border-blue-400"}`}>
+                      {amountStr || "0"}
                     </div>
-                  </div>
+                    <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase pointer-events-none">
+                      đ
+                    </span>
+                  </button>
                 </div>
 
                 <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex items-center border border-transparent dark:border-slate-700">
