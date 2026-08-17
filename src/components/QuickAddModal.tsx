@@ -4,6 +4,7 @@ import { Icon } from "@mdi/react";
 import {
   mdiCurrencyUsd,
   mdiPlus,
+  mdiMinus,
   mdiCogOutline,
   mdiBank,
   mdiCash,
@@ -43,9 +44,7 @@ export default function QuickAddModal({
   const [type, setType] = useState<"expense" | "income">("expense");
   const [amountStr, setAmountStr] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    getLocalDateString(),
-  );
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [category, setCategory] = useState("Ăn uống");
   const [wallet, setWallet] = useState("Ngân hàng");
   const [aiSuggesting, setAiSuggesting] = useState(false);
@@ -61,7 +60,9 @@ export default function QuickAddModal({
       if (key === "C") return "";
       if (key === "BACK") {
         const nextDigits = rawDigits.slice(0, -1);
-        return nextDigits ? new Intl.NumberFormat("vi-VN").format(parseInt(nextDigits, 10)) : "";
+        return nextDigits
+          ? new Intl.NumberFormat("vi-VN").format(parseInt(nextDigits, 10))
+          : "";
       }
       if (key === "000") {
         if (!rawDigits || rawDigits === "0") return prev;
@@ -265,7 +266,7 @@ export default function QuickAddModal({
                 onClose();
               }
             }}
-            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 shadow-[0_-12px_48px_rgba(0,0,0,0.12)] dark:shadow-[0_-12px_48px_rgba(0,0,0,0.5)] max-h-[92vh] flex flex-col overflow-hidden z-10 border-t border-slate-100 dark:border-slate-800"
+            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] dark:shadow-[0_-12px_48px_rgba(0,0,0,0.5)] max-h-[92vh] flex flex-col overflow-hidden z-10 border-t border-slate-100 dark:border-slate-800"
           >
             <div
               onPointerDown={(e) => {
@@ -279,10 +280,10 @@ export default function QuickAddModal({
               className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
             >
               <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
-              <div className="hidden flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-slate-900 dark:bg-white rounded-full animate-pulse" />
+              <div className="flex items-center justify-center gap-2 w-full">
+                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
                 <h2 className="text-base font-bold text-slate-800 dark:text-white">
-                  Ghi Chép Một Chạm
+                  Thêm Giao Dịch Thu / Chi
                 </h2>
               </div>
             </div>
@@ -293,25 +294,27 @@ export default function QuickAddModal({
                   type="button"
                   onClick={() => setType("expense")}
                   whileTap={{ scale: 0.95 }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     type === "expense"
                       ? "bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm"
                       : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                   }`}
                 >
-                  Khoản chi
+                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                  <span>Khoản chi</span>
                 </motion.button>
                 <motion.button
                   type="button"
                   onClick={() => setType("income")}
                   whileTap={{ scale: 0.95 }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     type === "income"
                       ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
                       : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                   }`}
                 >
-                  Khoản thu
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                  <span>Khoản thu</span>
                 </motion.button>
               </div>
 
@@ -319,25 +322,38 @@ export default function QuickAddModal({
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span>Số tiền (VNĐ)</span>
-                    <span className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
-                      Bàn phím số 🔢
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowKeypad(true)}
+                      className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Bàn phím số 🔢</span>
+                    </button>
                   </label>
-                  <div
-                    onClick={() => setShowKeypad(true)}
-                    className="relative flex items-center cursor-pointer group"
-                  >
+                  <div className="relative flex items-center group">
                     <input
                       type="text"
-                      readOnly
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       id="input-quick-add-amount"
                       value={amountStr}
+                      onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="0"
-                      className="w-full text-3xl font-extrabold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 pr-16 focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder-slate-300 dark:placeholder-slate-600 transition-all tracking-tight cursor-pointer group-hover:border-blue-500"
+                      className="w-full text-3xl font-extrabold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3.5 pr-20 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-300 dark:placeholder-slate-600 transition-all tracking-tight cursor-text"
                     />
-                    <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase pointer-events-none">
-                      (đ)
-                    </span>
+                    <div className="absolute right-3 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowKeypad(true)}
+                        className="px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-mono text-xs font-bold hover:bg-blue-200 transition-colors cursor-pointer"
+                        title="Mở bàn phím số"
+                      >
+                        123
+                      </button>
+                      <span className="text-xs font-bold text-slate-400 uppercase pointer-events-none">
+                        (đ)
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -481,10 +497,19 @@ export default function QuickAddModal({
                   type="submit"
                   id="btn-add-transaction-submit"
                   whileTap={{ scale: 0.96 }}
-                  className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-[22px] font-bold text-sm shadow-[0_8px_24px_rgba(15,23,42,0.15)] hover:bg-slate-800 dark:hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className={`w-full py-4 rounded-[22px] font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    type === "expense"
+                      ? "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/20"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
+                  }`}
                 >
-                  <Icon path={mdiPlus} size={1} />
-                  <span>Lưu Giao Dịch</span>
+                  <Icon
+                    path={type === "expense" ? mdiMinus : mdiPlus}
+                    size={1}
+                  />
+                  <span>
+                    {type === "expense" ? "Lưu Khoản Chi" : "Lưu Khoản Thu"}
+                  </span>
                 </motion.button>
               </form>
             </div>
@@ -499,7 +524,7 @@ export default function QuickAddModal({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 overflow-hidden z-[60] bg-slate-900/50 backdrop-blur-sm flex items-end justify-center"
+              className="fixed inset-0 overflow-hidden z-[99999] bg-slate-900/50 backdrop-blur-sm flex items-end justify-center"
               onClick={() => setShowKeypad(false)}
             >
               <motion.div
@@ -508,7 +533,7 @@ export default function QuickAddModal({
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 26, stiffness: 240 }}
                 onClick={(e) => e.stopPropagation()}
-                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-5 shadow-2xl flex flex-col space-y-4 border-t border-slate-200 dark:border-slate-800 z-[60]"
+                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-5 shadow-2xl flex flex-col space-y-4 border-t border-slate-200 dark:border-slate-800 z-[99999]"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">

@@ -2386,7 +2386,7 @@ export default function FinanceBudget({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 overflow-hidden z-[60] bg-slate-900/50 backdrop-blur-sm flex items-end justify-center"
+              className="fixed inset-0 overflow-hidden z-[99999] bg-slate-900/50 backdrop-blur-sm flex items-end justify-center"
               onClick={() => setActiveKeypadField(null)}
             >
               <motion.div
@@ -2395,7 +2395,7 @@ export default function FinanceBudget({
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 26, stiffness: 240 }}
                 onClick={(e) => e.stopPropagation()}
-                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-5 shadow-2xl flex flex-col space-y-4 border-t border-slate-200 dark:border-slate-800 z-[60]"
+                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-5 shadow-2xl flex flex-col space-y-4 border-t border-slate-200 dark:border-slate-800 z-[99999]"
               >
                 {/* Drag pill & Header */}
                 <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">

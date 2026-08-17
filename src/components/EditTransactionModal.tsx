@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
@@ -9,6 +9,9 @@ import {
   mdiCash,
   mdiWalletOutline,
   mdiCalendar,
+  mdiClose,
+  mdiPlus,
+  mdiMinus,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
@@ -45,6 +48,7 @@ export default function EditTransactionModal({
   const [category, setCategory] = useState("");
   const [wallet, setWallet] = useState("Ngân hàng");
   const dragControls = useDragControls();
+  const [showKeypad, setShowKeypad] = useState(false);
 
   useEffect(() => {
     if (transaction) {
@@ -56,6 +60,55 @@ export default function EditTransactionModal({
       setWallet(transaction.wallet);
     }
   }, [transaction]);
+
+  const handleKeypadPress = useCallback((key: string) => {
+    setAmountStr((prev) => {
+      let rawDigits = prev.replace(/\D/g, "");
+      if (key === "C") return "";
+      if (key === "BACK") {
+        const nextDigits = rawDigits.slice(0, -1);
+        return nextDigits ? new Intl.NumberFormat("vi-VN").format(parseInt(nextDigits, 10)) : "";
+      }
+      if (key === "000") {
+        if (!rawDigits || rawDigits === "0") return prev;
+        const combined = rawDigits + "000";
+        if (combined.length > 13) return prev;
+        return new Intl.NumberFormat("vi-VN").format(parseInt(combined, 10));
+      }
+      if (rawDigits === "0") rawDigits = "";
+      const combined = rawDigits + key;
+      if (combined.length > 13) return prev;
+      return new Intl.NumberFormat("vi-VN").format(parseInt(combined, 10));
+    });
+  }, []);
+
+  const handleKeypadPreset = (val: number | string) => {
+    if (typeof val === "number") {
+      const currentRaw = parseInt(amountStr.replace(/\D/g, ""), 10) || 0;
+      setAmountStr(new Intl.NumberFormat("vi-VN").format(currentRaw + val));
+    } else {
+      setAmountStr(new Intl.NumberFormat("vi-VN").format(parseInt(val, 10)));
+    }
+  };
+
+  useEffect(() => {
+    if (!showKeypad) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= "0" && e.key <= "9") {
+        handleKeypadPress(e.key);
+      } else if (e.key === "Backspace") {
+        handleKeypadPress("BACK");
+      } else if (e.key === "Delete" || e.key.toLowerCase() === "c") {
+        handleKeypadPress("C");
+      } else if (e.key === "Enter" || e.key === "Escape") {
+        setShowKeypad(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showKeypad, handleKeypadPress]);
 
   const categories =
     propCategories.length > 0
@@ -96,7 +149,7 @@ export default function EditTransactionModal({
       setAmountStr("");
       return;
     }
-    const formatted = new Intl.NumberFormat("vi-VN").format(parseInt(clean));
+    const formatted = new Intl.NumberFormat("vi-VN").format(parseInt(clean, 10));
     setAmountStr(formatted);
   };
 
@@ -127,7 +180,7 @@ export default function EditTransactionModal({
                 onClose();
               }
             }}
-            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 shadow-[0_-12px_48px_rgba(0,0,0,0.12)] dark:shadow-[0_-12px_48px_rgba(0,0,0,0.5)] max-h-[92vh] flex flex-col overflow-hidden z-10 border-t border-slate-100 dark:border-slate-800"
+            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] dark:shadow-[0_-12px_48px_rgba(0,0,0,0.5)] max-h-[92vh] flex flex-col overflow-hidden z-10 border-t border-slate-100 dark:border-slate-800"
           >
             {/* Draggable Header Section */}
             <div
@@ -142,10 +195,10 @@ export default function EditTransactionModal({
               className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
             >
               <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-slate-900 dark:bg-white rounded-full animate-pulse" />
+              <div className="flex items-center justify-center gap-2 w-full">
+                <span className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
                 <h2 className="text-base font-bold text-slate-800 dark:text-white">
-                  Chỉnh Sửa Giao Dịch
+                  Chỉnh Sửa Giao Dịch Thu / Chi
                 </h2>
               </div>
             </div>
@@ -153,16 +206,18 @@ export default function EditTransactionModal({
             {/* Scrollable Body */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 pt-2">
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-slate-50 dark:bg-slate-800/80 rounded-[24px] p-5 border border-slate-200 dark:border-slate-700 text-center space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    SỐ TIỀN GIAO DỊCH
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>Số tiền (VNĐ)</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowKeypad(true)}
+                      className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Bàn phím số 🔢</span>
+                    </button>
                   </label>
-                  <div className="flex items-center justify-center gap-1.5">
-                    <Icon
-                      path={mdiCurrencyUsd}
-                      size={1.25}
-                      className="text-slate-400"
-                    />
+                  <div className="relative flex items-center group">
                     <input
                       type="text"
                       inputMode="numeric"
@@ -170,11 +225,21 @@ export default function EditTransactionModal({
                       value={amountStr}
                       onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="0"
-                      className="w-48 text-2xl font-black text-slate-900 dark:text-white focus:outline-none bg-transparent placeholder-slate-300 dark:placeholder-slate-600 text-center cursor-text"
+                      className="w-full text-3xl font-extrabold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3.5 pr-20 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-300 dark:placeholder-slate-600 transition-all tracking-tight cursor-text"
                     />
-                    <span className="text-lg font-extrabold text-slate-500 dark:text-slate-400">
-                      ₫
-                    </span>
+                    <div className="absolute right-3 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowKeypad(true)}
+                        className="px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-mono text-xs font-bold hover:bg-blue-200 transition-colors cursor-pointer"
+                        title="Mở bàn phím số"
+                      >
+                        123
+                      </button>
+                      <span className="text-xs font-bold text-slate-400 uppercase pointer-events-none">
+                        (đ)
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -183,25 +248,27 @@ export default function EditTransactionModal({
                     type="button"
                     onClick={() => setType("expense")}
                     whileTap={{ scale: 0.95 }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       type === "expense"
                         ? "bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm"
                         : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                     }`}
                   >
-                    Khoản chi
+                    <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                    <span>Khoản chi</span>
                   </motion.button>
                   <motion.button
                     type="button"
                     onClick={() => setType("income")}
                     whileTap={{ scale: 0.95 }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       type === "income"
                         ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
                         : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                     }`}
                   >
-                    Khoản thu
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    <span>Khoản thu</span>
                   </motion.button>
                 </div>
 
@@ -332,15 +399,156 @@ export default function EditTransactionModal({
                 <motion.button
                   type="submit"
                   whileTap={{ scale: 0.96 }}
-                  className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-[22px] font-bold text-sm shadow-[0_8px_24px_rgba(15,23,42,0.15)] hover:bg-slate-800 dark:hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className={`w-full py-4 rounded-[22px] font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    type === "expense"
+                      ? "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/20"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
+                  }`}
                 >
-                  <Icon path={mdiCheck} size={1} />
-                  <span>Cập Nhật Giao Dịch</span>
+                  <Icon path={type === "expense" ? mdiMinus : mdiCheck} size={1} />
+                  <span>{type === "expense" ? "Cập Nhật Khoản Chi" : "Cập Nhật Khoản Thu"}</span>
                 </motion.button>
               </form>
             </div>
           </motion.div>
         </div>
+      )}
+      {/* Numeric Keypad Bottom Sheet Portal */}
+      {createPortal(
+        <AnimatePresence>
+          {showKeypad && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 overflow-hidden z-[99999] bg-slate-900/50 backdrop-blur-sm flex items-end justify-center"
+              onClick={() => setShowKeypad(false)}
+            >
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 26, stiffness: 240 }}
+                onClick={(e) => e.stopPropagation()}
+                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-5 shadow-2xl flex flex-col space-y-4 border-t border-slate-200 dark:border-slate-800 z-[99999]"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md">
+                      BÀN PHÍM SỐ
+                    </span>
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-white mt-1">
+                      Nhập số tiền giao dịch (VNĐ)
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowKeypad(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    <Icon path={mdiClose} size={0.75} />
+                  </button>
+                </div>
+
+                {/* Display Value Box */}
+                <div className="bg-slate-50 dark:bg-slate-800/90 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Số tiền
+                    </span>
+                    <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate block">
+                      {amountStr ? `${amountStr} đ` : "0 đ"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleKeypadPress("C")}
+                    className="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
+                  >
+                    Xóa hết
+                  </button>
+                </div>
+
+                {/* Quick Presets Bar */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {[
+                    { label: "+10k", val: 10000 },
+                    { label: "+20k", val: 20000 },
+                    { label: "+50k", val: 50000 },
+                    { label: "+100k", val: 100000 },
+                    { label: "+200k", val: 200000 },
+                    { label: "+500k", val: 500000 },
+                    { label: "+1tr", val: 1000000 },
+                    { label: "+5tr", val: 5000000 },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => handleKeypadPreset(p.val)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer transition-colors"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 3x4 Keypad Grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => handleKeypadPress(num)}
+                      className="h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-lg font-black text-slate-800 dark:text-white transition-all cursor-pointer shadow-sm flex items-center justify-center"
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleKeypadPress("C")}
+                    className="h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 active:scale-95 text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center"
+                  >
+                    C
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleKeypadPress("0")}
+                    className="h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-lg font-black text-slate-800 dark:text-white transition-all cursor-pointer shadow-sm flex items-center justify-center"
+                  >
+                    0
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleKeypadPress("000")}
+                    className="h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-sm font-black text-slate-800 dark:text-white transition-all cursor-pointer shadow-sm flex items-center justify-center"
+                  >
+                    000
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleKeypadPress("BACK")}
+                    className="col-span-3 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-sm font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer flex items-center justify-center gap-1 mt-1"
+                  >
+                    <span>⌫ Xóa ký tự cuối</span>
+                  </button>
+                </div>
+
+                {/* Confirm Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowKeypad(false)}
+                  className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs uppercase tracking-wider py-3.5 rounded-2xl hover:opacity-90 transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                >
+                  <Icon path={mdiCheck} size={0.875} />
+                  <span>Xác nhận</span>
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
       )}
     </AnimatePresence>,
   );
