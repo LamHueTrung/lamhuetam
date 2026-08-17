@@ -26,6 +26,7 @@ interface EditTransactionModalProps {
   categories: Category[];
   onClose: () => void;
   onUpdateTransaction: (id: string, data: Partial<Transaction>) => void;
+  onOpenCategoryManager?: () => void;
 }
 
 const wallets = [
@@ -40,6 +41,7 @@ export default function EditTransactionModal({
   categories: propCategories,
   onClose,
   onUpdateTransaction,
+  onOpenCategoryManager,
 }: EditTransactionModalProps) {
   const [type, setType] = useState<"expense" | "income">("expense");
   const [amountStr, setAmountStr] = useState("");
@@ -354,7 +356,7 @@ export default function EditTransactionModal({
                     })}
                     <motion.button
                       type="button"
-                      onClick={() => {}}
+                      onClick={() => onOpenCategoryManager && onOpenCategoryManager()}
                       whileTap={{ scale: 0.95 }}
                       className="p-3 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer"
                     >
@@ -472,7 +474,7 @@ export default function EditTransactionModal({
                 </div>
 
                 {/* Quick Presets Bar */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar no-swipe">
                   {[
                     { label: "+10k", val: 10000 },
                     { label: "+20k", val: 20000 },

@@ -531,6 +531,7 @@ function AppContent() {
                   onDeleteTransaction={handleDeleteTransaction}
                   onUpdateTransaction={handleUpdateTransaction}
                   categories={categories}
+                  onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
                 />
               )}
               {currentTab === 4 && (

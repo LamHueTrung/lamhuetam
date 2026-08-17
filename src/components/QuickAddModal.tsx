@@ -564,7 +564,7 @@ export default function QuickAddModal({
                 </div>
 
                 {/* Quick Presets Bar */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar no-swipe">
                   {[
                     { label: "+10k", val: 10000 },
                     { label: "+20k", val: 20000 },
