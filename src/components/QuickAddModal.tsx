@@ -87,23 +87,53 @@ export default function QuickAddModal({
   };
 
   useEffect(() => {
-    if (!showKeypad) return;
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")
+      ) {
+        return;
+      }
+
       if (e.key >= "0" && e.key <= "9") {
         handleKeypadPress(e.key);
       } else if (e.key === "Backspace") {
         handleKeypadPress("BACK");
       } else if (e.key === "Delete" || e.key.toLowerCase() === "c") {
         handleKeypadPress("C");
-      } else if (e.key === "Enter" || e.key === "Escape") {
-        setShowKeypad(false);
+      } else if (e.key === "Enter") {
+        if (showKeypad) setShowKeypad(false);
+      } else if (e.key === "Escape") {
+        if (showKeypad) {
+          setShowKeypad(false);
+        } else {
+          onClose();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showKeypad, handleKeypadPress]);
+  }, [isOpen, showKeypad, handleKeypadPress, onClose]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setAmountStr("");
+      setDescription("");
+      setSelectedDate(getLocalDateString());
+      setWallet("Ngân hàng");
+      if (propCategories.length > 0) {
+        setCategory(propCategories[0].name);
+      } else {
+        setCategory("Ăn uống");
+      }
+      setShowKeypad(false);
+    }
+  }, [isOpen, propCategories]);
 
   // Auto-sync category when propCategories load
   useEffect(() => {

@@ -51,15 +51,16 @@ export default function EditTransactionModal({
   const [showKeypad, setShowKeypad] = useState(false);
 
   useEffect(() => {
-    if (transaction) {
+    if (isOpen && transaction) {
       setType(transaction.type);
       setAmountStr(new Intl.NumberFormat("vi-VN").format(transaction.amount));
       setSelectedDate(transaction.date);
       setDescription(transaction.description);
       setCategory(transaction.category);
       setWallet(transaction.wallet);
+      setShowKeypad(false);
     }
-  }, [transaction]);
+  }, [isOpen, transaction]);
 
   const handleKeypadPress = useCallback((key: string) => {
     setAmountStr((prev) => {
@@ -92,23 +93,37 @@ export default function EditTransactionModal({
   };
 
   useEffect(() => {
-    if (!showKeypad) return;
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")
+      ) {
+        return;
+      }
+
       if (e.key >= "0" && e.key <= "9") {
         handleKeypadPress(e.key);
       } else if (e.key === "Backspace") {
         handleKeypadPress("BACK");
       } else if (e.key === "Delete" || e.key.toLowerCase() === "c") {
         handleKeypadPress("C");
-      } else if (e.key === "Enter" || e.key === "Escape") {
-        setShowKeypad(false);
+      } else if (e.key === "Enter") {
+        if (showKeypad) setShowKeypad(false);
+      } else if (e.key === "Escape") {
+        if (showKeypad) {
+          setShowKeypad(false);
+        } else {
+          onClose();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showKeypad, handleKeypadPress]);
+  }, [isOpen, showKeypad, handleKeypadPress, onClose]);
 
   const categories =
     propCategories.length > 0
