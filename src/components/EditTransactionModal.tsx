@@ -70,7 +70,9 @@ export default function EditTransactionModal({
       if (key === "C") return "";
       if (key === "BACK") {
         const nextDigits = rawDigits.slice(0, -1);
-        return nextDigits ? new Intl.NumberFormat("vi-VN").format(parseInt(nextDigits, 10)) : "";
+        return nextDigits
+          ? new Intl.NumberFormat("vi-VN").format(parseInt(nextDigits, 10))
+          : "";
       }
       if (key === "000") {
         if (!rawDigits || rawDigits === "0") return prev;
@@ -166,7 +168,9 @@ export default function EditTransactionModal({
       setAmountStr("");
       return;
     }
-    const formatted = new Intl.NumberFormat("vi-VN").format(parseInt(clean, 10));
+    const formatted = new Intl.NumberFormat("vi-VN").format(
+      parseInt(clean, 10),
+    );
     setAmountStr(formatted);
   };
 
@@ -224,26 +228,63 @@ export default function EditTransactionModal({
             <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pb-6 pt-2">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span>Số tiền (VNĐ)</span>
-                    <span className="text-[9px] font-bold text-slate-400">Nhấn vào ô để nhập</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowKeypad(true)}
-                    className="w-full relative flex items-center cursor-pointer group"
-                  >
-                    <div className={`w-full text-left text-3xl font-extrabold bg-slate-50 dark:bg-slate-800/80 border rounded-2xl px-4 py-3.5 pr-16 transition-all tracking-tight select-none ${
-                      amountStr
-                        ? "text-slate-900 dark:text-white"
-                        : "text-slate-300 dark:text-slate-600"
-                    } ${showKeypad ? "border-blue-500 ring-2 ring-blue-500/20" : "border-slate-200 dark:border-slate-700 group-hover:border-blue-400"}`}>
-                      {amountStr || "0"}
-                    </div>
-                    <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase pointer-events-none">
-                      đ
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block mb-1 flex items-center justify-between">
+                    <span>Số tiền (VND)</span>
+                    <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
+                      Bàn phím số 🔢
                     </span>
-                  </button>
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      // pattern="[0-9]*"
+                      value={amountStr}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        if (!raw) {
+                          setAmountStr("");
+                          return;
+                        }
+                        if (raw.length > 13) return;
+                        setAmountStr(
+                          new Intl.NumberFormat("vi-VN").format(
+                            parseInt(raw, 10),
+                          ),
+                        );
+                      }}
+                      onFocus={() => setShowKeypad(true)}
+                      onClick={() => setShowKeypad(true)}
+                      placeholder="0"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-bold rounded-xl pl-3.5 pr-12 py-3 text-slate-800 dark:text-white transition-colors outline-none cursor-pointer"
+                    />
+                    <span className="absolute right-3.5 text-[10px] text-slate-400 font-bold pointer-events-none">
+                      VND
+                    </span>
+                  </div>
+
+                  {/* Quick amount presets */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pt-2 pb-0.5 no-scrollbar no-swipe">
+                    {[
+                      { label: "+10k", val: 10000 },
+                      { label: "+20k", val: 20000 },
+                      { label: "+50k", val: 50000 },
+                      { label: "+100k", val: 100000 },
+                      { label: "+200k", val: 200000 },
+                      { label: "+500k", val: 500000 },
+                      { label: "+1tr", val: 1000000 },
+                      { label: "+5tr", val: 5000000 },
+                    ].map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => handleKeypadPreset(p.val)}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-[11px] font-bold text-slate-700 dark:text-slate-300 shrink-0 transition-all cursor-pointer"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex items-center border border-transparent dark:border-slate-700">
@@ -356,7 +397,9 @@ export default function EditTransactionModal({
                     })}
                     <motion.button
                       type="button"
-                      onClick={() => onOpenCategoryManager && onOpenCategoryManager()}
+                      onClick={() =>
+                        onOpenCategoryManager && onOpenCategoryManager()
+                      }
                       whileTap={{ scale: 0.95 }}
                       className="p-3 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer"
                     >
@@ -408,8 +451,15 @@ export default function EditTransactionModal({
                       : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
                   }`}
                 >
-                  <Icon path={type === "expense" ? mdiMinus : mdiCheck} size={1} />
-                  <span>{type === "expense" ? "Cập Nhật Khoản Chi" : "Cập Nhật Khoản Thu"}</span>
+                  <Icon
+                    path={type === "expense" ? mdiMinus : mdiCheck}
+                    size={1}
+                  />
+                  <span>
+                    {type === "expense"
+                      ? "Cập Nhật Khoản Chi"
+                      : "Cập Nhật Khoản Thu"}
+                  </span>
                 </motion.button>
               </form>
             </div>
@@ -554,5 +604,6 @@ export default function EditTransactionModal({
         document.body,
       )}
     </AnimatePresence>,
+    document.body,
   );
 }
