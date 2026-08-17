@@ -305,7 +305,12 @@ export default function FinanceBudget({
     | "monthlyPayment"
     | "totalInstallments"
     | "paymentDay"
-    | "paidInstallments";
+    | "paidInstallments"
+    | "grossSalary"
+    | "netSalary"
+    | "receiveDay"
+    | "workDays"
+    | "taskAmount";
 
   const [activeKeypadField, setActiveKeypadField] = useState<KeypadField | null>(null);
 
@@ -313,8 +318,14 @@ export default function FinanceBudget({
     setActiveKeypadField((field) => {
       if (!field) return null;
 
-      if (field === "originalAmount" || field === "monthlyPayment") {
-        const setter = field === "originalAmount" ? setOriginalAmount : setMonthlyPayment;
+      if (field === "originalAmount" || field === "monthlyPayment" || field === "grossSalary" || field === "netSalary" || field === "taskAmount") {
+        let setter: React.Dispatch<React.SetStateAction<string>>;
+        if (field === "originalAmount") setter = setOriginalAmount;
+        else if (field === "monthlyPayment") setter = setMonthlyPayment;
+        else if (field === "grossSalary") setter = setGrossSalary;
+        else if (field === "netSalary") setter = setNetSalary;
+        else setter = setTaskAmount;
+
         setter((prev) => {
           let rawDigits = prev.replace(/\D/g, "");
           if (key === "C") return "";
@@ -343,8 +354,9 @@ export default function FinanceBudget({
           if (parseInt(combined) <= 360) return combined;
           return prev;
         });
-      } else if (field === "paymentDay") {
-        setPaymentDay((prev) => {
+      } else if (field === "paymentDay" || field === "receiveDay" || field === "workDays") {
+        const setter = field === "paymentDay" ? setPaymentDay : field === "receiveDay" ? setReceiveDay : setWorkDays;
+        setter((prev) => {
           let rawDigits = prev.replace(/\D/g, "");
           if (key === "C") return "1";
           if (key === "BACK") {
@@ -366,19 +378,20 @@ export default function FinanceBudget({
   const handleKeypadPreset = (val: string | number) => {
     if (!activeKeypadField) return;
 
-    if (activeKeypadField === "originalAmount") {
+    if (activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment" || activeKeypadField === "grossSalary" || activeKeypadField === "netSalary" || activeKeypadField === "taskAmount") {
+      let currentVal = "";
+      let setter: (v: string) => void = setOriginalAmount;
+      if (activeKeypadField === "originalAmount") { currentVal = originalAmount; setter = setOriginalAmount; }
+      else if (activeKeypadField === "monthlyPayment") { currentVal = monthlyPayment; setter = setMonthlyPayment; }
+      else if (activeKeypadField === "grossSalary") { currentVal = grossSalary; setter = setGrossSalary; }
+      else if (activeKeypadField === "netSalary") { currentVal = netSalary; setter = setNetSalary; }
+      else { currentVal = taskAmount; setter = setTaskAmount; }
+
       if (typeof val === "number") {
-        const currentRaw = parseInt(originalAmount.replace(/\D/g, "")) || 0;
-        setOriginalAmount(numFmt(String(currentRaw + val)));
+        const currentRaw = parseInt(currentVal.replace(/\D/g, "")) || 0;
+        setter(numFmt(String(currentRaw + val)));
       } else {
-        setOriginalAmount(numFmt(String(val)));
-      }
-    } else if (activeKeypadField === "monthlyPayment") {
-      if (typeof val === "number") {
-        const currentRaw = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
-        setMonthlyPayment(numFmt(String(currentRaw + val)));
-      } else {
-        setMonthlyPayment(numFmt(String(val)));
+        setter(numFmt(String(val)));
       }
     } else if (activeKeypadField === "totalInstallments") {
       setTotalInstallments(String(val));
@@ -386,6 +399,10 @@ export default function FinanceBudget({
       setPaymentDay(String(val));
     } else if (activeKeypadField === "paidInstallments") {
       setPaidInstallments(String(val));
+    } else if (activeKeypadField === "receiveDay") {
+      setReceiveDay(String(val));
+    } else if (activeKeypadField === "workDays") {
+      setWorkDays(String(val));
     }
   };
 
@@ -1269,61 +1286,63 @@ export default function FinanceBudget({
             Cấu hình lương
           </h3>
           <div className="space-y-3">
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                Lương gross (VND)
+            <div onClick={() => setActiveKeypadField("grossSalary")} className="cursor-pointer group">
+              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
+                <span>Lương gross (VND)</span>
+                <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
+                  Bàn phím số 🔢
+                </span>
               </label>
               <input
                 type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+                readOnly
                 value={grossSalary}
-                onKeyDown={handleAmountKeyDown}
-                onChange={(e) => setGrossSalary(numFmt(e.target.value))}
                 placeholder="VD: 18,000,000"
-                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-bold rounded-xl px-3 py-2.5 outline-none dark:text-white cursor-pointer group-hover:border-blue-500 transition-colors"
               />
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                Lương thực nhận (VND) *
+            <div onClick={() => setActiveKeypadField("netSalary")} className="cursor-pointer group">
+              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
+                <span>Lương thực nhận (VND) *</span>
+                <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
+                  Bàn phím số 🔢
+                </span>
               </label>
               <input
                 type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+                readOnly
                 value={netSalary}
-                onKeyDown={handleAmountKeyDown}
-                onChange={(e) => setNetSalary(numFmt(e.target.value))}
                 placeholder="VD: 15,000,000"
-                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-bold rounded-xl px-3 py-2.5 outline-none dark:text-white cursor-pointer group-hover:border-blue-500 transition-colors"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                  Ngày nhận lương
+              <div onClick={() => setActiveKeypadField("receiveDay")} className="cursor-pointer group">
+                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
+                  <span>Ngày nhận lương</span>
+                  <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
+                    Bàn phím số 🔢
+                  </span>
                 </label>
                 <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={receiveDay}
-                  onChange={(e) => setReceiveDay(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
+                  type="text"
+                  readOnly
+                  value={receiveDay ? `Ngày ${receiveDay}` : "Ngày 1"}
+                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-bold rounded-xl px-3 py-2.5 outline-none dark:text-white cursor-pointer group-hover:border-blue-500 transition-colors"
                 />
               </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                  Số ngày công
+              <div onClick={() => setActiveKeypadField("workDays")} className="cursor-pointer group">
+                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
+                  <span>Số ngày công</span>
+                  <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
+                    Bàn phím số 🔢
+                  </span>
                 </label>
                 <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={workDays}
-                  onChange={(e) => setWorkDays(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none dark:text-white"
+                  type="text"
+                  readOnly
+                  value={workDays ? `${workDays} ngày` : "26 ngày"}
+                  className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-bold rounded-xl px-3 py-2.5 outline-none dark:text-white cursor-pointer group-hover:border-blue-500 transition-colors"
                 />
               </div>
             </div>
@@ -1693,16 +1712,15 @@ export default function FinanceBudget({
                         placeholder="Tên khoản chi"
                         className="w-full bg-white dark:bg-slate-600 border border-slate-100 dark:border-slate-500 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none dark:text-white"
                       />
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={taskAmount}
-                        onKeyDown={handleAmountKeyDown}
-                        onChange={(e) => setTaskAmount(numFmt(e.target.value))}
-                        placeholder="Số tiền"
-                        className="w-full bg-white dark:bg-slate-600 border border-slate-100 dark:border-slate-500 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none dark:text-white"
-                      />
+                      <div onClick={() => setActiveKeypadField("taskAmount")} className="cursor-pointer group relative">
+                        <input
+                          type="text"
+                          readOnly
+                          value={taskAmount ? `${taskAmount} đ` : ""}
+                          placeholder="Số tiền (Bàn phím số 🔢)"
+                          className="w-full bg-white dark:bg-slate-600 border border-slate-100 dark:border-slate-500 rounded-xl px-3 py-2 text-[10px] font-bold outline-none dark:text-white cursor-pointer group-hover:border-blue-500 transition-colors"
+                        />
+                      </div>
                       <input
                         type="text"
                         value={taskNote}
@@ -2394,7 +2412,17 @@ export default function FinanceBudget({
                             ? "Tổng số kỳ trả (Tháng)"
                             : activeKeypadField === "paymentDay"
                               ? "Ngày đến hạn (Hàng tháng)"
-                              : "Số kỳ đã trả trước đó"}
+                              : activeKeypadField === "paidInstallments"
+                                ? "Số kỳ đã trả trước đó"
+                                : activeKeypadField === "grossSalary"
+                                  ? "Lương Gross (VND)"
+                                  : activeKeypadField === "netSalary"
+                                    ? "Lương thực nhận (VND)"
+                                    : activeKeypadField === "receiveDay"
+                                      ? "Ngày nhận lương hàng tháng"
+                                      : activeKeypadField === "workDays"
+                                        ? "Số ngày công trong tháng"
+                                        : "Số tiền khoản chi (VND)"}
                     </h4>
                   </div>
                   <button
@@ -2421,7 +2449,17 @@ export default function FinanceBudget({
                             ? `${totalInstallments || "1"} kỳ`
                             : activeKeypadField === "paymentDay"
                               ? `Ngày ${paymentDay || "5"} hàng tháng`
-                              : `${paidInstallments || "0"} kỳ`}
+                              : activeKeypadField === "paidInstallments"
+                                ? `${paidInstallments || "0"} kỳ`
+                                : activeKeypadField === "grossSalary"
+                                  ? grossSalary ? `${grossSalary} đ` : "0 đ"
+                                  : activeKeypadField === "netSalary"
+                                    ? netSalary ? `${netSalary} đ` : "0 đ"
+                                    : activeKeypadField === "receiveDay"
+                                      ? `Ngày ${receiveDay || "1"}`
+                                      : activeKeypadField === "workDays"
+                                        ? `${workDays || "26"} ngày`
+                                        : taskAmount ? `${taskAmount} đ` : "0 đ"}
                     </span>
                   </div>
                   <button
@@ -2479,6 +2517,50 @@ export default function FinanceBudget({
                       ))}
                     </>
                   )}
+                  {(activeKeypadField === "grossSalary" || activeKeypadField === "netSalary") && (
+                    <>
+                      {[
+                        { label: "+1tr", val: 1000000 },
+                        { label: "+2tr", val: 2000000 },
+                        { label: "+5tr", val: 5000000 },
+                        { label: "10tr", val: "10000000" },
+                        { label: "15tr", val: "15000000" },
+                        { label: "20tr", val: "20000000" },
+                        { label: "30tr", val: "30000000" },
+                      ].map((p) => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => handleKeypadPreset(p.val)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer transition-colors"
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {activeKeypadField === "taskAmount" && (
+                    <>
+                      {[
+                        { label: "+50k", val: 50000 },
+                        { label: "+100k", val: 100000 },
+                        { label: "+500k", val: 500000 },
+                        { label: "+1tr", val: 1000000 },
+                        { label: "100k", val: "100000" },
+                        { label: "500k", val: "500000" },
+                        { label: "1tr", val: "1000000" },
+                      ].map((p) => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => handleKeypadPreset(p.val)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer transition-colors"
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </>
+                  )}
                   {activeKeypadField === "totalInstallments" && (
                     <>
                       {[3, 6, 12, 18, 24, 36, 48, 60].map((k) => (
@@ -2503,6 +2585,20 @@ export default function FinanceBudget({
                           className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer transition-colors"
                         >
                           Ngày {d}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {(activeKeypadField === "receiveDay" || activeKeypadField === "workDays") && (
+                    <>
+                      {[1, 5, 10, 15, 20, 25, 26, 28, 30].map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => handleKeypadPreset(d)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer transition-colors"
+                        >
+                          {activeKeypadField === "receiveDay" ? `Ngày ${d}` : `${d} ngày`}
                         </button>
                       ))}
                     </>
@@ -2549,7 +2645,7 @@ export default function FinanceBudget({
                   >
                     0
                   </button>
-                  {activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment" ? (
+                  {activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment" || activeKeypadField === "grossSalary" || activeKeypadField === "netSalary" || activeKeypadField === "taskAmount" ? (
                     <button
                       type="button"
                       onClick={() => handleKeypadPress("000")}
@@ -2566,7 +2662,7 @@ export default function FinanceBudget({
                       ⌫
                     </button>
                   )}
-                  {(activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment") && (
+                  {(activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment" || activeKeypadField === "grossSalary" || activeKeypadField === "netSalary" || activeKeypadField === "taskAmount") && (
                     <button
                       type="button"
                       onClick={() => handleKeypadPress("BACK")}

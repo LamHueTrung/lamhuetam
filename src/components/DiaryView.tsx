@@ -91,6 +91,11 @@ function LeafletMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const entriesRef = useRef(entries);
+
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
 
   const validEntries = entries.filter(
     (e) =>
@@ -205,9 +210,17 @@ function LeafletMap({
         if (!popupEl) return;
         const detailBtns = popupEl.querySelectorAll(".btn-view-diary-detail");
         detailBtns.forEach((btn: any) => {
-          btn.onclick = () => {
+          if (L && L.DomEvent) {
+            L.DomEvent.disableClickPropagation(btn);
+            L.DomEvent.disableScrollPropagation(btn);
+          }
+          btn.onclick = (e: any) => {
+            if (e) {
+              if (e.stopPropagation) e.stopPropagation();
+              if (e.preventDefault) e.preventDefault();
+            }
             const id = btn.getAttribute("data-id");
-            const target = entries.find((x) => x.id === id);
+            const target = entriesRef.current.find((x) => x.id === id);
             if (target && onSelectEntryDetail) {
               onSelectEntryDetail(target);
             }
@@ -215,7 +228,15 @@ function LeafletMap({
         });
         const dirBtns = popupEl.querySelectorAll(".btn-directions");
         dirBtns.forEach((btn: any) => {
-          btn.onclick = () => {
+          if (L && L.DomEvent) {
+            L.DomEvent.disableClickPropagation(btn);
+            L.DomEvent.disableScrollPropagation(btn);
+          }
+          btn.onclick = (e: any) => {
+            if (e) {
+              if (e.stopPropagation) e.stopPropagation();
+              if (e.preventDefault) e.preventDefault();
+            }
             const lat = btn.getAttribute("data-lat");
             const lng = btn.getAttribute("data-lng");
             if (lat && lng) {
@@ -1056,7 +1077,7 @@ export default function DiaryView() {
           resetForm();
           setShowForm(true);
         }}
-        className="fixed bottom-[120px] right-5 md:right-[calc(50%-12.75rem)] z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#06b6d4] to-[#3b82f6] text-white shadow-[0_8px_24px_rgba(6,182,212,0.4)] flex items-center justify-center cursor-pointer"
+        className="fixed bottom-[120px] right-5 md:right-[calc(50%-12.75rem)] z-[10000] w-14 h-14 rounded-full bg-gradient-to-br from-[#06b6d4] to-[#3b82f6] text-white shadow-[0_8px_24px_rgba(6,182,212,0.4)] flex items-center justify-center cursor-pointer"
       >
         <Icon path={mdiPlus} size={1.25} />
       </motion.button>
@@ -1072,7 +1093,7 @@ export default function DiaryView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 overflow-hidden z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
+              className="fixed inset-0 overflow-hidden z-[10005] bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
               onClick={() => {
                 setDetailEntry(null);
                 setReplyText("");
@@ -1234,7 +1255,7 @@ export default function DiaryView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 overflow-hidden z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
+              className="fixed inset-0 overflow-hidden z-[10005] bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
               onClick={() => setShowForm(false)}
             >
               <motion.div
