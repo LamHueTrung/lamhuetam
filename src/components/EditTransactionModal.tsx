@@ -177,7 +177,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                 onClose();
               }
             }}
-            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white rounded-t-[32px] shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-hidden z-10"
+            className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 shadow-[0_-12px_48px_rgba(0,0,0,0.12)] dark:shadow-[0_-12px_48px_rgba(0,0,0,0.5)] max-h-[92vh] flex flex-col overflow-hidden z-10 border-t border-slate-100 dark:border-slate-800"
           >
             {/* Draggable Header Section */}
             <div
@@ -188,8 +188,8 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
             >
               <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-slate-900 rounded-full animate-pulse" />
-                <h2 className="text-base font-bold text-slate-800">Chỉnh Sửa Giao Dịch</h2>
+                <span className="w-2.5 h-2.5 bg-slate-900 dark:bg-white rounded-full animate-pulse" />
+                <h2 className="text-base font-bold text-slate-800 dark:text-white">Chỉnh Sửa Giao Dịch</h2>
               </div>
             </div>
 
@@ -198,7 +198,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
               <form onSubmit={handleSubmit} className="space-y-6">
               <div
                 onClick={() => setShowKeypad(true)}
-                className="bg-slate-50 rounded-[24px] p-5 border border-slate-200 text-center space-y-2 cursor-pointer group hover:border-blue-500 transition-colors"
+                className="bg-slate-50 dark:bg-slate-800/80 rounded-[24px] p-5 border border-slate-200 dark:border-slate-700 text-center space-y-2 cursor-pointer group hover:border-blue-500 transition-colors"
               >
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block flex items-center justify-center gap-1">
                   <span>SỐ TIỀN GIAO DỊCH</span>
@@ -213,21 +213,21 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                     readOnly
                     value={amountStr}
                     placeholder="0"
-                    className="w-48 text-2xl font-black text-slate-900 focus:outline-none bg-transparent placeholder-slate-300 text-center cursor-pointer"
+                    className="w-48 text-2xl font-black text-slate-900 dark:text-white focus:outline-none bg-transparent placeholder-slate-300 dark:placeholder-slate-600 text-center cursor-pointer"
                   />
-                  <span className="text-lg font-extrabold text-slate-500">₫</span>
+                  <span className="text-lg font-extrabold text-slate-500 dark:text-slate-400">₫</span>
                 </div>
               </div>
 
-              <div className="bg-slate-100 p-1 rounded-2xl flex items-center">
+              <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex items-center border border-transparent dark:border-slate-700">
                 <motion.button
                   type="button"
                   onClick={() => setType('expense')}
                   whileTap={{ scale: 0.95 }}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     type === 'expense'
-                      ? "bg-white text-rose-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                   }`}
                 >
                   Khoản chi
@@ -238,8 +238,8 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                   whileTap={{ scale: 0.95 }}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     type === 'income'
-                      ? "bg-white text-emerald-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                   }`}
                 >
                   Khoản thu
@@ -253,7 +253,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Mô tả giao dịch..."
-                  className="w-full px-4 py-3 bg-slate-50/80 border border-slate-100 rounded-[20px] text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[20px] text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 dark:text-white"
                 />
               </div>
 
@@ -265,7 +265,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50/80 border border-slate-100 rounded-[20px] text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-slate-900 [color-scheme:light]"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50/80 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[20px] text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 dark:text-white [color-scheme:light] dark:[color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -275,16 +275,16 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                 <div className="grid grid-cols-3 gap-2.5">
                   {categories.map((cat) => {
                     const colorMap: Record<string, string> = {
-                      red: 'bg-red-50 text-red-600 hover:bg-red-100/80 border-red-100',
-                      amber: 'bg-amber-50 text-amber-600 hover:bg-amber-100/80 border-amber-100',
-                      blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100/80 border-blue-100',
-                      teal: 'bg-teal-50 text-teal-600 hover:bg-teal-100/80 border-teal-100',
-                      emerald: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100/80 border-emerald-100',
-                      slate: 'bg-slate-50 text-slate-600 hover:bg-slate-100/80 border-slate-100',
-                      indigo: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100/80 border-indigo-100',
-                      rose: 'bg-rose-50 text-rose-600 hover:bg-rose-100/80 border-rose-100',
-                      purple: 'bg-purple-50 text-purple-600 hover:bg-purple-100/80 border-purple-100',
-                      orange: 'bg-orange-50 text-orange-600 hover:bg-orange-100/80 border-orange-100',
+                      red: 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100/80 border-red-100 dark:border-red-900/50',
+                      amber: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100/80 border-amber-100 dark:border-amber-900/50',
+                      blue: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100/80 border-blue-100 dark:border-blue-900/50',
+                      teal: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 hover:bg-teal-100/80 border-teal-100 dark:border-teal-900/50',
+                      emerald: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100/80 border-emerald-100 dark:border-emerald-900/50',
+                      slate: 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100/80 border-slate-100 dark:border-slate-700',
+                      indigo: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/80 border-indigo-100 dark:border-indigo-900/50',
+                      rose: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100/80 border-rose-100 dark:border-rose-900/50',
+                      purple: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100/80 border-purple-100 dark:border-purple-900/50',
+                      orange: 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 hover:bg-orange-100/80 border-orange-100 dark:border-orange-900/50',
                     };
                     const CatIcon = cat.icon;
                     const isSelected = category === cat.name;
@@ -298,7 +298,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                         whileHover={{ scale: 1.02 }}
                         className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition-all duration-300 cursor-pointer ${
                           isSelected
-                            ? "bg-slate-900 border-slate-900 text-white shadow-md scale-105"
+                            ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900 shadow-md scale-105"
                             : colorMap[cat.color] || colorMap.slate
                         }`}
                       >
@@ -311,7 +311,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                     type="button"
                     onClick={() => {}}
                     whileTap={{ scale: 0.95 }}
-                    className="p-3 rounded-2xl border border-dashed border-slate-200 bg-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    className="p-3 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <Icon path={mdiCogOutline} size={1} />
                     <span className="text-[10px] font-bold">Quản lý</span>
@@ -332,8 +332,8 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
                         whileTap={{ scale: 0.95 }}
                         className={`p-3 rounded-2xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           isSelected
-                            ? "bg-slate-900 border-slate-900 text-white shadow-sm"
-                            : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
+                            ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900 shadow-sm"
+                            : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
                         }`}
                       >
                         <Icon path={w.icon} size={0.875} className="shrink-0" />
@@ -347,7 +347,7 @@ export default function EditTransactionModal({ isOpen, transaction, categories: 
               <motion.button
                 type="submit"
                 whileTap={{ scale: 0.96 }}
-                className="w-full bg-slate-900 text-white py-4 rounded-[22px] font-bold text-sm shadow-[0_8px_24px_rgba(15,23,42,0.15)] hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-[22px] font-bold text-sm shadow-[0_8px_24px_rgba(15,23,42,0.15)] hover:bg-slate-800 dark:hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Icon path={mdiCheck} size={1} />
                 <span>Cập Nhật Giao Dịch</span>

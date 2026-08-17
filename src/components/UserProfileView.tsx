@@ -23,6 +23,9 @@ import {
   mdiAutoFix,
   mdiDomain,
   mdiLaptop,
+  mdiPalette,
+  mdiWeatherNight,
+  mdiWeatherSunny,
   mdiLayersOutline,
   mdiChevronDown,
   mdiChevronRight,
@@ -1584,6 +1587,65 @@ export default function UserProfileView({
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* SECTION: Giao diện & Màu sắc chủ đề */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+              <Icon path={mdiPalette} size={0.9} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Giao diện & Màu sắc chủ đề
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Tùy chỉnh màu sắc hiển thị và chế độ sáng/tối
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 pt-1">
+          <div>
+            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
+              Chọn tông màu chủ đạo
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {[
+                { id: "blue", name: "Xanh dương", bg: "bg-blue-500", border: "border-blue-200 dark:border-blue-900", activeBg: "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400" },
+                { id: "green", name: "Xanh lá", bg: "bg-emerald-500", border: "border-emerald-200 dark:border-emerald-900", activeBg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400" },
+                { id: "red", name: "Đỏ cá tính", bg: "bg-rose-500", border: "border-rose-200 dark:border-rose-900", activeBg: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400" },
+                { id: "purple", name: "Tím sang trọng", bg: "bg-purple-500", border: "border-purple-200 dark:border-purple-900", activeBg: "bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400" },
+              ].map((theme) => {
+                const currentTheme = localStorage.getItem("app_accent_theme") || "blue";
+                const isSelected = currentTheme === theme.id;
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem("app_accent_theme", theme.id);
+                      const root = document.documentElement;
+                      root.classList.remove("theme-blue", "theme-green", "theme-red", "theme-purple");
+                      root.classList.add(`theme-${theme.id}`);
+                      window.dispatchEvent(new Event("storage"));
+                    }}
+                    className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? `${theme.activeBg} ${theme.border} font-bold ring-2 ring-offset-1 ring-slate-400 dark:ring-slate-600`
+                        : "bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded-full ${theme.bg} shrink-0 shadow-xs`} />
+                    <span className="text-xs truncate">{theme.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Action Footer */}

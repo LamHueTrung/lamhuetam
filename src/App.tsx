@@ -7,6 +7,7 @@ import {
   mdiWeatherNight,
   mdiWeatherSunny,
   mdiPackageUp,
+  mdiPalette,
 } from "@mdi/js";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import toast from "react-hot-toast";
@@ -94,10 +95,25 @@ function AppContent() {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
+  type AccentTheme = "blue" | "green" | "red" | "purple";
+  const [accentTheme, setAccentTheme] = useState<AccentTheme>(() => {
+    const saved = localStorage.getItem("app_accent_theme");
+    if (saved === "green" || saved === "red" || saved === "purple") return saved;
+    return "blue";
+  });
+  const [showThemePicker, setShowThemePicker] = useState(false);
+
   useEffect(() => {
     localStorage.setItem("dark_mode", String(isDarkMode));
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
+
+  useEffect(() => {
+    localStorage.setItem("app_accent_theme", accentTheme);
+    const root = document.documentElement;
+    root.classList.remove("theme-blue", "theme-green", "theme-red", "theme-purple");
+    root.classList.add(`theme-${accentTheme}`);
+  }, [accentTheme]);
 
   const handleCopyFinancialMarkdown = useCallback(() => {
     const nowStr = new Date().toLocaleString('vi-VN', {
@@ -391,7 +407,7 @@ function AppContent() {
 
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="flex items-center gap-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md hover:bg-slate-200 transition-colors text-[10px] font-black cursor-pointer"
+            className="flex items-center gap-1 text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-black cursor-pointer"
             title={isDarkMode ? "Chế độ sáng" : "Chế độ tối"}
           >
             <Icon
@@ -399,6 +415,41 @@ function AppContent() {
               size={0.75}
             />
           </button>
+
+          {/* Theme Color Picker */}
+          <div className="relative">
+            <button
+              onClick={() => setShowThemePicker(!showThemePicker)}
+              className="flex items-center gap-1 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-black cursor-pointer"
+              title="Màu chủ đề (Blue, Green, Red, Purple)"
+            >
+              <Icon path={mdiPalette} size={0.75} className="text-cyan-500 dark:text-cyan-400" />
+            </button>
+            {showThemePicker && (
+              <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-2.5 shadow-2xl z-50 flex items-center gap-2">
+                {[
+                  { key: "blue", color: "bg-blue-500", name: "Xanh dương" },
+                  { key: "green", color: "bg-emerald-500", name: "Xanh lá" },
+                  { key: "red", color: "bg-rose-500", name: "Đỏ" },
+                  { key: "purple", color: "bg-purple-500", name: "Tím" },
+                ].map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => {
+                      setAccentTheme(t.key as AccentTheme);
+                      setShowThemePicker(false);
+                    }}
+                    className={`w-6 h-6 rounded-full ${t.color} flex items-center justify-center transition-transform cursor-pointer ${
+                      accentTheme === t.key
+                        ? "ring-2 ring-offset-2 ring-slate-800 dark:ring-white scale-110"
+                        : "opacity-80 hover:opacity-100"
+                    }`}
+                    title={t.name}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={logout}
             className="flex items-center gap-1 text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md hover:bg-rose-100 transition-colors text-[10px] font-black cursor-pointer"
