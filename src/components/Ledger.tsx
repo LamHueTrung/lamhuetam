@@ -151,7 +151,24 @@ export default function Ledger({
 
             toast.custom(
               (t) => (
-                <div
+                <motion.div
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.7}
+                  onDragEnd={(_, info) => {
+                    if (Math.abs(info.offset.x) > 40 || Math.abs(info.velocity.x) > 200) {
+                      toast.dismiss(t.id);
+                    }
+                  }}
+                  animate={{
+                    opacity: t.visible ? 1 : 0,
+                    scale: t.visible ? 1 : 0.9,
+                  }}
+                  transition={{ duration: 0.15 }}
+                  style={{
+                    touchAction: "pan-y",
+                    cursor: "grab",
+                  }}
                   onClick={() => {
                     toast.dismiss(t.id);
                     // Đánh dấu tất cả các anomaly hiện tại là đã xem
@@ -162,9 +179,7 @@ export default function Ledger({
                       setDetailTransaction(topTx);
                     }
                   }}
-                  className={`${
-                    t.visible ? "animate-enter" : "animate-leave"
-                  } max-w-sm w-full bg-white dark:bg-slate-800 shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-rose-500/30 p-3.5 items-center gap-3 cursor-pointer active:scale-98 transition-all border border-rose-100 dark:border-rose-900/50`}
+                  className="max-w-sm w-full bg-white dark:bg-slate-800 shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-rose-500/30 p-3.5 items-center gap-3 cursor-pointer active:scale-98 transition-all border border-rose-100 dark:border-rose-900/50 select-none active:cursor-grabbing"
                 >
                   <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-500 flex items-center justify-center shrink-0">
                     <Icon path={mdiShieldAlertOutline} size={0.9} />
@@ -180,7 +195,19 @@ export default function Ledger({
                   <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-lg shrink-0">
                     Xem ngay
                   </span>
-                </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.dismiss(t.id);
+                    }}
+                    className="p-1 -mr-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all shrink-0 cursor-pointer"
+                    title="Đóng thông báo"
+                    aria-label="Đóng thông báo"
+                  >
+                    <Icon path={mdiClose} size={0.65} />
+                  </button>
+                </motion.div>
               ),
               { duration: 6000, id: "anomaly-toast" }
             );
