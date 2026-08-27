@@ -10,6 +10,9 @@ import {
   mdiTrendingUp,
   mdiScale,
   mdiPiggyBank,
+  mdiAutoFix,
+  mdiShieldAlertOutline,
+  mdiChartTimelineVariant,
 } from "@mdi/js";
 import Markdown from "react-markdown";
 import { motion, AnimatePresence } from "motion/react";
@@ -71,20 +74,38 @@ const quickChips: {
     bg: "bg-emerald-50",
   },
   {
-    label: "Tối ưu nợ",
+    label: "Dự báo Runway 30 ngày",
+    icon: mdiChartTimelineVariant,
+    promptType: "custom" as const,
+    customText: "Phân tích số ngày an toàn tài chính (Runway) và dự báo dòng tiền theo mô hình ML trong 30 ngày tới.",
+    color: "text-indigo-500",
+    bg: "bg-indigo-50",
+  },
+  {
+    label: "Giao dịch bất thường",
+    icon: mdiShieldAlertOutline,
+    promptType: "custom" as const,
+    customText: "Rà soát giúp tao xem có giao dịch chi tiêu bất thường hay đột biến chi phí lớn nào cần lưu ý không.",
+    color: "text-rose-500",
+    bg: "bg-rose-50",
+  },
+  {
+    label: "Tối ưu nợ & Tiết kiệm",
     icon: mdiScale,
     promptType: "debt" as const,
     color: "text-amber-500",
     bg: "bg-amber-50",
   },
   {
-    label: "Dự báo dòng tiền",
-    icon: mdiPiggyBank,
-    promptType: "savings" as const,
-    color: "text-blue-500",
-    bg: "bg-blue-50",
+    label: "Kế hoạch thâm hụt",
+    icon: mdiAutoFix,
+    promptType: "custom" as const,
+    customText: "Nếu bị thâm hụt ngân sách tháng này, tao nên cắt giảm những danh mục tùy ý nào trước để cân bằng lại?",
+    color: "text-purple-500",
+    bg: "bg-purple-50",
   },
 ];
+
 
 const WELCOME_TEXT = "Tao nè, ổn không mậy. Hỏi gì hỏi đi, tao chỉ đường cho.";
 
@@ -185,11 +206,30 @@ export default function AICovisor({
           content: m.text.length > 120 ? m.text.slice(0, 117) + "..." : m.text,
         }));
 
+      // Lấy dữ liệu ML từ cache để cung cấp số liệu định lượng chuẩn xác cho AI
+      let mlContext = undefined;
+      try {
+        const mlCache = localStorage.getItem("ml_forecast_cache");
+        if (mlCache) {
+          const parsedMl = JSON.parse(mlCache);
+          if (parsedMl?.runway_analysis) {
+            mlContext = {
+              runway_analysis: parsedMl.runway_analysis,
+            };
+          }
+        }
+      } catch (e) {
+        console.warn("[AICovisor] ML context read error:", e);
+      }
+
+      // Tinh gọn dữ liệu gửi đi (chỉ gửi tối đa 15 giao dịch gần nhất) để tiết kiệm token
+      const trimmedTransactions = (transactions || []).slice(-15);
+
       const response = await fetch("/.netlify/functions/gemini-advisor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          transactions,
+          transactions: trimmedTransactions,
           budgets,
           debts,
           savings,
@@ -202,6 +242,7 @@ export default function AICovisor({
           totalFixed,
           conversationHistory,
           sessionSummary,
+          mlContext,
         }),
       });
 

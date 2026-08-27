@@ -219,3 +219,111 @@ export interface AIConfig {
   testMessage?: string;
 }
 
+// ── NEW: ML Finance Forecasting Layer ──────────────────────
+export interface MLForecastDay {
+  date: string;
+  predicted_daily_expense: number;
+  scheduled_inflow: number;
+  scheduled_debt: number;
+  predicted_balance: number;
+  lower_bound: number;
+  upper_bound: number;
+}
+
+export interface MLRecurringSalary {
+  pay_day_of_month: number;
+  amount: number;
+  category: string;
+  last_received: string;
+}
+
+export interface MLRunwayAnalysis {
+  current_balance: number;
+  daily_burn_rate: number;
+  financial_runway_days: number;
+  is_financially_safe: boolean;
+  min_projected_balance: number;
+  first_deficit_date: string | null;
+  deficit_days_count: number;
+  recurring_salary_detected: MLRecurringSalary | null;
+}
+
+export interface MLForecastResponse {
+  expense_forecast_metrics?: {
+    in_sample_expense_mae: number;
+    test_days: number;
+    backtest_expense_mae: number;
+    backtest_expense_rmse: number;
+  };
+  runway_analysis: MLRunwayAnalysis;
+  obligations_count: number;
+  forecasts: {
+    '7'?: MLForecastDay[];
+    '30'?: MLForecastDay[];
+    [key: string]: MLForecastDay[] | undefined;
+  };
+}
+
+export interface MLAnomalyItem {
+  id: string;
+  date: string;
+  category: string;
+  amount: number;
+  description: string;
+  anomaly_score: number;
+  severity: 'critical' | 'warning';
+}
+
+export interface MLAnomalyResponse {
+  total_expenses: number;
+  anomaly_count: number;
+  anomaly_rate: number;
+  applied_threshold: number;
+  anomalies: MLAnomalyItem[];
+  normal: any[];
+}
+
+export interface MLClusterItem {
+  cluster_id: number;
+  count: number;
+  avg_amount: number;
+  top_categories: string[];
+  avg_day_of_week: number;
+}
+
+export interface MLAssociationRule {
+  antecedents: string[];
+  consequents: string[];
+  support: number;
+  confidence: number;
+  lift: number;
+}
+
+export interface MLPatternResponse {
+  recommended_k: number;
+  clusters: MLClusterItem[];
+  rules: MLAssociationRule[];
+}
+
+export interface MLCutDetail {
+  current_spending: number;
+  suggested_cut: number;
+  target_spending: number;
+}
+
+export interface MLResolutionPlanLevel {
+  level: number;
+  strategy: string;
+  amount_recovered: number;
+  details: Record<string, MLCutDetail> | { original_target?: number; adjusted_target?: number; [k: string]: any };
+}
+
+export interface MLDeficitResponse {
+  original_deficit: number;
+  total_recovered: number;
+  remaining_unresolved: number;
+  is_feasible_now: boolean;
+  resolution_plan: MLResolutionPlanLevel[];
+}
+
+

@@ -580,9 +580,61 @@ async function saveProfile(data: any) {
   return data;
 }
 
+// ── ML Finance Forecasting Layer ─────────────────────────
+
+const mlForecast = (payload: {
+  transactions: any[];
+  debts?: any[];
+  fixed_expenses?: any[];
+  pending_incomes?: any[];
+  plot?: boolean;
+}) =>
+  apiFetch(`${BASE}/ml-forecasting`, {
+    method: 'POST',
+    headers: { 'X-Action': 'forecast' },
+    body: JSON.stringify({ action: 'forecast', payload }),
+  });
+
+const mlAnomalies = (payload: {
+  transactions: any[];
+  contamination?: number;
+  use_dynamic_threshold?: boolean;
+  plot?: boolean;
+}) =>
+  apiFetch(`${BASE}/ml-forecasting`, {
+    method: 'POST',
+    headers: { 'X-Action': 'anomalies' },
+    body: JSON.stringify({ action: 'anomalies', payload }),
+  });
+
+const mlPatterns = (payload: {
+  transactions: any[];
+  n_clusters?: number;
+  min_support?: number;
+  filter_paydays?: boolean;
+  plot?: boolean;
+}) =>
+  apiFetch(`${BASE}/ml-forecasting`, {
+    method: 'POST',
+    headers: { 'X-Action': 'patterns' },
+    body: JSON.stringify({ action: 'patterns', payload }),
+  });
+
+const mlSolveDeficit = (payload: {
+  deficit_amount: number;
+  monthly_discretionary_spending: Record<string, number>;
+  savings_monthly_target?: number;
+}) =>
+  apiFetch(`${BASE}/ml-forecasting`, {
+    method: 'POST',
+    headers: { 'X-Action': 'solve-deficit' },
+    body: JSON.stringify({ action: 'solve-deficit', payload }),
+  });
+
 // ── Gemini / AI ────────────────────────────────────────────
 
-const geminiAdvisor = (data: any) => apiFetch(`${BASE}/gemini-advisor`, { method: 'POST', body: JSON.stringify(data) });
+const geminiAdvisor = (data: any) =>
+  apiFetch(`${BASE}/gemini-advisor`, { method: 'POST', body: JSON.stringify(data) });
 
 // ── Exported API ───────────────────────────────────────────
 
@@ -624,6 +676,13 @@ export const api = {
     advisor: geminiAdvisor,
   },
 
+  ml: {
+    forecast: mlForecast,
+    anomalies: mlAnomalies,
+    patterns: mlPatterns,
+    solveDeficit: mlSolveDeficit,
+  },
+
   salary: {
     get: getSalary,
     save: saveSalary,
@@ -653,3 +712,4 @@ export const api = {
     save: saveProfile,
   },
 };
+

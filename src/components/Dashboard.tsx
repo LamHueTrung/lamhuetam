@@ -10,11 +10,13 @@ import {
   mdiChartTimelineVariant,
   mdiChevronRight,
   mdiShieldAlertOutline,
+  mdiShieldCheckOutline,
   mdiCheckCircleOutline,
   mdiChartLine,
   mdiChartAreaspline,
   mdiChartBar,
   mdiAutoFix,
+  mdiCreation,
   mdiLoading,
   mdiRefresh,
   mdiAccountCircle,
@@ -30,7 +32,9 @@ import {
   Budget,
   SavingsGoal,
   UserProfile,
+  MLForecastResponse,
 } from "../types";
+import { api } from "../api/client";
 import { getLocalDateString } from "../utils/date";
 import {
   LineChart,
@@ -204,11 +208,93 @@ export default function Dashboard({
     0,
   );
 
-  const [trendRange, setTrendRange] = useState<"7d" | "30d" | "12m">("30d");
+  const [trendRange, setTrendRange] = useState<
+    "7d" | "30d" | "12m" | "forecast"
+  >("30d");
   const [showAmounts, setShowAmounts] = useState(false);
   const [spendingTab, setSpendingTab] = useState<"expense" | "income">(
     "expense",
   );
+
+  // ── ML Finance Forecasting Layer with Stale-While-Revalidate Cache ──
+  const [mlForecast, setMlForecast] = useState<MLForecastResponse | null>(() => {
+    try {
+      const cached = localStorage.getItem("ml_forecast_cache");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [mlForecastLoading, setMlForecastLoading] = useState(false);
+
+  // Compute a signature based on transactions & debts count/checksum
+  const txSignature = useMemo(() => {
+    if (!transactions || transactions.length === 0) return "";
+    const count = transactions.length;
+    const debtCount = (debts || []).length;
+    const recentSample = transactions
+      .slice(-5)
+      .map((t) => `${t.id}_${t.amount}_${t.date}`)
+      .join("|");
+    const totalAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+    return `c${count}_d${debtCount}_t${totalAmount}_${recentSample}`;
+  }, [transactions, debts]);
+
+  const fetchMlForecast = useCallback(async () => {
+    if (!transactions || transactions.length === 0) return;
+
+    // 1. Kiểm tra cache trong localStorage
+    const cachedSignature = localStorage.getItem("ml_forecast_tx_sig");
+    const cachedData = localStorage.getItem("ml_forecast_cache");
+
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        setMlForecast(parsed);
+        // Nếu dữ liệu thu chi không thay đổi -> dùng cache, không cần gọi API
+        if (cachedSignature === txSignature) {
+          return;
+        }
+      } catch (e) {
+        console.warn("[Dashboard] Cache parse error:", e);
+      }
+    }
+
+    // 2. Có dữ liệu thu chi mới -> Đã trả cache gần nhất ở trên, tiếp tục gọi API để cập nhật cache mới nhất
+    setMlForecastLoading(true);
+    try {
+      const resp = await api.ml.forecast({
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          date: t.date,
+          type: t.type,
+          amount: t.amount,
+          category: t.category,
+          description: t.description || "",
+        })),
+        debts: debts.map((d) => ({
+          _id: d.id,
+          name: d.name,
+          installments: d.installments,
+        })),
+        plot: false,
+      });
+      if (resp && resp.runway_analysis) {
+        setMlForecast(resp as MLForecastResponse);
+        localStorage.setItem("ml_forecast_cache", JSON.stringify(resp));
+        localStorage.setItem("ml_forecast_tx_sig", txSignature);
+      }
+    } catch (err) {
+      console.warn("[Dashboard] ML forecast fetch error:", err);
+    } finally {
+      setMlForecastLoading(false);
+    }
+  }, [transactions, debts, txSignature]);
+
+  useEffect(() => {
+    fetchMlForecast();
+  }, [fetchMlForecast]);
+
 
   const trendData = useMemo(() => {
     const filtered = transactions.filter((t) => {
@@ -272,12 +358,14 @@ export default function Dashboard({
   }, [transactions, categories]);
 
   const formatChartDate = (val: string) => {
+    if (!val) return "";
     if (trendRange === "12m") {
       const d = new Date(val + "T00:00:00");
-      return d.toLocaleDateString("vi-VN", { month: "short" });
+      return isNaN(d.getTime()) ? val : `T${d.getMonth() + 1}`;
     }
     const d = new Date(val + "T00:00:00");
-    return d.toLocaleDateString("vi-VN", { day: "numeric", month: "short" });
+    if (isNaN(d.getTime())) return val;
+    return `${d.getDate()}/${d.getMonth() + 1}`;
   };
 
   const totalIncomeForecast = transactions
@@ -752,112 +840,245 @@ export default function Dashboard({
         })()}
       </div>
 
-      {/* ── 2. Combined Trend Chart ── */}
-      <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600">
-              <Icon path={mdiChartTimelineVariant} size={0.875} />
+      {/* ── 2. UNIFIED TREND & ML CASHFLOW FORECAST CHART ── */}
+      <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-100 dark:border-slate-700/60 rounded-[28px] p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)] space-y-3">
+        {/* Header Title & Segmented Range */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <Icon path={mdiChartTimelineVariant} size={0.85} />
+              </div>
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                Xu hướng
+              </h3>
             </div>
-            <h3 className="text-sm font-bold text-slate-800 tracking-tight">
-              Xu Hướng Thu Chi
-            </h3>
+            {mlForecast?.runway_analysis && (
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all ${
+                  mlForecast.runway_analysis.is_financially_safe
+                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200/60"
+                    : "bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200/60"
+                }`}
+                title={mlForecast.runway_analysis.is_financially_safe ? "Dòng tiền an toàn" : "Cảnh báo thâm hụt"}
+              >
+                <Icon
+                  path={mlForecast.runway_analysis.is_financially_safe ? mdiShieldCheckOutline : mdiShieldAlertOutline}
+                  size={0.65}
+                />
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-1 bg-slate-50 rounded-full p-0.5">
-            {(["7d", "30d", "12m"] as const).map((r) => (
+
+          {/* Segmented Range Pills */}
+          <div className="flex items-center gap-1 bg-slate-100/70 dark:bg-slate-900/60 rounded-2xl p-1 overflow-x-auto no-scrollbar">
+            {[
+              { key: "7d" as const, label: "7 ngày" },
+              { key: "30d" as const, label: "30 ngày" },
+              { key: "12m" as const, label: "12 tháng" },
+              { key: "forecast" as const, label: "Dự báo", icon: mdiCreation },
+            ].map((r) => (
               <button
-                key={r}
-                onClick={() => setTrendRange(r)}
-                className={`text-[9px] font-bold px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                  trendRange === r
-                    ? "bg-white text-slate-800 shadow-sm"
-                    : "text-slate-400 hover:text-slate-600"
+                key={r.key}
+                onClick={() => setTrendRange(r.key)}
+                className={`flex-1 min-w-[70px] py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  trendRange === r.key
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                 }`}
               >
-                {r === "7d" ? "7 ngày" : r === "30d" ? "30 ngày" : "12 tháng"}
+                {r.icon && <Icon path={r.icon} size={0.5} />}
+                <span>{r.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="h-48">
+        {/* Mini Runway & Burn Rate Badges */}
+        {mlForecast?.runway_analysis && (
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="bg-slate-50/80 dark:bg-slate-900/40 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400">Runway</span>
+              <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
+                {mlForecast.runway_analysis.financial_runway_days} ngày
+              </span>
+            </div>
+            <div className="bg-slate-50/80 dark:bg-slate-900/40 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400">Chi tiêu AI</span>
+              <span className="text-xs font-black text-rose-500">
+                {formatVND(mlForecast.runway_analysis.daily_burn_rate)}/ngày
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Chart View */}
+        <div className="h-52 pt-2 -ml-2 -mr-1">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatChartDate}
-                tick={{ fontSize: 9, fill: "#94a3b8" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 9, fill: "#94a3b8" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v: number) => Math.round(v / 1000) + "k"}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 16,
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-                  fontSize: 11,
-                }}
-                formatter={(value: number, name: string) => [
-                  new Intl.NumberFormat("vi-VN").format(value) + "đ",
-                  name === "income"
-                    ? "Thu nhập"
-                    : name === "expense"
-                      ? "Chi tiêu"
-                      : "Chênh lệch",
-                ]}
-                labelFormatter={(label: string) =>
-                  new Date(label + "T00:00:00").toLocaleDateString("vi-VN", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })
-                }
-              />
-              <defs>
-                <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#059669" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#059669" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#e11d48" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#e11d48" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="income"
-                stroke="#059669"
-                strokeWidth={2}
-                fill="url(#incomeGrad)"
-                dot={false}
-                activeDot={{ r: 4, fill: "#059669" }}
-              />
-              <Area
-                type="monotone"
-                dataKey="expense"
-                stroke="#e11d48"
-                strokeWidth={2}
-                fill="url(#expenseGrad)"
-                dot={false}
-                activeDot={{ r: 4, fill: "#e11d48" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="balance"
-                stroke="#0ea5e9"
-                strokeWidth={1.5}
-                strokeDasharray="4 2"
-                dot={false}
-                name="balance"
-              />
-            </AreaChart>
+            {trendRange === "forecast" ? (
+              <AreaChart data={mlForecast?.forecasts?.["30"] || mlForecast?.forecasts?.["7"] || []}>
+                <defs>
+                  <linearGradient id="fanCorridorGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#818cf8" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#818cf8" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="predictedBalanceGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" opacity={0.6} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatChartDate}
+                  tick={{ fontSize: 9, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  width={34}
+                  tick={{ fontSize: 8.5, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v: number) => {
+                    if (Math.abs(v) >= 1000000) return (v / 1000000).toFixed(1).replace(/\.0$/, "") + "tr";
+                    if (Math.abs(v) >= 1000) return Math.round(v / 1000) + "k";
+                    return String(v);
+                  }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 14,
+                    border: "1px solid #e0e7ff",
+                    boxShadow: "0 8px 20px rgba(99,102,241,0.12)",
+                    fontSize: 10.5,
+                    padding: "6px 10px",
+                  }}
+                  formatter={(value: number, name: string) => [
+                    formatFullVND(value),
+                    name === "predicted_balance"
+                      ? "Số dư dự báo"
+                      : name === "upper_bound"
+                        ? "Biên độ trên"
+                        : name === "lower_bound"
+                          ? "Biên độ dưới"
+                          : "Chi tiêu/ngày",
+                  ]}
+                  labelFormatter={(label: string) => `Ngày ${formatChartDate(label)}`}
+                />
+                {/* Fan corridor envelope */}
+                <Area
+                  type="monotone"
+                  dataKey="upper_bound"
+                  stroke="#818cf8"
+                  strokeDasharray="2 2"
+                  strokeWidth={1}
+                  fill="url(#fanCorridorGrad)"
+                  dot={false}
+                  name="upper_bound"
+                />
+                {/* Predicted Balance main line */}
+                <Area
+                  type="monotone"
+                  dataKey="predicted_balance"
+                  stroke="#4f46e5"
+                  strokeWidth={2.5}
+                  fill="url(#predictedBalanceGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#4f46e5" }}
+                  name="predicted_balance"
+                />
+                {/* Daily expense predicted */}
+                <Line
+                  type="monotone"
+                  dataKey="predicted_daily_expense"
+                  stroke="#f43f5e"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
+                  dot={false}
+                  name="predicted_daily_expense"
+                />
+              </AreaChart>
+            ) : (
+              <AreaChart data={trendData}>
+                <defs>
+                  <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#059669" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#e11d48" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#e11d48" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" opacity={0.6} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatChartDate}
+                  tick={{ fontSize: 9, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  width={34}
+                  tick={{ fontSize: 8.5, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v: number) => {
+                    if (Math.abs(v) >= 1000000) return (v / 1000000).toFixed(1).replace(/\.0$/, "") + "tr";
+                    if (Math.abs(v) >= 1000) return Math.round(v / 1000) + "k";
+                    return String(v);
+                  }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 14,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+                    fontSize: 10.5,
+                    padding: "6px 10px",
+                  }}
+                  formatter={(value: number, name: string) => [
+                    formatFullVND(value),
+                    name === "income"
+                      ? "Thu nhập"
+                      : name === "expense"
+                        ? "Chi tiêu"
+                        : "Số dư",
+                  ]}
+                  labelFormatter={(label: string) => `Ngày ${formatChartDate(label)}`}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="income"
+                  stroke="#059669"
+                  strokeWidth={2}
+                  fill="url(#incomeGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#059669" }}
+                  name="income"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="expense"
+                  stroke="#e11d48"
+                  strokeWidth={2}
+                  fill="url(#expenseGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#e11d48" }}
+                  name="expense"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="balance"
+                  stroke="#0ea5e9"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 2"
+                  dot={false}
+                  name="balance"
+                />
+              </AreaChart>
+            )}
           </ResponsiveContainer>
         </div>
       </div>
@@ -1342,49 +1563,6 @@ export default function Dashboard({
             <span className="text-xs font-semibold">Chưa có đủ dữ liệu giao dịch để so sánh</span>
           </div>
         )}
-      </div>
-
-      {/* AI INSIGHTS CARD */}
-      <div
-        id="ai-insights-card"
-        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/40 dark:border-slate-800/80 rounded-[28px] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.03)]"
-      >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
-              <Icon path={mdiAutoFix} size={0.875} />
-            </div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              Gợi Ý từ AI
-            </h3>
-          </div>
-          <button
-            onClick={() => {
-              setAiLoaded(false);
-              localStorage.removeItem("ai_insight_cache");
-            }}
-            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
-          >
-            <Icon path={mdiRefresh} size={0.75} />
-            Làm mới
-          </button>
-        </div>
-        <div className="min-h-[40px]">
-          {aiLoading ? (
-            <div className="flex items-center gap-2 text-slate-400">
-              <Icon path={mdiLoading} size={1} className="animate-spin" />
-              <span className="text-xs font-medium">AI đang phân tích...</span>
-            </div>
-          ) : aiInsight ? (
-            <div className="markdown-body prose prose-sm max-w-none prose-slate dark:prose-invert text-xs leading-relaxed font-medium">
-              <Markdown>{aiInsight}</Markdown>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 font-medium italic">
-              Chưa có dữ liệu. Thêm giao dịch để AI phân tích.
-            </p>
-          )}
-        </div>
       </div>
     </div>
   );

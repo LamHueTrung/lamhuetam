@@ -2,6 +2,7 @@ node_modules/
 build/
 dist/
 coverage/
+/.agent
 .DS_Store
 *.log
 .env*
@@ -9,3 +10,4 @@ coverage/
 
 # Local Netlify folder
 .netlify
+/.agents

@@ -3,7 +3,7 @@ import { connectDB, AIConfig, ChatMessage, PersonalDNA, AIKnowledge } from "./_d
 import fetch from "node-fetch";
 import { getRecentMessages, summarizeSession } from "./chat-history";
 
-const DEFAULT_BASE_URL = "https://trungsaas-beta.onrender.com/v1";
+const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
 const DEFAULT_MODEL = "gemini-2.0-flash";
 
 // ─── FORMATTERS ─────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ function detectIntent(msg: string): Intent {
 }
 
 // ─── TIERED CONTEXT SELECTION ────────────────────────────────────────────────
-type Tier = "t1" | "t2" | "t3" | "t4" | "t5" | "t6";
+type Tier = "t1" | "t2" | "t3" | "t4" | "t5" | "t6" | "t7";
 
 function detectNeededTiers(msg: string, intent: Intent): Set<Tier> {
   const m = (msg || "").toLowerCase();
@@ -44,6 +44,7 @@ function detectNeededTiers(msg: string, intent: Intent): Set<Tier> {
   if (/lịch sử|giao dịch|chi tiêu|mua gì|ăn uống|top|danh mục/.test(m)) tiers.add("t4");
   if (/lãi suất|tiết kiệm|đầu tư|quy tắc|chiến lược|kiến thức/.test(m)) tiers.add("t5");
   if (intent === "motivation" || intent === "plan" || /hành vi|thói quen|hay bị|thường xuyên/.test(m)) tiers.add("t6");
+  if (/runway|dự báo|bất thường|đột biến|thâm hụt|cắt giảm|mô hình/.test(m) || intent === "plan") tiers.add("t7");
   return tiers;
 }
 
@@ -134,6 +135,20 @@ function buildT6(dna: any): string {
   return parts.join("\n");
 }
 
+function buildT7(mlContext?: any): string {
+  if (!mlContext) return "";
+  const parts: string[] = [];
+  if (mlContext.runway_analysis) {
+    const rw = mlContext.runway_analysis;
+    parts.push(`runway:${rw.financial_runway_days}ngày|burn_rate:${fmt(rw.daily_burn_rate)}/ngày|is_safe:${rw.is_financially_safe ? "YES" : "NO"}`);
+    if (rw.first_deficit_date) parts.push(`first_deficit:${rw.first_deficit_date}`);
+  }
+  if (mlContext.anomalies_count !== undefined) {
+    parts.push(`anomalies_detected:${mlContext.anomalies_count}`);
+  }
+  return parts.length ? `[ML-INSIGHTS]\n${parts.join("\n")}` : "";
+}
+
 // ─── HISTORY COMPRESSION ────────────────────────────────────────────────────
 function compressHistory(history: any[]): { role: string; content: string }[] {
   return (history || []).slice(-6).map((m: any) => ({
@@ -167,7 +182,8 @@ ${contextSections}${knowledgeSection ? "\n\n" + knowledgeSection : ""}${dnaSecti
 
 ## QUY TẮC BẤT BIẾN
 SỐNG>TỒN-TẠI: mọi kế hoạch phải đủ tiền sống tối thiểu thực tế, không đề xuất cắt đến mức không thể sinh hoạt.
-SỐ-LIỆU: chỉ dùng data từ [CORE][NỢ][CỐ-ĐỊNH][TX] ở trên. Nếu thiếu → nói thẳng "app chưa có số này".
+SỐ-LIỆU: chỉ dùng data từ [CORE][NỢ][CỐ-ĐỊNH][TX][ML-INSIGHTS] ở trên. Nếu thiếu → nói thẳng "app chưa có số này".
+ML-LOGIC: nếu có [ML-INSIGHTS], BẮT BUỘC dùng số ngày runway và burn_rate từ ML làm căn cứ, KHÔNG tự nhẩm đoán mò số liệu dự báo.
 NGẮN: tính_toán≤60từ|query≤120từ|tư_vấn≤200từ|kế_hoạch: dòng đầu "TÓM TẮT: [1 câu]", tối đa 4 bullet.
 TRUST: khi user xác nhận quyết định sẽ làm X → tính khả thi, KHÔNG phản đối vô cớ nếu con số hợp lý.
 NỢ-LOGIC: kỳ ✅paid = đã trả xong, KHÔNG nhắc như khoản phải chi. Chỉ nhắc kỳ ❌pending.
@@ -212,6 +228,7 @@ export const handler: Handler = async (event) => {
       fixedCats, fixedTasks, totalFixed,
       conversationHistory = [],
       sessionSummary = "",
+      mlContext,
     } = JSON.parse(event.body || "{}");
 
     // ── Time context ──
@@ -315,6 +332,7 @@ export const handler: Handler = async (event) => {
     if (neededTiers.has("t2")) sections.push(buildT2(activeDebts, thisMonth, now.getMonth() + 1));
     if (neededTiers.has("t3")) sections.push(buildT3(fixedCats, fixedTasks, totalFixed));
     if (neededTiers.has("t4")) sections.push(buildT4(recentTx, thisMonth));
+    if (neededTiers.has("t7") && mlContext) sections.push(buildT7(mlContext));
 
     let knowledgeSection = "";
     if (neededTiers.has("t5")) {

@@ -4,6 +4,7 @@ import { mdiChevronLeft, mdiChevronRight, mdiFire } from "@mdi/js";
 import { motion } from "motion/react";
 import { MOOD_CONFIG } from "./DiaryMoodConfig";
 import { getLocalDateString } from "../utils/date";
+import { DiaryEntry } from "../types";
 
 interface Props {
   entries: DiaryEntry[];

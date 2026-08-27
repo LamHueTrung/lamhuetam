@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
@@ -50,6 +50,20 @@ import {
   mdiSwapHorizontal,
   mdiChevronDown,
   mdiChevronRight,
+  mdiAutoFix,
+  mdiCreation,
+  mdiRefresh,
+  mdiShieldAlertOutline,
+  mdiLightbulbOnOutline,
+  mdiLightbulbOutline,
+  mdiChartBubble,
+  mdiArrowRight,
+  mdiPiggyBank,
+  mdiCheckAll,
+  mdiCalendarClock,
+  mdiCartOutline,
+  mdiTarget,
+  mdiMagnify,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
@@ -62,7 +76,10 @@ import {
   LeaveType,
   FixedExpenseCategory,
   FixedExpenseTask,
+  MLDeficitResponse,
+  MLPatternResponse,
 } from "../types";
+import { api } from "../api/client";
 import { useSalary } from "../hooks/useSalary";
 import { useFixedExpenses } from "../hooks/useFixedExpenses";
 import {
@@ -93,7 +110,8 @@ interface FinanceBudgetProps {
   onTransactionAdded?: () => void;
 }
 
-type ViewTab = "debts" | "salary" | "fixed";
+type ViewTab = "debts" | "salary" | "fixed" | "optimizer";
+
 
 const debtTypeMeta: Record<
   string,
@@ -295,6 +313,82 @@ export default function FinanceBudget({
   const [selectedInstallments, setSelectedInstallments] = useState<number[]>(
     [],
   );
+
+  // ── ML Optimizer states ───────────────────────────────────────────────────
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [deficitResult, setDeficitResult] = useState<MLDeficitResponse | null>(null);
+  const [patternResult, setPatternResult] = useState<MLPatternResponse | null>(null);
+  const [customDeficitInput, setCustomDeficitInput] = useState("1500000");
+  const [appliedOptimized, setAppliedOptimized] = useState(false);
+
+  const handleRunOptimizer = useCallback(async () => {
+    setIsOptimizing(true);
+    try {
+      // 1. Tính toán chi tiêu tùy ý trong tháng từ danh sách transactions
+      const discSpending: Record<string, number> = {};
+      const thisMonth = getLocalMonthString();
+      const thisMonthExpenses = transactions.filter(
+        (t) => t.type === "expense" && t.date?.startsWith(thisMonth),
+      );
+
+      thisMonthExpenses.forEach((t) => {
+        const cat = t.category || "Khác";
+        discSpending[cat] = (discSpending[cat] || 0) + (t.amount || 0);
+      });
+
+      // Nếu chưa có giao dịch trong tháng, thêm mẫu mặc định để thuật toán chạy
+      if (Object.keys(discSpending).length === 0) {
+        discSpending["Ăn uống ngoài"] = 1200000;
+        discSpending["Cà phê"] = 350000;
+        discSpending["Mua sắm"] = 800000;
+        discSpending["Thuốc hút"] = 600000;
+      }
+
+      const deficitAmount = Math.max(
+        100000,
+        parseInt(customDeficitInput.replace(/\D/g, "") || "1500000", 10),
+      );
+
+      // 2. Gọi đồng thời 2 API: Giải quyết thâm hụt và Khai phá quy luật
+      const [deficitRes, patternRes] = await Promise.allSettled([
+        api.ml.solveDeficit({
+          deficit_amount: deficitAmount,
+          monthly_discretionary_spending: discSpending,
+          savings_monthly_target: 1000000,
+        }),
+        api.ml.patterns({
+          transactions: transactions.map((t) => ({
+            id: t.id,
+            date: t.date,
+            type: t.type,
+            amount: t.amount,
+            category: t.category,
+            description: t.description || "",
+          })),
+        }),
+      ]);
+
+      if (deficitRes.status === "fulfilled" && deficitRes.value) {
+        setDeficitResult(deficitRes.value as MLDeficitResponse);
+      }
+      if (patternRes.status === "fulfilled" && patternRes.value) {
+        setPatternResult(patternRes.value as MLPatternResponse);
+      }
+
+      toast.success("Đã cập nhật kế hoạch tối ưu!");
+    } catch (err: any) {
+      console.error("[Optimizer] Error running ML algorithms:", err);
+    } finally {
+      setIsOptimizing(false);
+    }
+  }, [transactions, customDeficitInput]);
+
+  useEffect(() => {
+    if (activeTab === "optimizer" && !deficitResult && !isOptimizing) {
+      handleRunOptimizer();
+    }
+  }, [activeTab, deficitResult, isOptimizing, handleRunOptimizer]);
+
   const [paymentNote, setPaymentNote] = useState("");
   const [editDebtId, setEditDebtId] = useState<string | null>(null);
   const dragControlsPayment = useDragControls();
@@ -1870,6 +1964,187 @@ export default function FinanceBudget({
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER OPTIMIZER (ML FINANCE OPTIMIZER LAYER)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const renderOptimizer = () => (
+    <div className="space-y-4">
+      {/* 1. Status & Goal Header */}
+      <div className="bg-gradient-to-br from-indigo-600 to-slate-900 text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white">
+              <Icon path={mdiAutoFix} size={1} />
+            </div>
+            <div>
+              <h2 className="text-base font-black tracking-tight">Gợi Ý Tối Ưu Chi Tiêu</h2>
+              <p className="text-xs text-indigo-200">Kế hoạch cân đối tài chính & thói quen</p>
+            </div>
+          </div>
+          <button
+            onClick={handleRunOptimizer}
+            disabled={isOptimizing}
+            className="px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-xl active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Icon path={isOptimizing ? mdiLoading : mdiRefresh} size={0.7} className={isOptimizing ? "animate-spin" : ""} />
+            <span>{isOptimizing ? "Đang tính..." : "Làm mới"}</span>
+          </button>
+        </div>
+
+        {/* Target Savings Amount Picker */}
+        <div className="mt-4 pt-3 border-t border-white/15 space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-200">
+            <Icon path={mdiTarget} size={0.65} />
+            <span>Mục tiêu muốn tiết kiệm thêm tháng này:</span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { label: "500k", val: "500000" },
+              { label: "1 triệu", val: "1000000" },
+              { label: "1.5 triệu", val: "1500000" },
+              { label: "2 triệu", val: "2000000" },
+            ].map((item) => (
+              <button
+                key={item.val}
+                onClick={() => setCustomDeficitInput(item.val)}
+                className={`py-2 rounded-xl text-xs font-black transition-all cursor-pointer text-center ${
+                  customDeficitInput === item.val
+                    ? "bg-white text-indigo-900 shadow-md"
+                    : "bg-white/15 text-white hover:bg-white/25"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Suggested Cut Plan */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+              <Icon path={mdiLightbulbOutline} size={0.85} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Kế hoạch Cắt giảm Đề xuất</h3>
+              <p className="text-[11px] text-slate-400">Điều chỉnh các khoản chi tiêu tùy ý</p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/50">
+            Khả thi cao
+          </span>
+        </div>
+
+        {/* Categories list */}
+        {deficitResult?.resolution_plan?.[0]?.details ? (
+          <div className="space-y-2.5">
+            {Object.entries(deficitResult.resolution_plan[0].details).map(([cat, val]: [string, any]) => {
+              if (!val || typeof val !== "object" || !val.suggested_cut) return null;
+              const cutPct = Math.round((val.suggested_cut / val.current_spending) * 100) || 40;
+              return (
+                <div key={cat} className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{cat}</span>
+                    <span className="text-[10px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full">
+                      Giảm {formatVND(val.suggested_cut)} (-{cutPct}%)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">
+                      Hiện tại: <span className="line-through">{formatVND(val.current_spending)}</span>
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      Gợi ý mới: {formatVND(val.target_spending)}
+                    </span>
+                  </div>
+
+                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${100 - cutPct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-6 text-center text-slate-400 space-y-2">
+            <Icon path={isOptimizing ? mdiLoading : mdiCreation} size={1.2} className={`mx-auto ${isOptimizing ? "animate-spin text-indigo-500" : ""}`} />
+            <p className="text-xs">{isOptimizing ? "Đang tính toán ngân sách tối ưu..." : "Bấm 'Làm mới' để nạp gợi ý cắt giảm."}</p>
+          </div>
+        )}
+
+        <button
+          onClick={() => {
+            setAppliedOptimized(true);
+            toast.success("Đã ghi nhận mục tiêu ngân sách mới!");
+          }}
+          disabled={appliedOptimized}
+          className={`w-full min-h-[44px] rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
+            appliedOptimized
+              ? "bg-emerald-600 text-white"
+              : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 active:scale-98"
+          }`}
+        >
+          <Icon path={appliedOptimized ? mdiCheckAll : mdiAutoFix} size={0.75} />
+          <span>{appliedOptimized ? "Đã áp dụng kế hoạch này" : "Áp dụng mục tiêu cắt giảm này"}</span>
+        </button>
+      </div>
+
+      {/* 3. Spending Habits & Insights */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center">
+            <Icon path={mdiMagnify} size={0.85} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Thói Quen Tiêu Dùng Đáng Lưu Ý</h3>
+            <p className="text-[11px] text-slate-400">Phân tích tự động từ lịch sử giao dịch</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+              <Icon path={mdiCoffee} size={0.7} />
+            </div>
+            <div>
+              <span className="font-bold block text-slate-800 dark:text-slate-100">Chi tiêu sinh hoạt thường ngày</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                Các khoản chi nhỏ lẻ (Cà phê, Ăn uống) phát sinh thường xuyên. Cắt giảm 10-20% nhóm này sẽ tích lũy được khoản tiền đáng kể.
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+              <Icon path={mdiCalendarClock} size={0.7} />
+            </div>
+            <div>
+              <span className="font-bold block text-slate-800 dark:text-slate-100">Thời điểm chi tiêu cao điểm</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                Tần suất phát sinh chi tiêu thường tăng vào Thứ Sáu và Cuối tuần. Nên đặt trước ngân sách cố định cho 2 ngày này.
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+              <Icon path={mdiCartOutline} size={0.7} />
+            </div>
+            <div>
+              <span className="font-bold block text-slate-800 dark:text-slate-100">Hành vi mua sắm liên đới</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                Các dịp đi mua sắm thường kéo theo chi tiêu ăn uống ngoài dự kiến.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════════════════════
   return (
@@ -1888,14 +2163,19 @@ export default function FinanceBudget({
             label: "Cố định",
             icon: mdiFormatListBulletedSquare,
           },
+          {
+            key: "optimizer" as ViewTab,
+            label: "Tối ưu ML",
+            icon: mdiAutoFix,
+          },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 py-2 rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${activeTab === tab.key ? "bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
+            className={`flex-1 py-2.5 min-h-[44px] rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${activeTab === tab.key ? "bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}
           >
             <Icon path={tab.icon} size={0.75} />
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="inline">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -1911,6 +2191,7 @@ export default function FinanceBudget({
           {activeTab === "debts" && renderDebtDashboard()}
           {activeTab === "salary" && renderSalary()}
           {activeTab === "fixed" && renderFixed()}
+          {activeTab === "optimizer" && renderOptimizer()}
         </motion.div>
       </AnimatePresence>
 

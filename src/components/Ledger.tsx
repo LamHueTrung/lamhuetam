@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
@@ -18,16 +18,21 @@ import {
   mdiCash,
   mdiWalletOutline,
   mdiClose,
+  mdiAlertCircleOutline,
+  mdiShieldAlertOutline,
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
-import { Transaction, Category } from "../types";
+import { Transaction, Category, MLAnomalyItem } from "../types";
+import { api } from "../api/client";
 import { iconMap } from "../lib/iconMap";
 import EditTransactionModal from "./EditTransactionModal";
 import { getLocalDateString } from "../utils/date";
+import toast from "react-hot-toast";
 
 interface LedgerProps {
   transactions: Transaction[];
   onDeleteTransaction: (id: string) => void;
+
   onUpdateTransaction: (id: string, data: Partial<Transaction>) => void;
   categories: Category[];
   onOpenCategoryManager?: () => void;
@@ -87,6 +92,112 @@ export default function Ledger({
   const [moreActionTx, setMoreActionTx] = useState<Transaction | null>(null);
   const dragControlsAction = useDragControls();
   const dragControlsDetail = useDragControls();
+
+  // ── ML Anomalies State ──
+  const [anomalies, setAnomalies] = useState<MLAnomalyItem[]>([]);
+
+  const anomalyMap = useMemo(() => {
+    const map = new Map<string, MLAnomalyItem>();
+    anomalies.forEach((a) => map.set(a.id, a));
+    return map;
+  }, [anomalies]);
+
+  const markAnomalySeen = useCallback((id: string) => {
+    try {
+      const stored = localStorage.getItem("seen_anomaly_tx_ids");
+      const current: string[] = stored ? JSON.parse(stored) : [];
+      if (!current.includes(id)) {
+        const updated = [...current, id];
+        localStorage.setItem("seen_anomaly_tx_ids", JSON.stringify(updated));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleOpenDetail = useCallback((tx: Transaction) => {
+    if (anomalyMap.has(tx.id)) {
+      markAnomalySeen(tx.id);
+    }
+    setDetailTransaction(tx);
+  }, [anomalyMap, markAnomalySeen]);
+
+  const fetchAnomalies = useCallback(async () => {
+    if (!transactions || transactions.length === 0) return;
+    try {
+      const resp = await api.ml.anomalies({
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          date: t.date,
+          type: t.type,
+          amount: t.amount,
+          category: t.category,
+          description: t.description || "",
+        })),
+        contamination: 0.05,
+      });
+      if (resp && Array.isArray(resp.anomalies)) {
+        setAnomalies(resp.anomalies);
+
+        // Kiểm tra chi tiêu bất thường chưa xem để hiển thị Toast
+        try {
+          const stored = localStorage.getItem("seen_anomaly_tx_ids");
+          const seenIds: string[] = stored ? JSON.parse(stored) : [];
+          const unseen = resp.anomalies.filter((a: MLAnomalyItem) => !seenIds.includes(a.id));
+
+          if (unseen.length > 0) {
+            const topAnomaly = unseen[0];
+            const topTx = transactions.find((t) => t.id === topAnomaly.id);
+
+            toast.custom(
+              (t) => (
+                <div
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    // Đánh dấu tất cả các anomaly hiện tại là đã xem
+                    const updated = Array.from(new Set([...seenIds, ...unseen.map((a: MLAnomalyItem) => a.id)]));
+                    localStorage.setItem("seen_anomaly_tx_ids", JSON.stringify(updated));
+                    if (topTx) {
+                      if (topTx.date) setSelectedDate(topTx.date);
+                      setDetailTransaction(topTx);
+                    }
+                  }}
+                  className={`${
+                    t.visible ? "animate-enter" : "animate-leave"
+                  } max-w-sm w-full bg-white dark:bg-slate-800 shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-rose-500/30 p-3.5 items-center gap-3 cursor-pointer active:scale-98 transition-all border border-rose-100 dark:border-rose-900/50`}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-500 flex items-center justify-center shrink-0">
+                    <Icon path={mdiShieldAlertOutline} size={0.9} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black text-slate-800 dark:text-slate-100">
+                      Phát hiện {unseen.length} chi tiêu bất thường
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {topTx ? `${topTx.description} (${formatCurrency(topTx.amount)})` : "Nhấn để kiểm tra chi tiết"}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-lg shrink-0">
+                    Xem ngay
+                  </span>
+                </div>
+              ),
+              { duration: 6000, id: "anomaly-toast" }
+            );
+          }
+        } catch (err) {
+          console.warn("[Ledger] Anomaly toast error:", err);
+        }
+      }
+    } catch (e) {
+      console.warn("[Ledger] ML Anomaly detection fetch error:", e);
+    }
+  }, [transactions]);
+
+  useEffect(() => {
+    fetchAnomalies();
+  }, [fetchAnomalies]);
+
 
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
   const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
@@ -218,12 +329,15 @@ export default function Ledger({
             const { income, expense } = dayTotals(day);
             const isToday = dateStr === todayStr;
             const isSelected = dateStr === selectedDate;
+            const hasAnomaly = transactions.some(
+              (t) => t.date === dateStr && anomalyMap.has(t.id)
+            );
 
             return (
               <button
                 key={day}
                 onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                className={`aspect-square p-1 rounded-[14px] flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                className={`relative aspect-square p-1 rounded-[14px] flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
                   isSelected
                     ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-[0_4px_12px_rgba(15,23,42,0.15)] scale-105"
                     : isToday
@@ -231,6 +345,13 @@ export default function Ledger({
                       : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                 }`}
               >
+                {/* Dot marker khi có giao dịch bất thường */}
+                {hasAnomaly && (
+                  <span
+                    className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500 ring-1 ring-white dark:ring-slate-800 shadow-xs"
+                    title="Có chi tiêu bất thường"
+                  />
+                )}
                 <span
                   className={`text-[13px] font-bold leading-tight ${
                     isSelected
@@ -475,7 +596,7 @@ export default function Ledger({
                     className="relative overflow-hidden"
                   >
                     <motion.div
-                      onClick={() => setDetailTransaction(transaction)}
+                      onClick={() => handleOpenDetail(transaction)}
                       className={`bg-white dark:bg-slate-800 p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 dark:active:bg-slate-700/60 transition-colors relative z-10 ${idx > 0 ? "border-t border-slate-50 dark:border-slate-700/50" : ""}`}
                     >
                       <div className="flex items-center gap-3.5">
@@ -485,9 +606,24 @@ export default function Ledger({
                           {CatIcon && <CatIcon className="w-5 h-5" />}
                         </div>
                         <div className="space-y-1 min-w-0">
-                          <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                            {transaction.description}
-                          </h4>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                              {transaction.description}
+                            </h4>
+                            {anomalyMap.get(transaction.id) && (
+                              <span
+                                className={`shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+                                  anomalyMap.get(transaction.id)?.severity === "critical"
+                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
+                                    : "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                                }`}
+                              >
+                                {anomalyMap.get(transaction.id)?.severity === "critical"
+                                  ? "Đột biến"
+                                  : "Bất thường"}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                             <span className="flex items-center gap-0.5">
                               <Icon path={mdiWallet} size={0.75} />
@@ -693,6 +829,26 @@ export default function Ledger({
 
                   return (
                     <div className="space-y-4">
+                      {anomalyMap.get(tx.id) && (
+                        <div className={`p-3 rounded-2xl border flex items-start gap-2.5 ${
+                          anomalyMap.get(tx.id)?.severity === "critical"
+                            ? "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
+                            : "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-300"
+                        }`}>
+                          <Icon path={mdiShieldAlertOutline} size={0.9} className="shrink-0 mt-0.5 text-rose-500" />
+                          <div className="text-xs">
+                            <span className="font-bold block">
+                              {anomalyMap.get(tx.id)?.severity === "critical"
+                                ? "Cảnh báo: Giao dịch đột biến chi phí lớn"
+                                : "Phát hiện: Giao dịch có dấu hiệu bất thường"}
+                            </span>
+                            <span className="text-[11px] opacity-80 mt-0.5 block">
+                              Mô hình Isolation Forest phát hiện khoản chi này lệch chuẩn so với thói quen sinh hoạt thường ngày.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="bg-slate-50 rounded-[24px] p-5 text-center">
                         <div
                           className={`w-14 h-14 rounded-full ${colorMap[color] || colorMap.slate} flex items-center justify-center mx-auto mb-3`}
