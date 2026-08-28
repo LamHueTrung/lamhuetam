@@ -631,6 +631,28 @@ const mlSolveDeficit = (payload: {
     body: JSON.stringify({ action: 'solve-deficit', payload }),
   });
 
+const mlOptimizeDebt = (payload: {
+  debts: Array<{
+    id: string;
+    name: string;
+    total_balance: number;
+    annual_rate: number;
+    due_date?: string | null;
+    min_payment?: number | null;
+  }>;
+  daily_cashflows: Array<{
+    date: string;
+    available: number;
+  }>;
+  strategy?: 'avalanche' | 'snowball';
+  min_balance_threshold?: number | null;
+}) =>
+  apiFetch(`${BASE}/ml-forecasting`, {
+    method: 'POST',
+    headers: { 'X-Action': 'optimize-debt' },
+    body: JSON.stringify({ action: 'optimize-debt', payload }),
+  });
+
 // ── Gemini / AI ────────────────────────────────────────────
 
 const geminiAdvisor = (data: any) =>
@@ -681,6 +703,7 @@ export const api = {
     anomalies: mlAnomalies,
     patterns: mlPatterns,
     solveDeficit: mlSolveDeficit,
+    optimizeDebt: mlOptimizeDebt,
   },
 
   salary: {

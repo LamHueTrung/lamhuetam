@@ -326,4 +326,64 @@ export interface MLDeficitResponse {
   resolution_plan: MLResolutionPlanLevel[];
 }
 
+// ── NEW: ML Decision Layer (Debt Optimizer) ─────────────────
+export interface MLDebtInput {
+  id: string;
+  name: string;
+  total_balance: number;
+  annual_rate: number;
+  due_date?: string | null;
+  min_payment?: number | null;
+}
+
+export interface MLDailyCashflowInput {
+  date: string;
+  available: number;
+}
+
+export interface MLOptimizeDebtPayload {
+  debts: MLDebtInput[];
+  daily_cashflows: MLDailyCashflowInput[];
+  strategy?: 'avalanche' | 'snowball';
+  min_balance_threshold?: number | null;
+}
+
+export interface MLPaymentDetail {
+  debt_id: string;
+  debt_name: string;
+  amount: number;
+}
+
+export interface MLDailyScheduleItem {
+  date: string;
+  balance_before_payment: number;
+  payments: MLPaymentDetail[];
+  total_paid_today: number;
+  balance_after_payment: number;
+  is_safe: boolean;
+}
+
+export interface MLDebtSummaryItem {
+  debt_id: string;
+  debt_name: string;
+  original_balance: number;
+  total_paid: number;
+  total_interest_accrued: number;
+  payoff_date: string | null;
+  status: 'paid_off' | 'in_progress';
+}
+
+export interface MLOptimizeDebtResponse {
+  status: string;
+  strategy: 'avalanche' | 'snowball';
+  horizon_days: number;
+  min_balance_threshold_applied: number;
+  total_interest_saved: number;
+  is_fully_repayable: boolean;
+  daily_schedule: MLDailyScheduleItem[];
+  debt_summary: MLDebtSummaryItem[];
+  warnings?: string[];
+}
+
+
 

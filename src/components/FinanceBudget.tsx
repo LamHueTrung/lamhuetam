@@ -82,7 +82,9 @@ import {
   FixedExpenseTask,
   MLDeficitResponse,
   MLPatternResponse,
+  MLOptimizeDebtResponse,
 } from "../types";
+import DebtOptimizerDrawer from "./DebtOptimizerDrawer";
 import { api } from "../api/client";
 import { useSalary } from "../hooks/useSalary";
 import { useFixedExpenses } from "../hooks/useFixedExpenses";
@@ -349,6 +351,15 @@ export default function FinanceBudget({
     "all",
   );
 
+  // ── ML Debt Optimizer (Decision Layer Lớp 3) states (No Cache, On-Demand) ──
+  const [showDebtOptimizer, setShowDebtOptimizer] = useState(false);
+  const [isOptimizingDebt, setIsOptimizingDebt] = useState(false);
+  const [debtOptimizerResult, setDebtOptimizerResult] =
+    useState<MLOptimizeDebtResponse | null>(null);
+  const [debtStrategy, setDebtStrategy] = useState<"avalanche" | "snowball">(
+    "avalanche",
+  );
+
   // ── ML Optimizer states & Cache ───────────────────────────────────────────
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [deficitResult, setDeficitResult] = useState<MLDeficitResponse | null>(
@@ -543,6 +554,126 @@ export default function FinanceBudget({
       }
     },
     [transactions, customDeficitInput, deficitResult, patternResult],
+  );
+
+  // ── On-Demand Debt Optimizer Trigger (Lớp 3 - Không Cache, Không Auto-run) ──
+  const handleRunDebtOptimizer = useCallback(
+    async (strategyToUse: "avalanche" | "snowball" = debtStrategy) => {
+      if (!navigator.onLine) {
+        toast.error("Vui lòng kết nối Internet để sử dụng tính năng tối ưu trả nợ AI.");
+        return;
+      }
+
+      const activeDebts = debts.filter((d) => (d.currentBalance || 0) > 0);
+      if (activeDebts.length === 0) {
+        toast.error("Bạn chưa có khoản nợ nào cần tối ưu.");
+        return;
+      }
+
+      setIsOptimizingDebt(true);
+      setShowDebtOptimizer(true);
+      setDebtStrategy(strategyToUse);
+
+      try {
+        // 1. Thu thập dữ liệu dự báo dòng tiền 30 ngày từ Lớp 2 (nếu có)
+        let dailyCashflows: Array<{ date: string; available: number }> = [];
+
+        try {
+          const forecastResp: any = await api.ml.forecast({
+            transactions: transactions.map((t) => ({
+              id: t.id,
+              date: t.date,
+              type: t.type,
+              amount: t.amount,
+              category: t.category,
+              description: t.description || "",
+            })),
+            debts: activeDebts.map((d) => ({
+              _id: d.id,
+              name: d.name,
+              installments: d.installments,
+            })),
+            plot: false,
+          });
+
+          const forecast30 =
+            forecastResp?.forecasts?.["30"] ||
+            forecastResp?.forecasts?.["7"] ||
+            [];
+          if (forecast30.length > 0) {
+            dailyCashflows = forecast30.map((f: any) => ({
+              date: f.date,
+              available: Math.max(0, f.predicted_balance ?? 0),
+            }));
+          }
+        } catch (err) {
+          console.warn(
+            "[DebtOptimizer] Forecast fetch error, falling back to simulated baseline:",
+            err,
+          );
+        }
+
+        // Fallback tạo chuỗi 30 ngày an toàn dựa trên số dư hiện tại
+        if (dailyCashflows.length < 7) {
+          const today = new Date();
+          const baseBalance = transactions.reduce(
+            (acc, t) => acc + (t.type === "income" ? t.amount : -t.amount),
+            0,
+          );
+          dailyCashflows = Array.from({ length: 30 }, (_, i) => {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            return {
+              date: d.toISOString().split("T")[0],
+              available: Math.max(500000, baseBalance - i * 50000),
+            };
+          });
+        }
+
+        // 2. Chuyển đổi format nợ sang chuẩn input Lớp 3
+        const mappedDebts = activeDebts.map((d) => {
+          const nextUnpaid = d.installments?.find(
+            (i) => i.status === "pending" || i.status === "partial",
+          );
+          return {
+            id: d.id,
+            name: d.name,
+            total_balance: d.currentBalance,
+            annual_rate: d.interestRate
+              ? d.interestRate / 100
+              : d.type === "credit_card"
+                ? 0.3
+                : d.type === "installment"
+                  ? 0.15
+                  : 0.0,
+            due_date: nextUnpaid?.dueDate || null,
+            min_payment: d.monthlyPayment || null,
+          };
+        });
+
+        // 3. Gọi endpoint Decision Layer Lớp 3
+        const optResult: any = await api.ml.optimizeDebt({
+          debts: mappedDebts,
+          daily_cashflows: dailyCashflows,
+          strategy: strategyToUse,
+          min_balance_threshold: null,
+        });
+
+        setDebtOptimizerResult(optResult as MLOptimizeDebtResponse);
+        toast.success(
+          `Đã tối ưu hóa lịch trả nợ (${strategyToUse === "avalanche" ? "Avalanche" : "Snowball"})!`,
+        );
+      } catch (err: any) {
+        console.error("[DebtOptimizer] Error:", err);
+        toast.error(
+          "Không thể tối ưu hóa lịch trả nợ: " +
+            (err.message || "Lỗi kết nối máy chủ"),
+        );
+      } finally {
+        setIsOptimizingDebt(false);
+      }
+    },
+    [debts, transactions, debtStrategy],
   );
 
   useEffect(() => {
@@ -1222,20 +1353,33 @@ export default function FinanceBudget({
           <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
             QUẢN LÝ NỢ
           </span>
-          {/* <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
-            Hồ Sơ Nợ
-          </h1> */}
         </div>
-        <button
-          onClick={() => {
-            resetDebtForm();
-            setShowAddForm(true);
-          }}
-          className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-        >
-          <Icon path={mdiPlus} size={0.875} />
-          <span>Thêm nợ</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleRunDebtOptimizer()}
+            disabled={isOptimizingDebt}
+            className="text-white font-bold text-xs px-3.5 py-2.5 rounded-full hover:opacity-95 transition-all cursor-pointer shadow-sm flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
+            title="Tối ưu hóa phân bổ dòng tiền trả nợ bằng thuật toán AI"
+          >
+            <Icon
+              path={isOptimizingDebt ? mdiLoading : mdiCreation}
+              size={0.75}
+              className={isOptimizingDebt ? "animate-spin" : ""}
+            />
+            <span>{isOptimizingDebt ? "Đang tính..." : "Gợi ý trả nợ AI"}</span>
+          </button>
+          <button
+            onClick={() => {
+              resetDebtForm();
+              setShowAddForm(true);
+            }}
+            className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+          >
+            <Icon path={mdiPlus} size={0.875} />
+            <span>Thêm nợ</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -3943,6 +4087,18 @@ export default function FinanceBudget({
         </AnimatePresence>,
         document.body,
       )}
+
+      {/* Debt Optimizer Slide-Over Drawer (Decision Layer Lớp 3) */}
+      <DebtOptimizerDrawer
+        isOpen={showDebtOptimizer}
+        onClose={() => setShowDebtOptimizer(false)}
+        isLoading={isOptimizingDebt}
+        result={debtOptimizerResult}
+        currentStrategy={debtStrategy}
+        onSelectStrategy={(newStrategy) => {
+          handleRunDebtOptimizer(newStrategy);
+        }}
+      />
     </div>
   );
 }

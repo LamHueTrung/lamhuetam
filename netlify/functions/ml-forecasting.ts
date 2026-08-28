@@ -56,10 +56,13 @@ export const handler: Handler = async (event) => {
     if (action === "anomalies") endpoint = "/anomalies";
     else if (action === "patterns") endpoint = "/patterns";
     else if (action === "solve-deficit" || action === "solve_deficit") endpoint = "/solve-deficit";
+    else if (action === "optimize-debt" || action === "optimize_debt") endpoint = "/optimize-debt";
+
+    const isNoCacheEndpoint = endpoint === "/optimize-debt";
 
     // Cache key based on endpoint and hash of payload
     const cacheKey = `${endpoint}_${JSON.stringify(payload)}`;
-    const cached = cache.get(cacheKey);
+    const cached = isNoCacheEndpoint ? null : cache.get(cacheKey);
     const now = Date.now();
 
     if (cached && now - cached.timestamp < CACHE_TTL_MS) {
@@ -99,8 +102,10 @@ export const handler: Handler = async (event) => {
 
     const data = await mlResponse.json();
 
-    // Cache success responses
-    cache.set(cacheKey, { timestamp: now, data });
+    // Cache success responses (except for no-cache endpoints)
+    if (!isNoCacheEndpoint) {
+      cache.set(cacheKey, { timestamp: now, data });
+    }
 
     return {
       statusCode: 200,
