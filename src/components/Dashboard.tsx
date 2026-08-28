@@ -978,19 +978,32 @@ export default function Dashboard({
                 <Icon path={mdiCreation} size={0.5} />
               </div>
               <div className="flex items-center gap-2 flex-wrap text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                <span className="flex items-center gap-1" title="Thời gian dự trữ duy trì">
-                  <Icon path={mdiCalendarClockOutline} size={0.55} className="text-indigo-500 dark:text-indigo-400" />
+                <span
+                  className="flex items-center gap-1"
+                  title="Thời gian dự trữ duy trì"
+                >
+                  <Icon
+                    path={mdiCalendarClockOutline}
+                    size={0.55}
+                    className="text-indigo-500 dark:text-indigo-400"
+                  />
                   <strong className="font-black text-indigo-600 dark:text-indigo-400">
                     {mlForecast.runway_analysis.financial_runway_days} ngày
                   </strong>
                 </span>
 
-                <span className="text-slate-300 dark:text-slate-700 font-light">•</span>
+                <span className="text-slate-300 dark:text-slate-700 font-light">
+                  •
+                </span>
 
-                <span className="flex items-center gap-1" title="Mức chi tiêu dự báo">
+                <span
+                  className="flex items-center gap-1"
+                  title="Mức chi tiêu dự báo"
+                >
                   <Icon path={mdiFire} size={0.55} className="text-rose-500" />
                   <strong className="font-black text-rose-600 dark:text-rose-400">
-                    ~{formatVND(mlForecast.runway_analysis.daily_burn_rate)}/ngày
+                    ~{formatVND(mlForecast.runway_analysis.daily_burn_rate)}
+                    /ngày
                   </strong>
                 </span>
               </div>
@@ -1142,13 +1155,25 @@ export default function Dashboard({
               <ComposedChart data={trendData} barGap={2}>
                 <defs>
                   {/* Gradient Cột Thu Nhập (Xanh Emerald) */}
-                  <linearGradient id="incomeBarGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="incomeBarGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#10b981" />
                     <stop offset="100%" stopColor="#059669" />
                   </linearGradient>
 
                   {/* Gradient Cột Chi Tiêu (Đỏ Hồng Rose) */}
-                  <linearGradient id="expenseBarGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="expenseBarGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#f43f5e" />
                     <stop offset="100%" stopColor="#e11d48" />
                   </linearGradient>
@@ -1185,15 +1210,28 @@ export default function Dashboard({
                 <Tooltip
                   content={({ active, payload, label }) => {
                     if (!active || !payload || !payload.length) return null;
-                    const incomeVal = Number(payload.find((p) => p.dataKey === "income")?.value) || 0;
-                    const expenseVal = Number(payload.find((p) => p.dataKey === "expense")?.value) || 0;
-                    const balanceVal = Number(payload.find((p) => p.dataKey === "balance")?.value) || 0;
+                    const incomeVal =
+                      Number(
+                        payload.find((p) => p.dataKey === "income")?.value,
+                      ) || 0;
+                    const expenseVal =
+                      Number(
+                        payload.find((p) => p.dataKey === "expense")?.value,
+                      ) || 0;
+                    const balanceVal =
+                      Number(
+                        payload.find((p) => p.dataKey === "balance")?.value,
+                      ) || 0;
                     const netDiff = incomeVal - expenseVal;
 
                     return (
                       <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 shadow-xl text-xs space-y-2 select-none min-w-[185px]">
                         <div className="font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-1.5 flex items-center justify-between">
-                          <span>{label ? `Ngày ${formatChartDate(String(label))}` : "Thời điểm"}</span>
+                          <span>
+                            {label
+                              ? `Ngày ${formatChartDate(String(label))}`
+                              : "Thời điểm"}
+                          </span>
                           <span
                             className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
                               netDiff >= 0
@@ -1263,8 +1301,18 @@ export default function Dashboard({
                   name="Số dư"
                   stroke="#f59e0b"
                   strokeWidth={2.5}
-                  dot={{ r: 2.5, fill: "#f59e0b", stroke: "#ffffff", strokeWidth: 1.5 }}
-                  activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: "#f59e0b" }}
+                  dot={{
+                    r: 2.5,
+                    fill: "#f59e0b",
+                    stroke: "#ffffff",
+                    strokeWidth: 1.5,
+                  }}
+                  activeDot={{
+                    r: 5,
+                    stroke: "#ffffff",
+                    strokeWidth: 2,
+                    fill: "#f59e0b",
+                  }}
                 />
               </ComposedChart>
             )}
@@ -1544,7 +1592,7 @@ export default function Dashboard({
             className={`rounded-xl p-2.5 ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}
           >
             <span className="text-[8px] font-bold text-slate-400 uppercase block">
-              Dự báo
+              Tích lũy
             </span>
             <span
               className={`text-[11px] font-extrabold mt-0.5 block ${projectedIncome - expenseThisMonth - totalPayablesMonthly - totalFixed >= 0 ? "text-emerald-600" : "text-rose-600"}`}
