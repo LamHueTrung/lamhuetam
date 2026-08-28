@@ -207,16 +207,17 @@ export default function AICovisor({
         }));
 
       // Lấy dữ liệu ML từ cache để cung cấp số liệu định lượng chuẩn xác cho AI
-      let mlContext = undefined;
+      let mlContext: any = undefined;
       try {
         const mlCache = localStorage.getItem("ml_forecast_cache");
         if (mlCache) {
           const parsedMl = JSON.parse(mlCache);
-          if (parsedMl?.runway_analysis) {
-            mlContext = {
-              runway_analysis: parsedMl.runway_analysis,
-            };
-          }
+          mlContext = {
+            runway_analysis: parsedMl?.runway_analysis,
+            anomalies_count: Array.isArray(parsedMl?.anomalies)
+              ? parsedMl.anomalies.length
+              : undefined,
+          };
         }
       } catch (e) {
         console.warn("[AICovisor] ML context read error:", e);
