@@ -24,7 +24,15 @@ import {
   mdiMapMarkerOutline,
   mdiEyeOutline,
   mdiEyeOffOutline,
+  mdiViewGridOutline,
+  mdiClose,
+  mdiReceiptTextOutline,
+  mdiLayersOutline,
+  mdiSwapHorizontal,
+  mdiCalendarClockOutline,
+  mdiFire,
 } from "@mdi/js";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Transaction,
   DebtAccount,
@@ -43,6 +51,7 @@ import {
   Area,
   BarChart,
   Bar,
+  ComposedChart,
   PieChart,
   Pie,
   Cell,
@@ -51,11 +60,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
+  LabelList,
 } from "recharts";
 import Markdown from "react-markdown";
 import { calcRemainingBalance, calcPaidPercent } from "../lib/debtUtils";
@@ -217,14 +222,16 @@ export default function Dashboard({
   );
 
   // ── ML Finance Forecasting Layer with Stale-While-Revalidate Cache ──
-  const [mlForecast, setMlForecast] = useState<MLForecastResponse | null>(() => {
-    try {
-      const cached = localStorage.getItem("ml_forecast_cache");
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [mlForecast, setMlForecast] = useState<MLForecastResponse | null>(
+    () => {
+      try {
+        const cached = localStorage.getItem("ml_forecast_cache");
+        return cached ? JSON.parse(cached) : null;
+      } catch {
+        return null;
+      }
+    },
+  );
   const [mlForecastLoading, setMlForecastLoading] = useState(false);
 
   // Compute a signature based on transactions & debts count/checksum
@@ -236,7 +243,10 @@ export default function Dashboard({
       .slice(-5)
       .map((t) => `${t.id}_${t.amount}_${t.date}`)
       .join("|");
-    const totalAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const totalAmount = transactions.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0,
+    );
     return `c${count}_d${debtCount}_t${totalAmount}_${recentSample}`;
   }, [transactions, debts]);
 
@@ -295,7 +305,6 @@ export default function Dashboard({
     fetchMlForecast();
   }, [fetchMlForecast]);
 
-
   const trendData = useMemo(() => {
     const filtered = transactions.filter((t) => {
       const d = new Date(t.date);
@@ -334,21 +343,6 @@ export default function Dashboard({
     });
     return Object.values(map);
   }, [transactions, trendRange]);
-
-  const netWorthData = useMemo(() => {
-    const sorted = [...transactions].sort((a, b) =>
-      a.date.localeCompare(b.date),
-    );
-    let running = 0;
-    const map: Record<string, { date: string; netWorth: number }> = {};
-    sorted.forEach((t) => {
-      const key = t.date;
-      if (!map[key]) map[key] = { date: key, netWorth: running };
-      running += t.type === "income" ? t.amount : -t.amount;
-      map[key].netWorth = running;
-    });
-    return Object.values(map);
-  }, [transactions]);
 
   const topCategories = useMemo(() => {
     return Object.entries(categorySpentMap)
@@ -413,32 +407,44 @@ export default function Dashboard({
         new Date(aNext.dueDate).getTime() - new Date(bNext.dueDate).getTime()
       );
     });
-    
+
   // ── Tính toán dữ liệu so sánh Tháng này vs Tháng trước (MoM Radar) ──
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, "0")}`;
 
   const lastMonthExpenses = transactions.filter(
-    (t) => t.type === "expense" && t.date.startsWith(lastMonthStr)
+    (t) => t.type === "expense" && t.date.startsWith(lastMonthStr),
   );
 
+  // State chọn danh mục trên Treemap để xem Drill-down giao dịch
+  const [selectedHeatmapCategory, setSelectedHeatmapCategory] = useState<
+    string | null
+  >(null);
 
+  const totalExpenseThisMonth = thisMonthExpenses.reduce(
+    (sum, t) => sum + t.amount,
+    0,
+  );
+  const totalExpenseLastMonth = lastMonthExpenses.reduce(
+    (sum, t) => sum + t.amount,
+    0,
+  );
 
-  // State toggle loại dữ liệu hiển thị trên Radar: 'absolute' (k) hoặc 'percentage' (%)
-  const [radarDataType, setRadarDataType] = useState<"absolute" | "percentage">("percentage");
+  // ── Tính toán dữ liệu Bản Đồ Nhiệt Cấu Trúc MoM (Treemap Heatmap) ──
+  const momHeatmapData = useMemo(() => {
+    if (thisMonthExpenses.length === 0 && lastMonthExpenses.length === 0)
+      return [];
 
-  const totalExpenseThisMonth = thisMonthExpenses.reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenseLastMonth = lastMonthExpenses.reduce((sum, t) => sum + t.amount, 0);
-
-  const momRadarData = useMemo(() => {
     const categoriesSet = new Set<string>();
     const thisMonthMap: Record<string, number> = {};
     const lastMonthMap: Record<string, number> = {};
+    const txCountMap: Record<string, number> = {};
 
     thisMonthExpenses.forEach((t) => {
       const cat = t.category?.trim() || "Khác";
       categoriesSet.add(cat);
       thisMonthMap[cat] = (thisMonthMap[cat] || 0) + t.amount;
+      txCountMap[cat] = (txCountMap[cat] || 0) + 1;
     });
 
     lastMonthExpenses.forEach((t) => {
@@ -448,43 +454,126 @@ export default function Dashboard({
     });
 
     const list = Array.from(categoriesSet).map((cat) => {
-      const thisMonthVal = thisMonthMap[cat] || 0;
-      const lastMonthVal = lastMonthMap[cat] || 0;
-
-      if (radarDataType === "percentage") {
-        const thisMonthPct = totalExpenseThisMonth > 0 ? Math.round((thisMonthVal / totalExpenseThisMonth) * 100) : 0;
-        const lastMonthPct = totalExpenseLastMonth > 0 ? Math.round((lastMonthVal / totalExpenseLastMonth) * 100) : 0;
-        return {
-          category: cat,
-          "Tháng trước": lastMonthPct,
-          "Tháng này": thisMonthPct,
-          rawThisMonth: thisMonthVal,
-          rawLastMonth: lastMonthVal,
-        };
-      } else {
-        return {
-          category: cat,
-          "Tháng trước": Math.round(lastMonthVal / 1000), // đơn vị 'k'
-          "Tháng này": Math.round(thisMonthVal / 1000), // đơn vị 'k'
-          rawThisMonth: thisMonthVal,
-          rawLastMonth: lastMonthVal,
-        };
+      const thisVal = thisMonthMap[cat] || 0;
+      const lastVal = lastMonthMap[cat] || 0;
+      const diff = thisVal - lastVal;
+      let percentChange = 0;
+      if (lastVal > 0) {
+        percentChange = Math.round((diff / lastVal) * 100);
+      } else if (thisVal > 0) {
+        percentChange = 100;
       }
+
+      const sharePercent =
+        totalExpenseThisMonth > 0
+          ? Math.round((thisVal / totalExpenseThisMonth) * 100)
+          : 0;
+      const lastMonthSharePercent =
+        totalExpenseLastMonth > 0
+          ? Math.round((lastVal / totalExpenseLastMonth) * 100)
+          : 0;
+
+      // Phân cấp 5 dải màu Gradient nhiệt độ
+      let status: "surge" | "increase" | "stable" | "decrease" | "heavy_drop" =
+        "stable";
+      let gradient = "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)";
+      let glowColor = "rgba(99, 102, 241, 0.4)";
+      let badgeBg = "bg-white/20 text-white";
+      let badgeLabel = "Ổn định";
+
+      if (percentChange > 20) {
+        status = "surge";
+        gradient = "linear-gradient(135deg, #fb7185 0%, #e11d48 100%)"; // Rose -> Ruby Red
+        glowColor = "rgba(225, 29, 72, 0.45)";
+        badgeBg = "bg-rose-950/60 text-rose-100 border border-rose-300/40";
+        badgeLabel = `+${percentChange}% (Tăng mạnh)`;
+      } else if (percentChange >= 5) {
+        status = "increase";
+        gradient = "linear-gradient(135deg, #fb923c 0%, #ea580c 100%)"; // Coral -> Deep Orange
+        glowColor = "rgba(234, 88, 12, 0.45)";
+        badgeBg = "bg-orange-950/60 text-amber-100 border border-amber-300/40";
+        badgeLabel = `+${percentChange}% (Tăng nhẹ)`;
+      } else if (percentChange <= -20) {
+        status = "heavy_drop";
+        gradient = "linear-gradient(135deg, #34d399 0%, #059669 100%)"; // Emerald -> Forest
+        glowColor = "rgba(5, 150, 105, 0.45)";
+        badgeBg =
+          "bg-emerald-950/60 text-emerald-100 border border-emerald-300/40";
+        badgeLabel = `${percentChange}% (Giảm mạnh)`;
+      } else if (percentChange <= -5) {
+        status = "decrease";
+        gradient = "linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%)"; // Teal -> Dark Cyan
+        glowColor = "rgba(13, 148, 136, 0.45)";
+        badgeBg = "bg-teal-950/60 text-teal-100 border border-teal-300/40";
+        badgeLabel = `${percentChange}% (Tiết kiệm)`;
+      } else {
+        status = "stable";
+        gradient = "linear-gradient(135deg, #818cf8 0%, #4f46e5 100%)"; // Indigo -> Deep Violet
+        glowColor = "rgba(79, 70, 229, 0.45)";
+        badgeBg =
+          "bg-indigo-950/60 text-indigo-100 border border-indigo-300/40";
+        badgeLabel = `${percentChange >= 0 ? "+" : ""}${percentChange}% (Ổn định)`;
+      }
+
+      return {
+        category: cat,
+        thisMonthAmount: thisVal,
+        lastMonthAmount: lastVal,
+        diff,
+        percentChange,
+        sharePercent,
+        lastMonthSharePercent,
+        txCount: txCountMap[cat] || 0,
+        status,
+        gradient,
+        glowColor,
+        badgeBg,
+        badgeLabel,
+      };
     });
 
-    // Sắp xếp theo tổng độ lớn chi tiêu của 2 tháng
+    // Sắp xếp theo độ lớn chi tiêu tháng này giảm dần
     return list
-      .sort((a, b) => {
-        const aVal = (a.rawThisMonth || 0) + (a.rawLastMonth || 0);
-        const bVal = (b.rawThisMonth || 0) + (b.rawLastMonth || 0);
-        return bVal - aVal;
-      })
-      .slice(0, 6); // Lấy tối đa 6 danh mục lớn nhất để biểu đồ gọn gàng
-  }, [thisMonthExpenses, lastMonthExpenses, radarDataType, totalExpenseThisMonth, totalExpenseLastMonth]);
+      .filter((item) => item.thisMonthAmount > 0 || item.lastMonthAmount > 0)
+      .sort((a, b) => b.thisMonthAmount - a.thisMonthAmount);
+  }, [
+    thisMonthExpenses,
+    lastMonthExpenses,
+    totalExpenseThisMonth,
+    totalExpenseLastMonth,
+  ]);
+
+  // Chuẩn hóa dữ liệu cho Recharts Horizontal BarChart
+  const momChartData = useMemo(() => {
+    return momHeatmapData.map((item) => ({
+      category: item.category,
+      "Tháng này": item.thisMonthAmount,
+      "Tháng trước": item.lastMonthAmount,
+      thisMonthLabel:
+        item.thisMonthAmount > 0
+          ? `${formatVND(item.thisMonthAmount)} (${item.sharePercent}%)`
+          : "",
+      lastMonthLabel:
+        item.lastMonthAmount > 0
+          ? `${formatVND(item.lastMonthAmount)} (${item.lastMonthSharePercent}%)`
+          : "",
+      percentChange: item.percentChange,
+      diff: item.diff,
+      sharePercent: item.sharePercent,
+      lastMonthSharePercent: item.lastMonthSharePercent,
+      gradient: item.gradient,
+      badgeBg: item.badgeBg,
+    }));
+  }, [momHeatmapData]);
 
   // Tính toán các danh mục biến động mạnh nhất phục vụ Smart Micro-insights
   const categoryChanges = useMemo(() => {
-    const changes: Array<{ category: string; diff: number; percent: number; type: "increase" | "decrease" }> = [];
+    const changes: Array<{
+      category: string;
+      diff: number;
+      percent: number;
+      type: "increase" | "decrease";
+    }> = [];
     const categoriesSet = new Set<string>();
     const thisMonthMap: Record<string, number> = {};
     const lastMonthMap: Record<string, number> = {};
@@ -535,9 +624,13 @@ export default function Dashboard({
     return { topIncrease, topDecrease };
   }, [thisMonthExpenses, lastMonthExpenses]);
 
-  const expenseChangePercent = totalExpenseLastMonth > 0 
-    ? Math.round(((expenseThisMonth - totalExpenseLastMonth) / totalExpenseLastMonth) * 100)
-    : 0;
+  const expenseChangePercent =
+    totalExpenseLastMonth > 0
+      ? Math.round(
+          ((expenseThisMonth - totalExpenseLastMonth) / totalExpenseLastMonth) *
+            100,
+        )
+      : 0;
 
   // AI Insights
   const [aiInsight, setAiInsight] = useState<string | null>(null);
@@ -679,40 +772,15 @@ export default function Dashboard({
           </h2>
         </div>
 
-        {/* Mini net worth sparkline */}
-        {netWorthData.length > 1 && (
-          <div className="h-10 mt-2 -mx-1">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={netWorthData}>
-                <defs>
-                  <linearGradient id="nwMiniGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  type="monotone"
-                  dataKey="netWorth"
-                  stroke="#0ea5e9"
-                  strokeWidth={1.5}
-                  fill="url(#nwMiniGrad)"
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
         {/* Net Debt Badge */}
         {netDebt > 0 && (
-          <div className="mt-2 px-2.5 py-1 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-1.5">
+          <div className="mt-2.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/60 rounded-xl flex items-center gap-1.5">
             <Icon
               path={mdiShieldAlertOutline}
-              size={0.6}
+              size={0.65}
               className="text-amber-500 shrink-0"
             />
-            <span className="text-[9px] font-bold text-amber-700">
+            <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">
               Dư nợ ròng: {formatVND(netDebt)}
             </span>
           </div>
@@ -860,10 +928,18 @@ export default function Dashboard({
                     ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200/60"
                     : "bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200/60"
                 }`}
-                title={mlForecast.runway_analysis.is_financially_safe ? "Dòng tiền an toàn" : "Cảnh báo thâm hụt"}
+                title={
+                  mlForecast.runway_analysis.is_financially_safe
+                    ? "Dòng tiền an toàn"
+                    : "Cảnh báo thâm hụt"
+                }
               >
                 <Icon
-                  path={mlForecast.runway_analysis.is_financially_safe ? mdiShieldCheckOutline : mdiShieldAlertOutline}
+                  path={
+                    mlForecast.runway_analysis.is_financially_safe
+                      ? mdiShieldCheckOutline
+                      : mdiShieldAlertOutline
+                  }
                   size={0.65}
                 />
               </div>
@@ -894,20 +970,52 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* Mini Runway & Burn Rate Badges */}
+        {/* Smart AI Forecast Ribbon (Icon-driven, no tickers) */}
         {mlForecast?.runway_analysis && (
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <div className="bg-slate-50/80 dark:bg-slate-900/40 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400">Runway</span>
-              <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
-                {mlForecast.runway_analysis.financial_runway_days} ngày
-              </span>
+          <div className="bg-gradient-to-r from-indigo-50/70 via-slate-50/60 to-purple-50/70 dark:from-indigo-950/40 dark:via-slate-900/40 dark:to-purple-950/40 border border-indigo-100/60 dark:border-indigo-900/40 rounded-2xl px-3 py-1.5 flex items-center justify-between gap-2 shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center shadow-2xs shrink-0">
+                <Icon path={mdiCreation} size={0.5} />
+              </div>
+              <div className="flex items-center gap-2 flex-wrap text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                <span className="flex items-center gap-1" title="Thời gian dự trữ duy trì">
+                  <Icon path={mdiCalendarClockOutline} size={0.55} className="text-indigo-500 dark:text-indigo-400" />
+                  <strong className="font-black text-indigo-600 dark:text-indigo-400">
+                    {mlForecast.runway_analysis.financial_runway_days} ngày
+                  </strong>
+                </span>
+
+                <span className="text-slate-300 dark:text-slate-700 font-light">•</span>
+
+                <span className="flex items-center gap-1" title="Mức chi tiêu dự báo">
+                  <Icon path={mdiFire} size={0.55} className="text-rose-500" />
+                  <strong className="font-black text-rose-600 dark:text-rose-400">
+                    ~{formatVND(mlForecast.runway_analysis.daily_burn_rate)}/ngày
+                  </strong>
+                </span>
+              </div>
             </div>
-            <div className="bg-slate-50/80 dark:bg-slate-900/40 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400">Chi tiêu AI</span>
-              <span className="text-xs font-black text-rose-500">
-                {formatVND(mlForecast.runway_analysis.daily_burn_rate)}/ngày
-              </span>
+
+            <div
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 border ${
+                mlForecast.runway_analysis.is_financially_safe
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+              }`}
+              title={
+                mlForecast.runway_analysis.is_financially_safe
+                  ? "Dòng tiền an toàn"
+                  : "Cảnh báo thâm hụt"
+              }
+            >
+              <Icon
+                path={
+                  mlForecast.runway_analysis.is_financially_safe
+                    ? mdiShieldCheckOutline
+                    : mdiShieldAlertOutline
+                }
+                size={0.55}
+              />
             </div>
           </div>
         )}
@@ -916,18 +1024,44 @@ export default function Dashboard({
         <div className="h-52 pt-2 -ml-2 -mr-1">
           <ResponsiveContainer width="100%" height="100%">
             {trendRange === "forecast" ? (
-              <AreaChart data={mlForecast?.forecasts?.["30"] || mlForecast?.forecasts?.["7"] || []}>
+              <AreaChart
+                data={
+                  mlForecast?.forecasts?.["30"] ||
+                  mlForecast?.forecasts?.["7"] ||
+                  []
+                }
+              >
                 <defs>
-                  <linearGradient id="fanCorridorGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="fanCorridorGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#818cf8" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#818cf8" stopOpacity={0.05} />
+                    <stop
+                      offset="100%"
+                      stopColor="#818cf8"
+                      stopOpacity={0.05}
+                    />
                   </linearGradient>
-                  <linearGradient id="predictedBalanceGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="predictedBalanceGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" opacity={0.6} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f1f5f9"
+                  opacity={0.6}
+                />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatChartDate}
@@ -941,7 +1075,10 @@ export default function Dashboard({
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) => {
-                    if (Math.abs(v) >= 1000000) return (v / 1000000).toFixed(1).replace(/\.0$/, "") + "tr";
+                    if (Math.abs(v) >= 1000000)
+                      return (
+                        (v / 1000000).toFixed(1).replace(/\.0$/, "") + "tr"
+                      );
                     if (Math.abs(v) >= 1000) return Math.round(v / 1000) + "k";
                     return String(v);
                   }}
@@ -964,7 +1101,9 @@ export default function Dashboard({
                           ? "Biên độ dưới"
                           : "Chi tiêu/ngày",
                   ]}
-                  labelFormatter={(label: string) => `Ngày ${formatChartDate(label)}`}
+                  labelFormatter={(label: string) =>
+                    `Ngày ${formatChartDate(label)}`
+                  }
                 />
                 {/* Fan corridor envelope */}
                 <Area
@@ -1000,18 +1139,27 @@ export default function Dashboard({
                 />
               </AreaChart>
             ) : (
-              <AreaChart data={trendData}>
+              <ComposedChart data={trendData} barGap={2}>
                 <defs>
-                  <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#059669" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                  {/* Gradient Cột Thu Nhập (Xanh Emerald) */}
+                  <linearGradient id="incomeBarGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" />
+                    <stop offset="100%" stopColor="#059669" />
                   </linearGradient>
-                  <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#e11d48" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#e11d48" stopOpacity={0} />
+
+                  {/* Gradient Cột Chi Tiêu (Đỏ Hồng Rose) */}
+                  <linearGradient id="expenseBarGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f43f5e" />
+                    <stop offset="100%" stopColor="#e11d48" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" opacity={0.6} />
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
+                  className="text-slate-200/60 dark:text-slate-700/40"
+                />
+
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatChartDate}
@@ -1020,64 +1168,105 @@ export default function Dashboard({
                   tickLine={false}
                 />
                 <YAxis
-                  width={34}
+                  width={36}
                   tick={{ fontSize: 8.5, fill: "#94a3b8" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) => {
-                    if (Math.abs(v) >= 1000000) return (v / 1000000).toFixed(1).replace(/\.0$/, "") + "tr";
+                    if (Math.abs(v) >= 1000000)
+                      return (
+                        (v / 1000000).toFixed(1).replace(/\.0$/, "") + "tr"
+                      );
                     if (Math.abs(v) >= 1000) return Math.round(v / 1000) + "k";
                     return String(v);
                   }}
                 />
+
                 <Tooltip
-                  contentStyle={{
-                    borderRadius: 14,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
-                    fontSize: 10.5,
-                    padding: "6px 10px",
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const incomeVal = Number(payload.find((p) => p.dataKey === "income")?.value) || 0;
+                    const expenseVal = Number(payload.find((p) => p.dataKey === "expense")?.value) || 0;
+                    const balanceVal = Number(payload.find((p) => p.dataKey === "balance")?.value) || 0;
+                    const netDiff = incomeVal - expenseVal;
+
+                    return (
+                      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 shadow-xl text-xs space-y-2 select-none min-w-[185px]">
+                        <div className="font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-1.5 flex items-center justify-between">
+                          <span>{label ? `Ngày ${formatChartDate(String(label))}` : "Thời điểm"}</span>
+                          <span
+                            className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                              netDiff >= 0
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                            }`}
+                          >
+                            {netDiff >= 0 ? "Thặng dư" : "Bội chi"}
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 text-[11px]">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
+                              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500" />
+                              Thu nhập:
+                            </span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                              {formatFullVND(incomeVal)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
+                              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500" />
+                              Chi tiêu:
+                            </span>
+                            <span className="font-bold text-rose-600 dark:text-rose-400">
+                              {formatFullVND(expenseVal)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                            <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-semibold text-[10.5px]">
+                              <span className="w-2 h-0.5 bg-amber-500 rounded-full" />
+                              Số dư tích lũy:
+                            </span>
+                            <span className="font-black text-slate-800 dark:text-slate-100">
+                              {formatFullVND(balanceVal)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
                   }}
-                  formatter={(value: number, name: string) => [
-                    formatFullVND(value),
-                    name === "income"
-                      ? "Thu nhập"
-                      : name === "expense"
-                        ? "Chi tiêu"
-                        : "Số dư",
-                  ]}
-                  labelFormatter={(label: string) => `Ngày ${formatChartDate(label)}`}
                 />
-                <Area
-                  type="monotone"
+
+                {/* Cột Thu Nhập */}
+                <Bar
                   dataKey="income"
-                  stroke="#059669"
-                  strokeWidth={2}
-                  fill="url(#incomeGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#059669" }}
-                  name="income"
+                  name="Thu nhập"
+                  fill="url(#incomeBarGrad)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={18}
                 />
-                <Area
-                  type="monotone"
+
+                {/* Cột Chi Tiêu */}
+                <Bar
                   dataKey="expense"
-                  stroke="#e11d48"
-                  strokeWidth={2}
-                  fill="url(#expenseGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#e11d48" }}
-                  name="expense"
+                  name="Chi tiêu"
+                  fill="url(#expenseBarGrad)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={18}
                 />
+
+                {/* Đường Số Dư Tích Lũy */}
                 <Line
                   type="monotone"
                   dataKey="balance"
-                  stroke="#0ea5e9"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                  dot={false}
-                  name="balance"
+                  name="Số dư"
+                  stroke="#f59e0b"
+                  strokeWidth={2.5}
+                  dot={{ r: 2.5, fill: "#f59e0b", stroke: "#ffffff", strokeWidth: 1.5 }}
+                  activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: "#f59e0b" }}
                 />
-              </AreaChart>
+              </ComposedChart>
             )}
           </ResponsiveContainer>
         </div>
@@ -1387,183 +1576,485 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* SO SÁNH CHI TIÊU THÁNG NÀY VS THÁNG TRƯỚC (RADAR CHART) */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/40 dark:border-slate-800/80 rounded-[28px] p-6 shadow-[0_12px_36px_rgba(0,0,0,0.03)] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
-              <Icon
-                path={mdiChartTimelineVariant}
-                size={0.875}
-                className="text-indigo-500"
-              />
-              Cấu Trúc Chi Tiêu MoM
-            </h3>
-            <p className="text-[10px] text-slate-400 font-medium">
-              So sánh cơ cấu chi tiêu với tháng trước ({radarDataType === "percentage" ? "tỷ lệ phần trăm %" : "đơn vị: nghìn đồng"})
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* Toggle hiển thị % / Số tiền tuyệt đối */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-              <button
-                onClick={() => setRadarDataType("percentage")}
-                className={`text-[9px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  radarDataType === "percentage"
-                    ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                Tỷ lệ %
-              </button>
-              <button
-                onClick={() => setRadarDataType("absolute")}
-                className={`text-[9px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  radarDataType === "absolute"
-                    ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                Số tiền (k)
-              </button>
+      {/* ── 3. BẢN ĐỒ SO SÁNH CẤU TRÚC CHI TIÊU MoM (UI/UX PRO MAX REDESIGN) ── */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800 rounded-[32px] p-5 sm:p-6 shadow-[0_16px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.3)] space-y-5 transition-all">
+        {/* Header Block */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+              <Icon path={mdiChartBar} size={0.9} />
             </div>
+            <div className="space-y-0.5">
+              <h3 className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                Cấu Trúc Chi Tiêu MoM
+              </h3>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                So sánh cơ cấu danh mục giữa Tháng này vs Tháng trước
+              </p>
+            </div>
+          </div>
 
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 ${expenseChangePercent <= 0 ? "bg-emerald-500 text-white shadow-sm" : "bg-rose-500 text-white shadow-sm"}`}>
-                {expenseChangePercent <= 0 ? "Giảm" : "Tăng"} {Math.abs(expenseChangePercent)}%
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span
+              className={`text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xs border ${
+                expenseChangePercent <= 0
+                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60"
+                  : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/60"
+              }`}
+            >
+              <Icon
+                path={
+                  expenseChangePercent <= 0 ? mdiTrendingDown : mdiTrendingUp
+                }
+                size={0.65}
+              />
+              {expenseChangePercent <= 0 ? "Tiết kiệm" : "Tăng"}{" "}
+              {Math.abs(expenseChangePercent)}% MoM
+            </span>
+          </div>
+        </div>
+
+        {/* Dual KPI Metric Highlights */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Tháng này Card */}
+          <div className="bg-gradient-to-br from-indigo-50/80 via-purple-50/40 to-white dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-slate-900/60 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl p-3.5 shadow-xs flex flex-col justify-between gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-xs" />
+                Tháng này
               </span>
+              <span className="text-[10px] font-semibold text-indigo-500 dark:text-indigo-400 px-2 py-0.5 bg-indigo-100/60 dark:bg-indigo-900/50 rounded-full">
+                {thisMonthExpenses.length} giao dịch
+              </span>
+            </div>
+            <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              {formatFullVND(expenseThisMonth)}
+            </div>
+          </div>
+
+          {/* Tháng trước Card */}
+          <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/50 rounded-2xl p-3.5 shadow-xs flex flex-col justify-between gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-500 shadow-xs" />
+                Tháng trước
+              </span>
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 px-2 py-0.5 bg-slate-200/60 dark:bg-slate-700/50 rounded-full">
+                {lastMonthExpenses.length} giao dịch
+              </span>
+            </div>
+            <div className="text-lg sm:text-xl font-bold text-slate-700 dark:text-slate-300 tracking-tight">
+              {formatFullVND(totalExpenseLastMonth)}
             </div>
           </div>
         </div>
 
-        {momRadarData.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
-            {/* Chart Area */}
-            <div className="md:col-span-3 h-56 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="48%" outerRadius="68%" data={momRadarData}>
-                  <PolarGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-                  <PolarAngleAxis
-                    dataKey="category"
-                    tick={{ fill: "#64748b", fontSize: 8.5, fontWeight: 600 }}
-                  />
-                  <PolarRadiusAxis
-                    angle={30}
-                    domain={[0, "auto"]}
-                    tick={{ fill: "#94a3b8", fontSize: 7.5 }}
-                  />
-                  <Radar
-                    name="Tháng trước"
-                    dataKey="Tháng trước"
-                    stroke="#94a3b8"
-                    fill="#cbd5e1"
-                    fillOpacity={0.15}
-                  />
-                  <Radar
-                    name="Tháng này"
-                    dataKey="Tháng này"
-                    stroke="#8b5cf6"
-                    fill="#c084fc"
-                    fillOpacity={0.3}
-                  />
-                  <Tooltip
-                    formatter={(value) => [`${value}${radarDataType === "percentage" ? "%" : "k"}`, ""]}
-                    contentStyle={{
-                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                      borderRadius: "16px",
-                      border: "1px solid rgba(255, 255, 255, 0.6)",
-                      backdropFilter: "blur(12px)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
-                      fontSize: "10.5px",
-                      fontWeight: 600,
-                      color: "#1e293b",
-                    }}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-              
-              {/* Custom Legend inside chart container */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-4 text-[10px] font-bold text-slate-500">
-                <div className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-slate-300 border border-slate-400" />
-                  Tháng trước
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-violet-400 border border-violet-500" />
-                  Tháng này
-                </div>
+        {/* ── RECHARTS BAR CHART (LAYOUT="VERTICAL") ── */}
+        {momChartData.length > 0 ? (
+          <div className="space-y-4">
+            <div className="bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl p-2.5 sm:p-4 border border-slate-100 dark:border-slate-800 relative">
+              <div className="flex items-center justify-between text-[10px] text-slate-400 px-2 pb-2 font-medium">
+                <span>Danh mục</span>
+                <span className="italic">
+                  💡 Chạm cột để xem chi tiết giao dịch
+                </span>
+              </div>
+              <div
+                style={{
+                  height: `${Math.max(260, momChartData.length * 48)}px`,
+                }}
+                className="w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    layout="vertical"
+                    data={momChartData}
+                    margin={{ top: 8, right: 90, left: -10, bottom: 0 }}
+                    barGap={4}
+                    barSize={12}
+                  >
+                    <defs>
+                      {/* Gradient cao cấp cho Tháng Này (Indigo -> Violet) */}
+                      <linearGradient
+                        id="barThisMonth"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%"
+                      >
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#a855f7" />
+                      </linearGradient>
+
+                      {/* Gradient thanh lịch cho Tháng Trước (Slate đối chứng) */}
+                      <linearGradient
+                        id="barLastMonth"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%"
+                      >
+                        <stop offset="0%" stopColor="#94a3b8" />
+                        <stop offset="100%" stopColor="#cbd5e1" />
+                      </linearGradient>
+
+                      {/* Hiệu ứng bóng đổ phát sáng nhẹ 3D */}
+                      <filter
+                        id="glowThisMonth"
+                        x="-10%"
+                        y="-20%"
+                        width="130%"
+                        height="150%"
+                      >
+                        <feDropShadow
+                          dx="0"
+                          dy="2"
+                          stdDeviation="2.5"
+                          floodColor="#6366f1"
+                          floodOpacity="0.28"
+                        />
+                      </filter>
+                    </defs>
+
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={false}
+                      stroke="currentColor"
+                      className="text-slate-200/80 dark:text-slate-700/50"
+                    />
+
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v) => formatVND(v)}
+                      tick={{ fontSize: 9.5, fill: "#94a3b8" }}
+                      axisLine={{ stroke: "#cbd5e1", opacity: 0.3 }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="category"
+                      tick={{ fontSize: 11, fontWeight: 700, fill: "#64748b" }}
+                      width={80}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload || !payload.length) return null;
+                        const data = payload[0]?.payload;
+                        if (!data) return null;
+                        const diffVal =
+                          (data["Tháng này"] || 0) - (data["Tháng trước"] || 0);
+
+                        return (
+                          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 shadow-xl text-xs space-y-2 select-none min-w-[170px]">
+                            <div className="font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-1.5 flex items-center justify-between gap-2">
+                              <span>{data.category}</span>
+                              <span
+                                className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                                  data.percentChange <= 0
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                                }`}
+                              >
+                                {data.percentChange >= 0
+                                  ? `+${data.percentChange}%`
+                                  : `${data.percentChange}%`}
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-[11px]">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
+                                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" />
+                                  Tháng này:
+                                </span>
+                                <span className="font-black text-indigo-600 dark:text-indigo-400">
+                                  {formatFullVND(data["Tháng này"])}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="flex items-center gap-1.5 text-slate-400 font-medium">
+                                  <span className="w-2 h-2 rounded-full bg-slate-400" />
+                                  Tháng trước:
+                                </span>
+                                <span className="font-semibold text-slate-600 dark:text-slate-300">
+                                  {formatFullVND(data["Tháng trước"])}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[10px]">
+                                <span className="text-slate-400 font-medium">
+                                  Chênh lệch:
+                                </span>
+                                <span
+                                  className={`font-bold ${diffVal <= 0 ? "text-emerald-500" : "text-rose-500"}`}
+                                >
+                                  {diffVal >= 0 ? "+" : ""}
+                                  {formatFullVND(diffVal)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+
+                    <Bar
+                      dataKey="Tháng này"
+                      fill="url(#barThisMonth)"
+                      radius={[0, 7, 7, 0]}
+                      onClick={(entry: any) =>
+                        setSelectedHeatmapCategory(entry.category)
+                      }
+                      style={{
+                        cursor: "pointer",
+                        filter: "url(#glowThisMonth)",
+                      }}
+                    >
+                      <LabelList
+                        dataKey="thisMonthLabel"
+                        position="right"
+                        style={{
+                          fontSize: "9.5px",
+                          fontWeight: 800,
+                          fill: "#6366f1",
+                        }}
+                      />
+                    </Bar>
+                    <Bar
+                      dataKey="Tháng trước"
+                      fill="url(#barLastMonth)"
+                      radius={[0, 7, 7, 0]}
+                      onClick={(entry: any) =>
+                        setSelectedHeatmapCategory(entry.category)
+                      }
+                      style={{ cursor: "pointer", opacity: 0.85 }}
+                    >
+                      <LabelList
+                        dataKey="lastMonthLabel"
+                        position="right"
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: 600,
+                          fill: "#94a3b8",
+                        }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Quick stats and micro-insights */}
-            <div className="md:col-span-2 space-y-3">
-              <div className="bg-white/40 dark:bg-slate-800/40 border border-white/60 dark:border-slate-700/50 rounded-2xl p-3.5 space-y-1.5">
-                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
+            {/* Micro-insights Summary & Advice */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              <div className="bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   Tổng chi tháng này
                 </span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-black text-slate-800 dark:text-slate-100">
-                    {formatFullVND(expenseThisMonth)}
-                  </span>
+                <div className="text-base font-black text-slate-800 dark:text-slate-100">
+                  {formatFullVND(expenseThisMonth)}
                 </div>
                 <span className="text-[10px] text-slate-400 font-semibold block">
                   Tháng trước: {formatFullVND(totalExpenseLastMonth)}
                 </span>
               </div>
 
-              {/* Smart Micro-insights Details */}
-              {(categoryChanges.topIncrease || categoryChanges.topDecrease) && (
-                <div className="space-y-2">
-                  <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                    Phân tích biến động
-                  </span>
-                  
-                  {categoryChanges.topIncrease && (
-                    <div className="bg-rose-50/50 dark:bg-rose-950/10 border border-rose-100/30 rounded-xl p-2.5 flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1.5" />
-                      <div className="text-[10.5px]">
-                        <span className="font-bold text-rose-600 dark:text-rose-400">Tăng mạnh nhất: </span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">
-                          {categoryChanges.topIncrease.category} (+{formatFullVND(categoryChanges.topIncrease.diff)})
-                        </span>
-                      </div>
-                    </div>
-                  )}
+              <div className="bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Biến động tiêu biểu
+                </span>
+                {categoryChanges.topIncrease && (
+                  <div className="flex items-center gap-1.5 text-[10.5px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                    <span className="font-bold text-rose-600 dark:text-rose-400">
+                      Tăng:{" "}
+                    </span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
+                      {categoryChanges.topIncrease.category} (+
+                      {formatFullVND(categoryChanges.topIncrease.diff)})
+                    </span>
+                  </div>
+                )}
+                {categoryChanges.topDecrease && (
+                  <div className="flex items-center gap-1.5 text-[10.5px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      Giảm:{" "}
+                    </span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
+                      {categoryChanges.topDecrease.category} (
+                      {formatFullVND(categoryChanges.topDecrease.diff)})
+                    </span>
+                  </div>
+                )}
+              </div>
 
-                  {categoryChanges.topDecrease && (
-                    <div className="bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100/30 rounded-xl p-2.5 flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
-                      <div className="text-[10.5px]">
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">Tiết kiệm nhất: </span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">
-                          {categoryChanges.topDecrease.category} ({formatFullVND(categoryChanges.topDecrease.diff)})
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100/30 rounded-2xl p-3.5">
-                <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 block mb-1">
+              <div className="bg-indigo-50/60 dark:bg-indigo-950/30 rounded-2xl p-3.5 border border-indigo-100/40 dark:border-indigo-900/40">
+                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block mb-1">
                   Nhận xét nhanh
                 </span>
                 <p className="text-[10.5px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                   {expenseChangePercent <= 0
-                    ? `Chi tiêu của bạn đang kiểm soát tốt, giảm ${Math.abs(expenseChangePercent)}% so với tháng trước. Hãy tiếp tục duy trì!`
-                    : `Bạn đã chi nhiều hơn tháng trước ${Math.abs(expenseChangePercent)}%. Hãy xem lại các hạng mục có vùng phủ lớn trên biểu đồ để cân đối.`}
+                    ? `Chi tiêu đang kiểm soát tốt, giảm ${Math.abs(expenseChangePercent)}% so với tháng trước. Hãy tiếp tục duy trì phong độ!`
+                    : `Chi tiêu đang tăng ${Math.abs(expenseChangePercent)}% so với tháng trước. Hãy chú ý các danh mục có nhiệt độ đỏ để cân đối lại.`}
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="h-40 flex flex-col items-center justify-center text-slate-400 gap-1.5">
-            <Icon path={mdiChartTimelineVariant} size={1.5} className="opacity-40" />
-            <span className="text-xs font-semibold">Chưa có đủ dữ liệu giao dịch để so sánh</span>
+          <div className="h-36 flex flex-col items-center justify-center text-slate-400 gap-2">
+            <Icon path={mdiChartBar} size={1.5} className="opacity-40" />
+            <span className="text-xs font-semibold">
+              Chưa có đủ dữ liệu giao dịch để tạo biểu đồ so sánh
+            </span>
           </div>
         )}
       </div>
+
+      {/* ── DRILL-DOWN MODAL XEM CHI TIẾT DANH MỤC ── */}
+      <AnimatePresence>
+        {selectedHeatmapCategory &&
+          (() => {
+            const item = momHeatmapData.find(
+              (h) => h.category === selectedHeatmapCategory,
+            );
+            if (!item) return null;
+
+            const categoryTransactions = thisMonthExpenses
+              .filter(
+                (t) =>
+                  (t.category?.trim() || "Khác") === selectedHeatmapCategory,
+              )
+              .sort((a, b) => b.date.localeCompare(a.date));
+
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.92, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: 15 }}
+                  className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-white/20 dark:border-slate-800 flex flex-col max-h-[85vh]"
+                >
+                  {/* Header with Category Gradient */}
+                  <div
+                    style={{ background: item.gradient }}
+                    className="p-5 text-white relative overflow-hidden shrink-0"
+                  >
+                    <button
+                      onClick={() => setSelectedHeatmapCategory(null)}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors cursor-pointer"
+                    >
+                      <Icon path={mdiClose} size={0.75} />
+                    </button>
+
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-white" />
+                      <h3 className="text-lg font-bold tracking-tight">
+                        {item.category}
+                      </h3>
+                    </div>
+
+                    <div className="text-2xl font-black tracking-tight mt-1">
+                      {formatFullVND(item.thisMonthAmount)}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/25">
+                        {item.badgeLabel}
+                      </span>
+                      <span className="text-[10px] text-white/90">
+                        Chiếm {item.sharePercent}% tổng chi tháng này
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* MoM Comparison Stats */}
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3 text-center shrink-0">
+                    <div className="p-2.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                        Tháng trước
+                      </span>
+                      <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">
+                        {formatFullVND(item.lastMonthAmount)}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                        Chênh lệch MoM
+                      </span>
+                      <span
+                        className={`text-xs sm:text-sm font-black ${
+                          item.diff > 0
+                            ? "text-rose-500"
+                            : item.diff < 0
+                              ? "text-emerald-500"
+                              : "text-slate-500"
+                        }`}
+                      >
+                        {item.diff > 0
+                          ? `+${formatFullVND(item.diff)}`
+                          : item.diff < 0
+                            ? `-${formatFullVND(Math.abs(item.diff))}`
+                            : "0đ"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Transaction List */}
+                  <div className="p-4 overflow-y-auto space-y-2 flex-1">
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                      Giao dịch trong tháng ({categoryTransactions.length})
+                    </span>
+
+                    {categoryTransactions.length > 0 ? (
+                      categoryTransactions.map((tx) => (
+                        <div
+                          key={tx.id}
+                          className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                              {tx.note || "Chi tiêu không ghi chú"}
+                            </p>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {tx.date}
+                            </span>
+                          </div>
+                          <span className="text-xs font-black text-slate-900 dark:text-slate-100 shrink-0">
+                            {formatFullVND(tx.amount)}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center text-slate-400 text-xs font-medium">
+                        Không có giao dịch nào phát sinh trong tháng này
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Action */}
+                  <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedHeatmapCategory(null)}
+                      className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedHeatmapCategory(null);
+                        onNavigateToTab(2);
+                      }}
+                      className="flex-1 py-2.5 rounded-xl bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    >
+                      Xem trên Sổ cái
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            );
+          })()}
+      </AnimatePresence>
     </div>
   );
 }

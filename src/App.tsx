@@ -7,7 +7,6 @@ import {
   mdiWeatherNight,
   mdiWeatherSunny,
   mdiPackageUp,
-  mdiPalette,
 } from "@mdi/js";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import toast from "react-hot-toast";
@@ -101,7 +100,6 @@ function AppContent() {
     if (saved === "green" || saved === "red" || saved === "purple") return saved;
     return "blue";
   });
-  const [showThemePicker, setShowThemePicker] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("dark_mode", String(isDarkMode));
@@ -431,43 +429,6 @@ function AppContent() {
               size={0.75}
             />
           </button>
-
-          {/* Theme Color Picker */}
-          <div className="relative">
-            <button
-              onClick={() => setShowThemePicker(!showThemePicker)}
-              className="flex items-center gap-1 text-accent-primary bg-accent-light px-2 py-0.5 rounded-md hover:opacity-80 transition-colors text-[10px] font-black cursor-pointer"
-              title="Màu chủ đề (Blue, Green, Red, Purple)"
-            >
-              <Icon path={mdiPalette} size={0.75} className="text-accent-primary" />
-            </button>
-            {showThemePicker && (
-              <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-2.5 shadow-2xl z-50 flex items-center gap-2">
-                {[
-                  { key: "blue", color: "bg-blue-500", name: "Xanh dương" },
-                  { key: "green", color: "bg-emerald-500", name: "Xanh lá" },
-                  { key: "red", color: "bg-rose-500", name: "Đỏ" },
-                  { key: "purple", color: "bg-purple-500", name: "Tím" },
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => {
-                      const newTheme = t.key as AccentTheme;
-                      setAccentTheme(newTheme);
-                      setShowThemePicker(false);
-                      window.dispatchEvent(new CustomEvent("accent-theme-change", { detail: newTheme }));
-                    }}
-                    className={`w-6 h-6 rounded-full ${t.color} flex items-center justify-center transition-transform cursor-pointer ${
-                      accentTheme === t.key
-                        ? "ring-2 ring-offset-2 ring-slate-800 dark:ring-white scale-110"
-                        : "opacity-80 hover:opacity-100"
-                    }`}
-                    title={t.name}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
           <button
             onClick={logout}
             className="flex items-center gap-1 text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md hover:bg-rose-100 transition-colors text-[10px] font-black cursor-pointer"

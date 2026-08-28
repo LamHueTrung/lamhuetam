@@ -197,13 +197,13 @@ export default function AICovisor({
     input?.focus();
 
     try {
-      // Compress conversation history (bỏ welcome message, max 6 tin gần nhất)
+      // Lưu giữ lịch sử hội thoại trọn vẹn (bỏ welcome message, 6 tin gần nhất)
       const conversationHistory = messages
         .filter((m) => m.id !== "welcome")
         .slice(-6)
         .map((m) => ({
           role: m.sender === "user" ? "user" : "assistant",
-          content: m.text.length > 120 ? m.text.slice(0, 117) + "..." : m.text,
+          content: m.text,
         }));
 
       // Lấy dữ liệu ML từ cache để cung cấp số liệu định lượng chuẩn xác cho AI

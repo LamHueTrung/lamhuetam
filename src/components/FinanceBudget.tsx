@@ -64,6 +64,7 @@ import {
   mdiCartOutline,
   mdiTarget,
   mdiMagnify,
+  mdiTrendingUp,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
@@ -456,6 +457,104 @@ export default function FinanceBudget({
       handleRunOptimizer();
     }
   }, [activeTab, deficitResult, isOptimizing, handleRunOptimizer]);
+
+  // ── Habit insights derived dynamically from ML patterns ──────────────────
+  const habitInsights = useMemo(() => {
+    if (!patternResult) return [];
+
+    const insights: Array<{
+      id: string;
+      icon: string;
+      iconBg: string;
+      iconColor: string;
+      title: string;
+      description: string;
+      badge?: string;
+      badgeColor?: string;
+    }> = [];
+
+    const dayLabels = [
+      "Chủ nhật",
+      "Thứ hai",
+      "Thứ ba",
+      "Thứ tư",
+      "Thứ năm",
+      "Thứ sáu",
+      "Thứ bảy",
+    ];
+
+    // 1. Phân tích Association Rules (Hành vi liên đới từ Apriori)
+    if (Array.isArray(patternResult.rules) && patternResult.rules.length > 0) {
+      const sortedRules = [...patternResult.rules]
+        .filter((r) => r.confidence > 0.25)
+        .sort((a, b) => (b.confidence * (b.lift || 1)) - (a.confidence * (a.lift || 1)));
+
+      sortedRules.slice(0, 2).forEach((rule, idx) => {
+        const fromCat = rule.antecedents.join(", ");
+        const toCat = rule.consequents.join(", ");
+        const confPct = Math.round(rule.confidence * 100);
+        insights.push({
+          id: `rule-${idx}`,
+          icon: mdiCartOutline,
+          iconBg: "bg-purple-50 dark:bg-purple-950/40",
+          iconColor: "text-purple-600 dark:text-purple-400",
+          title: `Hành vi liên đới: ${fromCat} ➔ ${toCat}`,
+          description: `Khi phát sinh chi tiêu cho "${fromCat}", có ${confPct}% xác suất bạn sẽ chi tiêu tiếp cho "${toCat}". Đề xuất đặt trước hạn mức khi mua sắm các nhóm này.`,
+          badge: `Tương quan ${rule.lift ? rule.lift.toFixed(1) + 'x' : confPct + '%'}`,
+          badgeColor: "bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/50",
+        });
+      });
+    }
+
+    // 2. Phân tích Clusters (Phân cụm thói quen từ K-Means)
+    if (Array.isArray(patternResult.clusters) && patternResult.clusters.length > 0) {
+      patternResult.clusters.forEach((cl, idx) => {
+        const topCats = Array.isArray(cl.top_categories) && cl.top_categories.length > 0
+          ? cl.top_categories.slice(0, 2).join(", ")
+          : "Chi tiêu tổng hợp";
+        const dayIdx = Math.abs(Math.round(cl.avg_day_of_week)) % 7;
+        const dayName = dayLabels[dayIdx] || "Trong tuần";
+        const isWeekend = dayIdx === 0 || dayIdx === 5 || dayIdx === 6;
+
+        if (isWeekend) {
+          insights.push({
+            id: `cluster-weekend-${idx}`,
+            icon: mdiCalendarClock,
+            iconBg: "bg-blue-50 dark:bg-blue-950/40",
+            iconColor: "text-blue-600 dark:text-blue-400",
+            title: `Thời điểm chi tiêu cao điểm (${dayName})`,
+            description: `Tần suất giao dịch tập trung nhiều vào ${dayName} với nhóm chủ đạo "${topCats}". Mức chi trung bình khoảng ${formatVND(cl.avg_amount)}/giao dịch.`,
+            badge: `${cl.count} giao dịch`,
+            badgeColor: "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50",
+          });
+        } else if (cl.avg_amount < 200000 && cl.count >= 2) {
+          insights.push({
+            id: `cluster-small-${idx}`,
+            icon: mdiCoffee,
+            iconBg: "bg-amber-50 dark:bg-amber-950/40",
+            iconColor: "text-amber-600 dark:text-amber-400",
+            title: `Chi tiêu nhỏ lẻ thường nhật (${topCats})`,
+            description: `Nhóm chi tiêu nhỏ (${topCats}) phát sinh ${cl.count} lần với trung bình ${formatVND(cl.avg_amount)}/lần. Tích lũy các khoản nhỏ này chiếm phần đáng kể trong tháng.`,
+            badge: "Thường nhật",
+            badgeColor: "bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/50",
+          });
+        } else {
+          insights.push({
+            id: `cluster-main-${idx}`,
+            icon: mdiTrendingUp,
+            iconBg: "bg-emerald-50 dark:bg-emerald-950/40",
+            iconColor: "text-emerald-600 dark:text-emerald-400",
+            title: `Nhóm chi tiêu chủ lực (${topCats})`,
+            description: `Chi tiêu thường phát sinh vào ${dayName} với mức trung bình ${formatVND(cl.avg_amount)}/lần. Đã ghi nhận ${cl.count} giao dịch.`,
+            badge: `${cl.count} lần`,
+            badgeColor: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/50",
+          });
+        }
+      });
+    }
+
+    return insights;
+  }, [patternResult]);
 
   const [paymentNote, setPaymentNote] = useState("");
   const [editDebtId, setEditDebtId] = useState<string | null>(null);
@@ -2229,53 +2328,69 @@ export default function FinanceBudget({
         </div>
 
         {/* 3. Spending Habits & Insights */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center">
-              <Icon path={mdiMagnify} size={0.85} />
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center">
+                <Icon path={mdiMagnify} size={0.85} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Thói Quen Tiêu Dùng Đáng Lưu Ý</h3>
+                <p className="text-[11px] text-slate-400">Phân tích học máy từ lịch sử giao dịch thực tế</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Thói Quen Tiêu Dùng Đáng Lưu Ý</h3>
-              <p className="text-[11px] text-slate-400">Phân tích tự động từ lịch sử giao dịch</p>
-            </div>
+            {habitInsights.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400 border border-purple-200/50">
+                {habitInsights.length} quy luật AI
+              </span>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                <Icon path={mdiCoffee} size={0.7} />
+          <div className="space-y-2.5">
+            {isOptimizing ? (
+              <div className="py-6 text-center text-slate-400 space-y-2">
+                <Icon path={mdiLoading} size={1.2} className="mx-auto animate-spin text-purple-500" />
+                <p className="text-xs">Đang phân tích thói quen từ giao dịch...</p>
               </div>
-              <div>
-                <span className="font-bold block text-slate-800 dark:text-slate-100">Chi tiêu sinh hoạt thường ngày</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                  Các khoản chi nhỏ lẻ (Cà phê, Ăn uống) phát sinh thường xuyên. Cắt giảm 10-20% nhóm này sẽ tích lũy được khoản tiền đáng kể.
-                </span>
+            ) : habitInsights.length > 0 ? (
+              habitInsights.map((insight) => (
+                <div
+                  key={insight.id}
+                  className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-3 transition-all hover:shadow-sm"
+                >
+                  <div className={`w-8 h-8 rounded-xl ${insight.iconBg} flex items-center justify-center ${insight.iconColor} shrink-0 mt-0.5`}>
+                    <Icon path={insight.icon} size={0.75} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">
+                        {insight.title}
+                      </span>
+                      {insight.badge && (
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${insight.badgeColor || "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>
+                          {insight.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {insight.description}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/60 text-center space-y-1.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-500 flex items-center justify-center mx-auto">
+                  <Icon path={mdiChartBubble} size={0.8} />
+                </div>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Chưa đủ dữ liệu để trích xuất quy luật
+                </p>
+                <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                  Thêm từ 3-5 giao dịch chi tiêu trong tháng, sau đó bấm "Chạy lại" để mô hình AI tự động phát hiện thói quen của bạn.
+                </p>
               </div>
-            </div>
-
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                <Icon path={mdiCalendarClock} size={0.7} />
-              </div>
-              <div>
-                <span className="font-bold block text-slate-800 dark:text-slate-100">Thời điểm chi tiêu cao điểm</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                  Tần suất phát sinh chi tiêu thường tăng vào Thứ Sáu và Cuối tuần. Nên đặt trước ngân sách cố định cho 2 ngày này.
-                </span>
-              </div>
-            </div>
-
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
-                <Icon path={mdiCartOutline} size={0.7} />
-              </div>
-              <div>
-                <span className="font-bold block text-slate-800 dark:text-slate-100">Hành vi mua sắm liên đới</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                  Các dịp đi mua sắm thường kéo theo chi tiêu ăn uống ngoài dự kiến.
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
