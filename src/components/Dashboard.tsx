@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
   mdiWallet,
@@ -32,7 +33,7 @@ import {
   mdiCalendarClockOutline,
   mdiFire,
 } from "@mdi/js";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useDragControls } from "motion/react";
 import {
   Transaction,
   DebtAccount,
@@ -420,6 +421,8 @@ export default function Dashboard({
   const [selectedHeatmapCategory, setSelectedHeatmapCategory] = useState<
     string | null
   >(null);
+  const [showAllMoMCats, setShowAllMoMCats] = useState(false);
+  const dragControlsCategory = useDragControls();
 
   const totalExpenseThisMonth = thisMonthExpenses.reduce(
     (sum, t) => sum + t.amount,
@@ -483,33 +486,34 @@ export default function Dashboard({
 
       if (percentChange > 20) {
         status = "surge";
-        gradient = "linear-gradient(135deg, #fb7185 0%, #e11d48 100%)"; // Rose -> Ruby Red
-        glowColor = "rgba(225, 29, 72, 0.45)";
+        gradient =
+          "linear-gradient(135deg, #e11d48 0%, #be123c 50%, #881337 100%)"; // Rich Crimson Ruby
+        glowColor = "rgba(225, 29, 72, 0.5)";
         badgeBg = "bg-rose-950/60 text-rose-100 border border-rose-300/40";
         badgeLabel = `+${percentChange}% (Tăng mạnh)`;
       } else if (percentChange >= 5) {
         status = "increase";
-        gradient = "linear-gradient(135deg, #fb923c 0%, #ea580c 100%)"; // Coral -> Deep Orange
-        glowColor = "rgba(234, 88, 12, 0.45)";
+        gradient = "linear-gradient(135deg, #f97316 0%, #c2410c 100%)"; // Deep Amber Orange
+        glowColor = "rgba(234, 88, 12, 0.5)";
         badgeBg = "bg-orange-950/60 text-amber-100 border border-amber-300/40";
         badgeLabel = `+${percentChange}% (Tăng nhẹ)`;
       } else if (percentChange <= -20) {
         status = "heavy_drop";
-        gradient = "linear-gradient(135deg, #34d399 0%, #059669 100%)"; // Emerald -> Forest
-        glowColor = "rgba(5, 150, 105, 0.45)";
+        gradient = "linear-gradient(135deg, #10b981 0%, #047857 100%)"; // Rich Emerald
+        glowColor = "rgba(5, 150, 105, 0.5)";
         badgeBg =
           "bg-emerald-950/60 text-emerald-100 border border-emerald-300/40";
         badgeLabel = `${percentChange}% (Giảm mạnh)`;
       } else if (percentChange <= -5) {
         status = "decrease";
-        gradient = "linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%)"; // Teal -> Dark Cyan
-        glowColor = "rgba(13, 148, 136, 0.45)";
+        gradient = "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)"; // Vivid Teal
+        glowColor = "rgba(13, 148, 136, 0.5)";
         badgeBg = "bg-teal-950/60 text-teal-100 border border-teal-300/40";
         badgeLabel = `${percentChange}% (Tiết kiệm)`;
       } else {
         status = "stable";
-        gradient = "linear-gradient(135deg, #818cf8 0%, #4f46e5 100%)"; // Indigo -> Deep Violet
-        glowColor = "rgba(79, 70, 229, 0.45)";
+        gradient = "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)"; // Deep Indigo
+        glowColor = "rgba(79, 70, 229, 0.5)";
         badgeBg =
           "bg-indigo-950/60 text-indigo-100 border border-indigo-300/40";
         badgeLabel = `${percentChange >= 0 ? "+" : ""}${percentChange}% (Ổn định)`;
@@ -565,6 +569,12 @@ export default function Dashboard({
       badgeBg: item.badgeBg,
     }));
   }, [momHeatmapData]);
+
+  // Lấy Top 5 danh mục lớn nhất để biểu đồ luôn to rõ, dễ thao tác
+  const displayedMoMData = useMemo(() => {
+    if (showAllMoMCats) return momChartData;
+    return momChartData.slice(0, 5);
+  }, [momChartData, showAllMoMCats]);
 
   // Tính toán các danh mục biến động mạnh nhất phục vụ Smart Micro-insights
   const categoryChanges = useMemo(() => {
@@ -1624,27 +1634,27 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── 3. BẢN ĐỒ SO SÁNH CẤU TRÚC CHI TIÊU MoM (UI/UX PRO MAX REDESIGN) ── */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800 rounded-[32px] p-5 sm:p-6 shadow-[0_16px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.3)] space-y-5 transition-all">
+      {/* ── 3. BẢN ĐỒ SO SÁNH CẤU TRÚC CHI TIÊU MoM (ICON-FIRST COMPACT REDESIGN) ── */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800 rounded-[32px] p-4 sm:p-6 shadow-[0_16px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.3)] space-y-4 transition-all">
         {/* Header Block */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
-              <Icon path={mdiChartBar} size={0.9} />
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+              <Icon path={mdiChartBar} size={0.85} />
             </div>
-            <div className="space-y-0.5">
+            <div>
               <h3 className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 tracking-tight">
                 Cấu Trúc Chi Tiêu MoM
               </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                So sánh cơ cấu danh mục giữa Tháng này vs Tháng trước
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                So sánh cơ cấu danh mục với tháng trước
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span
-              className={`text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xs border ${
+              className={`text-[11px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs border ${
                 expenseChangePercent <= 0
                   ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60"
                   : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/60"
@@ -1654,75 +1664,98 @@ export default function Dashboard({
                 path={
                   expenseChangePercent <= 0 ? mdiTrendingDown : mdiTrendingUp
                 }
-                size={0.65}
+                size={0.6}
               />
-              {expenseChangePercent <= 0 ? "Tiết kiệm" : "Tăng"}{" "}
-              {Math.abs(expenseChangePercent)}% MoM
+              {expenseChangePercent > 0 ? "+" : ""}
+              {expenseChangePercent}%
             </span>
           </div>
         </div>
 
-        {/* Dual KPI Metric Highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Dual KPI Metric Highlights (Icon-driven 2 columns) */}
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           {/* Tháng này Card */}
-          <div className="bg-gradient-to-br from-indigo-50/80 via-purple-50/40 to-white dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-slate-900/60 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl p-3.5 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="bg-gradient-to-br from-indigo-50/80 via-purple-50/40 to-white dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-slate-900/60 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-col justify-between gap-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-xs" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                  <Icon path={mdiWallet} size={0.55} />
+                </div>
                 Tháng này
               </span>
-              <span className="text-[10px] font-semibold text-indigo-500 dark:text-indigo-400 px-2 py-0.5 bg-indigo-100/60 dark:bg-indigo-900/50 rounded-full">
-                {thisMonthExpenses.length} giao dịch
+              <span className="text-[9px] sm:text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-100/60 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded-full">
+                {thisMonthExpenses.length} GD
               </span>
             </div>
-            <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="text-sm sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate">
               {formatFullVND(expenseThisMonth)}
             </div>
           </div>
 
           {/* Tháng trước Card */}
-          <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/50 rounded-2xl p-3.5 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/50 rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-col justify-between gap-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-500 shadow-xs" />
+              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-lg bg-slate-400 dark:bg-slate-600 text-white flex items-center justify-center shrink-0">
+                  <Icon path={mdiCalendarClockOutline} size={0.55} />
+                </div>
                 Tháng trước
               </span>
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 px-2 py-0.5 bg-slate-200/60 dark:bg-slate-700/50 rounded-full">
-                {lastMonthExpenses.length} giao dịch
+              <span className="text-[9px] sm:text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-700/50 px-1.5 py-0.5 rounded-full">
+                {lastMonthExpenses.length} GD
               </span>
             </div>
-            <div className="text-lg sm:text-xl font-bold text-slate-700 dark:text-slate-300 tracking-tight">
+            <div className="text-sm sm:text-lg font-bold text-slate-700 dark:text-slate-300 tracking-tight truncate">
               {formatFullVND(totalExpenseLastMonth)}
             </div>
           </div>
         </div>
 
-        {/* ── RECHARTS BAR CHART (LAYOUT="VERTICAL") ── */}
-        {momChartData.length > 0 ? (
-          <div className="space-y-4">
-            <div className="bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl p-2.5 sm:p-4 border border-slate-100 dark:border-slate-800 relative">
-              <div className="flex items-center justify-between text-[10px] text-slate-400 px-2 pb-2 font-medium">
-                <span>Danh mục</span>
-                <span className="italic">
-                  💡 Chạm cột để xem chi tiết giao dịch
+        {/* ── RECHARTS BAR CHART (TOP 5 CATEGORIES - BIG TOUCH TARGETS) ── */}
+        {displayedMoMData.length > 0 ? (
+          <div className="space-y-3">
+            <div className="bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl p-2.5 sm:p-3.5 border border-slate-100 dark:border-slate-800 relative">
+              <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 px-1 pb-2">
+                <span>
+                  {showAllMoMCats
+                    ? `Tất cả ${momChartData.length} danh mục`
+                    : `Top ${displayedMoMData.length} danh mục lớn nhất`}
                 </span>
+                {momChartData.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllMoMCats(!showAllMoMCats)}
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center gap-0.5"
+                  >
+                    <span>
+                      {showAllMoMCats
+                        ? "Thu gọn Top 5"
+                        : `Xem tất cả (${momChartData.length})`}
+                    </span>
+                    <Icon
+                      path={showAllMoMCats ? mdiChevronRight : mdiChevronRight}
+                      size={0.55}
+                      className={showAllMoMCats ? "-rotate-90" : "rotate-90"}
+                    />
+                  </button>
+                )}
               </div>
+
               <div
                 style={{
-                  height: `${Math.max(260, momChartData.length * 48)}px`,
+                  height: `${showAllMoMCats ? Math.max(220, displayedMoMData.length * 44) : Math.max(180, displayedMoMData.length * 44)}px`,
                 }}
-                className="w-full"
+                className="w-full transition-all duration-300"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
-                    data={momChartData}
-                    margin={{ top: 8, right: 90, left: -10, bottom: 0 }}
+                    data={displayedMoMData}
+                    margin={{ top: 4, right: 65, left: -18, bottom: 0 }}
                     barGap={4}
-                    barSize={12}
+                    barSize={13}
                   >
                     <defs>
-                      {/* Gradient cao cấp cho Tháng Này (Indigo -> Violet) */}
                       <linearGradient
                         id="barThisMonth"
                         x1="0%"
@@ -1734,7 +1767,6 @@ export default function Dashboard({
                         <stop offset="100%" stopColor="#a855f7" />
                       </linearGradient>
 
-                      {/* Gradient thanh lịch cho Tháng Trước (Slate đối chứng) */}
                       <linearGradient
                         id="barLastMonth"
                         x1="0%"
@@ -1745,43 +1777,26 @@ export default function Dashboard({
                         <stop offset="0%" stopColor="#94a3b8" />
                         <stop offset="100%" stopColor="#cbd5e1" />
                       </linearGradient>
-
-                      {/* Hiệu ứng bóng đổ phát sáng nhẹ 3D */}
-                      <filter
-                        id="glowThisMonth"
-                        x="-10%"
-                        y="-20%"
-                        width="130%"
-                        height="150%"
-                      >
-                        <feDropShadow
-                          dx="0"
-                          dy="2"
-                          stdDeviation="2.5"
-                          floodColor="#6366f1"
-                          floodOpacity="0.28"
-                        />
-                      </filter>
                     </defs>
 
                     <CartesianGrid
                       strokeDasharray="3 3"
                       horizontal={false}
                       stroke="currentColor"
-                      className="text-slate-200/80 dark:text-slate-700/50"
+                      className="text-slate-200/60 dark:text-slate-700/40"
                     />
 
                     <XAxis
                       type="number"
                       tickFormatter={(v) => formatVND(v)}
-                      tick={{ fontSize: 9.5, fill: "#94a3b8" }}
+                      tick={{ fontSize: 9, fill: "#94a3b8" }}
                       axisLine={{ stroke: "#cbd5e1", opacity: 0.3 }}
                       tickLine={false}
                     />
                     <YAxis
                       type="category"
                       dataKey="category"
-                      tick={{ fontSize: 11, fontWeight: 700, fill: "#64748b" }}
+                      tick={{ fontSize: 11, fontWeight: 700, fill: "#475569" }}
                       width={80}
                       axisLine={false}
                       tickLine={false}
@@ -1796,14 +1811,14 @@ export default function Dashboard({
                           (data["Tháng này"] || 0) - (data["Tháng trước"] || 0);
 
                         return (
-                          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 shadow-xl text-xs space-y-2 select-none min-w-[170px]">
-                            <div className="font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-1.5 flex items-center justify-between gap-2">
+                          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl p-2.5 border border-slate-200/80 dark:border-slate-800 shadow-xl text-xs space-y-1.5 select-none min-w-[160px]">
+                            <div className="font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-1 flex items-center justify-between gap-2">
                               <span>{data.category}</span>
                               <span
-                                className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                                className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
                                   data.percentChange <= 0
-                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                                 }`}
                               >
                                 {data.percentChange >= 0
@@ -1811,29 +1826,25 @@ export default function Dashboard({
                                   : `${data.percentChange}%`}
                               </span>
                             </div>
-                            <div className="space-y-1 text-[11px]">
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
-                                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" />
+                            <div className="space-y-1 text-[10.5px]">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-slate-500 dark:text-slate-400">
                                   Tháng này:
                                 </span>
                                 <span className="font-black text-indigo-600 dark:text-indigo-400">
                                   {formatFullVND(data["Tháng này"])}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="flex items-center gap-1.5 text-slate-400 font-medium">
-                                  <span className="w-2 h-2 rounded-full bg-slate-400" />
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-slate-400">
                                   Tháng trước:
                                 </span>
                                 <span className="font-semibold text-slate-600 dark:text-slate-300">
                                   {formatFullVND(data["Tháng trước"])}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[10px]">
-                                <span className="text-slate-400 font-medium">
-                                  Chênh lệch:
-                                </span>
+                              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[9.5px]">
+                                <span className="text-slate-400">Chênh lệch:</span>
                                 <span
                                   className={`font-bold ${diffVal <= 0 ? "text-emerald-500" : "text-rose-500"}`}
                                 >
@@ -1854,16 +1865,13 @@ export default function Dashboard({
                       onClick={(entry: any) =>
                         setSelectedHeatmapCategory(entry.category)
                       }
-                      style={{
-                        cursor: "pointer",
-                        filter: "url(#glowThisMonth)",
-                      }}
+                      style={{ cursor: "pointer" }}
                     >
                       <LabelList
                         dataKey="thisMonthLabel"
                         position="right"
                         style={{
-                          fontSize: "9.5px",
+                          fontSize: "9px",
                           fontWeight: 800,
                           fill: "#6366f1",
                         }}
@@ -1876,13 +1884,13 @@ export default function Dashboard({
                       onClick={(entry: any) =>
                         setSelectedHeatmapCategory(entry.category)
                       }
-                      style={{ cursor: "pointer", opacity: 0.85 }}
+                      style={{ cursor: "pointer", opacity: 0.8 }}
                     >
                       <LabelList
                         dataKey="lastMonthLabel"
                         position="right"
                         style={{
-                          fontSize: "9px",
+                          fontSize: "8.5px",
                           fontWeight: 600,
                           fill: "#94a3b8",
                         }}
@@ -1893,216 +1901,266 @@ export default function Dashboard({
               </div>
             </div>
 
-            {/* Micro-insights Summary & Advice */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-              <div className="bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Tổng chi tháng này
-                </span>
-                <div className="text-base font-black text-slate-800 dark:text-slate-100">
-                  {formatFullVND(expenseThisMonth)}
+            {/* ── VISUAL HIGHLIGHTS: ICON BADGES & SMART INSIGHT ── */}
+            <div className="space-y-2">
+              {/* Row 1: Top Increase & Top Decrease Badges */}
+              {(categoryChanges.topIncrease || categoryChanges.topDecrease) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {categoryChanges.topIncrease && (
+                    <div className="p-2.5 bg-rose-50/60 dark:bg-rose-950/30 rounded-2xl border border-rose-100/60 dark:border-rose-900/40 flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center shrink-0">
+                        <Icon path={mdiArrowUpBold} size={0.55} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] font-bold text-rose-500 uppercase tracking-wider block">
+                          Tăng mạnh
+                        </span>
+                        <div className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 truncate">
+                          {categoryChanges.topIncrease.category}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 shrink-0">
+                        +{formatVND(categoryChanges.topIncrease.diff)}
+                      </span>
+                    </div>
+                  )}
+
+                  {categoryChanges.topDecrease && (
+                    <div className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100/60 dark:border-emerald-900/40 flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                        <Icon path={mdiArrowDownBold} size={0.55} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider block">
+                          Giảm sâu
+                        </span>
+                        <div className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 truncate">
+                          {categoryChanges.topDecrease.category}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 shrink-0">
+                        -{formatVND(Math.abs(categoryChanges.topDecrease.diff))}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-[10px] text-slate-400 font-semibold block">
-                  Tháng trước: {formatFullVND(totalExpenseLastMonth)}
-                </span>
-              </div>
+              )}
 
-              <div className="bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 space-y-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Biến động tiêu biểu
-                </span>
-                {categoryChanges.topIncrease && (
-                  <div className="flex items-center gap-1.5 text-[10.5px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                    <span className="font-bold text-rose-600 dark:text-rose-400">
-                      Tăng:{" "}
-                    </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
-                      {categoryChanges.topIncrease.category} (+
-                      {formatFullVND(categoryChanges.topIncrease.diff)})
-                    </span>
-                  </div>
-                )}
-                {categoryChanges.topDecrease && (
-                  <div className="flex items-center gap-1.5 text-[10.5px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      Giảm:{" "}
-                    </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
-                      {categoryChanges.topDecrease.category} (
-                      {formatFullVND(categoryChanges.topDecrease.diff)})
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-indigo-50/60 dark:bg-indigo-950/30 rounded-2xl p-3.5 border border-indigo-100/40 dark:border-indigo-900/40">
-                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block mb-1">
-                  Nhận xét nhanh
-                </span>
-                <p className="text-[10.5px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  {expenseChangePercent <= 0
-                    ? `Chi tiêu đang kiểm soát tốt, giảm ${Math.abs(expenseChangePercent)}% so với tháng trước. Hãy tiếp tục duy trì phong độ!`
-                    : `Chi tiêu đang tăng ${Math.abs(expenseChangePercent)}% so với tháng trước. Hãy chú ý các danh mục có nhiệt độ đỏ để cân đối lại.`}
-                </p>
+              {/* Row 2: AI Quick Summary Pill */}
+              <div className="p-2.5 bg-indigo-50/70 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100/60 dark:border-indigo-900/50 flex items-center gap-2.5 text-[10.5px]">
+                <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Icon path={mdiAutoFix} size={0.55} />
+                </div>
+                <div className="text-slate-700 dark:text-slate-300 font-medium leading-tight flex-1 truncate">
+                  <span className="font-extrabold text-indigo-700 dark:text-indigo-300">
+                    {expenseChangePercent <= 0 ? "Tiết kiệm" : "Tăng"}{" "}
+                    {Math.abs(expenseChangePercent)}% MoM
+                  </span>
+                  {" • "}
+                  <span>
+                    {expenseChangePercent <= 0
+                      ? "Kiểm soát chi tiêu rất tốt!"
+                      : "Cần chú ý các nhóm chi tiêu tăng cao."}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="h-36 flex flex-col items-center justify-center text-slate-400 gap-2">
-            <Icon path={mdiChartBar} size={1.5} className="opacity-40" />
+          <div className="h-32 flex flex-col items-center justify-center text-slate-400 gap-1.5">
+            <Icon path={mdiChartBar} size={1.2} className="opacity-40" />
             <span className="text-xs font-semibold">
-              Chưa có đủ dữ liệu giao dịch để tạo biểu đồ so sánh
+              Chưa có đủ dữ liệu giao dịch để so sánh
             </span>
           </div>
         )}
       </div>
 
-      {/* ── DRILL-DOWN MODAL XEM CHI TIẾT DANH MỤC ── */}
-      <AnimatePresence>
-        {selectedHeatmapCategory &&
-          (() => {
-            const item = momHeatmapData.find(
-              (h) => h.category === selectedHeatmapCategory,
-            );
-            if (!item) return null;
+      {/* ── DRILL-DOWN MODAL XEM CHI TIẾT DANH MỤC (BOTTOM SHEET) ── */}
+      {createPortal(
+        <AnimatePresence>
+          {selectedHeatmapCategory &&
+            (() => {
+              const item = momHeatmapData.find(
+                (h) => h.category === selectedHeatmapCategory,
+              );
+              if (!item) return null;
 
-            const categoryTransactions = thisMonthExpenses
-              .filter(
-                (t) =>
-                  (t.category?.trim() || "Khác") === selectedHeatmapCategory,
-              )
-              .sort((a, b) => b.date.localeCompare(a.date));
+              const categoryTransactions = thisMonthExpenses
+                .filter(
+                  (t) =>
+                    (t.category?.trim() || "Khác") === selectedHeatmapCategory,
+                )
+                .sort((a, b) => b.date.localeCompare(a.date));
 
-            return (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+              return (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.92, y: 15 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.92, y: 15 }}
-                  className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-white/20 dark:border-slate-800 flex flex-col max-h-[85vh]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 overflow-hidden z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
+                  onClick={() => setSelectedHeatmapCategory(null)}
                 >
-                  {/* Header with Category Gradient */}
-                  <div
-                    style={{ background: item.gradient }}
-                    className="p-5 text-white relative overflow-hidden shrink-0"
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", damping: 26, stiffness: 240 }}
+                    drag="y"
+                    dragControls={dragControlsCategory}
+                    dragListener={false}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0, bottom: 0.5 }}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.y > 60 || info.velocity.y > 200) {
+                        setSelectedHeatmapCategory(null);
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[88vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.25)] border-t border-white/20 dark:border-slate-800 z-50"
                   >
-                    <button
-                      onClick={() => setSelectedHeatmapCategory(null)}
-                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors cursor-pointer"
+                    {/* Header with Category Gradient & Drag Handle */}
+                    <div
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        dragControlsCategory.start(e);
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      style={{
+                        touchAction: "none",
+                        background: item.gradient,
+                      }}
+                      className="p-5 pt-3 text-white relative overflow-hidden shrink-0 select-none cursor-grab active:cursor-grabbing shadow-inner"
                     >
-                      <Icon path={mdiClose} size={0.75} />
-                    </button>
+                      {/* Ambient lighting */}
+                      <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/15 blur-2xl pointer-events-none" />
 
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-2.5 h-2.5 rounded-full bg-white" />
-                      <h3 className="text-lg font-bold tracking-tight">
-                        {item.category}
-                      </h3>
-                    </div>
+                      {/* Drag Handle Notch */}
+                      <div className="w-12 h-1.5 bg-white/40 rounded-full mx-auto mb-3" />
 
-                    <div className="text-2xl font-black tracking-tight mt-1">
-                      {formatFullVND(item.thisMonthAmount)}
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/25">
-                        {item.badgeLabel}
-                      </span>
-                      <span className="text-[10px] text-white/90">
-                        Chiếm {item.sharePercent}% tổng chi tháng này
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* MoM Comparison Stats */}
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3 text-center shrink-0">
-                    <div className="p-2.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                        Tháng trước
-                      </span>
-                      <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">
-                        {formatFullVND(item.lastMonthAmount)}
-                      </span>
-                    </div>
-                    <div className="p-2.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                        Chênh lệch MoM
-                      </span>
-                      <span
-                        className={`text-xs sm:text-sm font-black ${
-                          item.diff > 0
-                            ? "text-rose-500"
-                            : item.diff < 0
-                              ? "text-emerald-500"
-                              : "text-slate-500"
-                        }`}
+                      {/* Close Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedHeatmapCategory(null)}
+                        className="absolute top-4 right-4 w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md flex items-center justify-center text-white transition-all cursor-pointer"
                       >
-                        {item.diff > 0
-                          ? `+${formatFullVND(item.diff)}`
-                          : item.diff < 0
-                            ? `-${formatFullVND(Math.abs(item.diff))}`
-                            : "0đ"}
-                      </span>
+                        <Icon path={mdiClose} size={0.65} />
+                      </button>
+
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+                        <h3 className="text-lg font-extrabold tracking-tight">
+                          {item.category}
+                        </h3>
+                      </div>
+
+                      <div className="text-2xl sm:text-3xl font-black tracking-tight mt-1 drop-shadow-sm">
+                        {formatFullVND(item.thisMonthAmount)}
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm">
+                          {item.badgeLabel}
+                        </span>
+                        <span className="text-[10px] text-white/90 font-medium">
+                          Chiếm {item.sharePercent}% tổng chi tháng này
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Transaction List */}
-                  <div className="p-4 overflow-y-auto space-y-2 flex-1">
-                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                      Giao dịch trong tháng ({categoryTransactions.length})
-                    </span>
-
-                    {categoryTransactions.length > 0 ? (
-                      categoryTransactions.map((tx) => (
-                        <div
-                          key={tx.id}
-                          className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3"
+                    {/* MoM Comparison Stats */}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3 text-center shrink-0">
+                      <div className="p-2.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-xs">
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">
+                          Tháng trước
+                        </span>
+                        <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">
+                          {formatFullVND(item.lastMonthAmount)}
+                        </span>
+                      </div>
+                      <div className="p-2.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-xs">
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">
+                          Chênh lệch MoM
+                        </span>
+                        <span
+                          className={`text-xs sm:text-sm font-black ${
+                            item.diff > 0
+                              ? "text-rose-500"
+                              : item.diff < 0
+                                ? "text-emerald-500"
+                                : "text-slate-500"
+                          }`}
                         >
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                              {tx.note || "Chi tiêu không ghi chú"}
-                            </p>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              {tx.date}
+                          {item.diff > 0
+                            ? `+${formatFullVND(item.diff)}`
+                            : item.diff < 0
+                              ? `-${formatFullVND(Math.abs(item.diff))}`
+                              : "0đ"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Transaction List */}
+                    <div className="p-4 overflow-y-auto overscroll-contain space-y-2 flex-1">
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                        Giao dịch trong tháng ({categoryTransactions.length})
+                      </span>
+
+                      {categoryTransactions.length > 0 ? (
+                        categoryTransactions.map((tx) => (
+                          <div
+                            key={tx.id}
+                            className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                {tx.description || "Chi tiêu không ghi chú"}
+                              </p>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {tx.date}
+                              </span>
+                            </div>
+                            <span className="text-xs font-black text-slate-900 dark:text-slate-100 shrink-0">
+                              {formatFullVND(tx.amount)}
                             </span>
                           </div>
-                          <span className="text-xs font-black text-slate-900 dark:text-slate-100 shrink-0">
-                            {formatFullVND(tx.amount)}
-                          </span>
+                        ))
+                      ) : (
+                        <div className="py-8 text-center text-slate-400 text-xs font-medium">
+                          Không có giao dịch nào phát sinh trong tháng này
                         </div>
-                      ))
-                    ) : (
-                      <div className="py-8 text-center text-slate-400 text-xs font-medium">
-                        Không có giao dịch nào phát sinh trong tháng này
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  {/* Footer Action */}
-                  <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex items-center gap-2">
-                    <button
-                      onClick={() => setSelectedHeatmapCategory(null)}
-                      className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                    >
-                      Đóng
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedHeatmapCategory(null);
-                        onNavigateToTab(2);
-                      }}
-                      className="flex-1 py-2.5 rounded-xl bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-                    >
-                      Xem trên Sổ cái
-                    </button>
-                  </div>
+                    {/* Footer Action */}
+                    <div className="p-4 pb-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedHeatmapCategory(null)}
+                        className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedHeatmapCategory(null);
+                          onNavigateToTab(2);
+                        }}
+                        className="flex-1 py-3 rounded-2xl bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      >
+                        Xem trên Sổ cái
+                      </button>
+                    </div>
+                  </motion.div>
                 </motion.div>
-              </div>
-            );
-          })()}
-      </AnimatePresence>
+              );
+            })()}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }

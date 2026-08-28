@@ -45,12 +45,12 @@ html, body, #root {
 }
 
 .theme-red {
-  --accent-primary: #f43f5e;
-  --accent-secondary: #e11d48;
-  --accent-gradient-from: #fb7185;
-  --accent-gradient-to: #e11d48;
-  --accent-ring: rgba(244, 63, 94, 0.4);
-  --accent-light-bg: rgba(244, 63, 94, 0.12);
+  --accent-primary: #e11d48;
+  --accent-secondary: #9f1239;
+  --accent-gradient-from: #f43f5e;
+  --accent-gradient-to: #be123c;
+  --accent-ring: rgba(225, 29, 72, 0.4);
+  --accent-light-bg: rgba(225, 29, 72, 0.12);
 }
 
 .theme-purple {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
@@ -65,6 +65,9 @@ import {
   mdiTarget,
   mdiMagnify,
   mdiTrendingUp,
+  mdiCheckCircle,
+  mdiInformationOutline,
+  mdiHistory,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
@@ -113,25 +116,53 @@ interface FinanceBudgetProps {
 
 type ViewTab = "debts" | "salary" | "fixed" | "optimizer";
 
-
 const debtTypeMeta: Record<
   string,
-  { icon: string; label: string; color: string }
+  {
+    icon: string;
+    label: string;
+    color: string;
+    gradient: string;
+    gradientBg: string;
+    badgeBg: string;
+    accentColor: string;
+    ringColor: string;
+  }
 > = {
   installment: {
     icon: mdiBank,
     label: "Trả góp",
-    color: "bg-blue-50 text-blue-700",
+    color: "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300",
+    gradient: "from-blue-600 via-indigo-600 to-violet-700",
+    gradientBg:
+      "linear-gradient(135deg, #2563EB 0%, #4F46E5 50%, #7C3AED 100%)",
+    badgeBg: "bg-blue-500/20 border-blue-400/30 text-blue-100",
+    accentColor: "text-blue-500",
+    ringColor: "ring-blue-500/30",
   },
   credit_card: {
     icon: mdiCreditCard,
     label: "Thẻ tín dụng",
-    color: "bg-purple-50 text-purple-700",
+    color:
+      "bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300",
+    gradient: "from-fuchsia-600 via-purple-600 to-indigo-700",
+    gradientBg:
+      "linear-gradient(135deg, #C026D3 0%, #9333EA 50%, #4338CA 100%)",
+    badgeBg: "bg-purple-500/20 border-purple-400/30 text-purple-100",
+    accentColor: "text-purple-500",
+    ringColor: "ring-purple-500/30",
   },
   friend: {
     icon: mdiAccountGroup,
-    label: "Bạn bè",
-    color: "bg-amber-50 text-amber-700",
+    label: "Bạn bè & Vay mượn",
+    color:
+      "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
+    gradient: "from-amber-500 via-orange-600 to-rose-600",
+    gradientBg:
+      "linear-gradient(135deg, #F59E0B 0%, #EA580C 50%, #E11D48 100%)",
+    badgeBg: "bg-amber-500/20 border-amber-400/30 text-amber-100",
+    accentColor: "text-amber-500",
+    ringColor: "ring-amber-500/30",
   },
 };
 
@@ -314,33 +345,40 @@ export default function FinanceBudget({
   const [selectedInstallments, setSelectedInstallments] = useState<number[]>(
     [],
   );
+  const [debtDetailTab, setDebtDetailTab] = useState<"all" | "unpaid" | "paid">(
+    "all",
+  );
 
   // ── ML Optimizer states & Cache ───────────────────────────────────────────
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [deficitResult, setDeficitResult] = useState<MLDeficitResponse | null>(() => {
-    try {
-      const saved = localStorage.getItem("ml_optimizer_cache");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.deficitResult || null;
+  const [deficitResult, setDeficitResult] = useState<MLDeficitResponse | null>(
+    () => {
+      try {
+        const saved = localStorage.getItem("ml_optimizer_cache");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return parsed.deficitResult || null;
+        }
+      } catch (e) {
+        console.warn("Failed to load ml_optimizer_cache:", e);
       }
-    } catch (e) {
-      console.warn("Failed to load ml_optimizer_cache:", e);
-    }
-    return null;
-  });
-  const [patternResult, setPatternResult] = useState<MLPatternResponse | null>(() => {
-    try {
-      const saved = localStorage.getItem("ml_optimizer_cache");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.patternResult || null;
+      return null;
+    },
+  );
+  const [patternResult, setPatternResult] = useState<MLPatternResponse | null>(
+    () => {
+      try {
+        const saved = localStorage.getItem("ml_optimizer_cache");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return parsed.patternResult || null;
+        }
+      } catch (e) {
+        console.warn("Failed to load ml_optimizer_cache:", e);
       }
-    } catch (e) {
-      console.warn("Failed to load ml_optimizer_cache:", e);
-    }
-    return null;
-  });
+      return null;
+    },
+  );
   const [customDeficitInput, setCustomDeficitInput] = useState<string>(() => {
     try {
       const saved = localStorage.getItem("ml_optimizer_cache");
@@ -362,94 +400,150 @@ export default function FinanceBudget({
     return null;
   });
   const [appliedOptimized, setAppliedOptimized] = useState(false);
+  const [expandedPlanCat, setExpandedPlanCat] = useState<string | null>(null);
 
-  const handleRunOptimizer = useCallback(async (overrideAmount?: string) => {
-    setIsOptimizing(true);
-    try {
-      const amountStr = overrideAmount !== undefined ? overrideAmount : customDeficitInput;
-      const targetSavings = Math.max(
-        100000,
-        parseInt(amountStr.replace(/\D/g, "") || "1000000", 10),
-      );
+  const getPlanCategoryIcon = (categoryName: string) => {
+    const lower = categoryName.toLowerCase();
+    if (
+      lower.includes("ăn") ||
+      lower.includes("uống") ||
+      lower.includes("cơm") ||
+      lower.includes("food")
+    )
+      return mdiFoodForkDrink;
+    if (
+      lower.includes("cà phê") ||
+      lower.includes("cafe") ||
+      lower.includes("coffee") ||
+      lower.includes("trà")
+    )
+      return mdiCoffee;
+    if (
+      lower.includes("mua") ||
+      lower.includes("shop") ||
+      lower.includes("sắm")
+    )
+      return mdiShoppingOutline;
+    if (
+      lower.includes("chơi") ||
+      lower.includes("game") ||
+      lower.includes("giải trí")
+    )
+      return mdiGamepadVariantOutline;
+    if (
+      lower.includes("xăng") ||
+      lower.includes("xe") ||
+      lower.includes("di chuyển")
+    )
+      return mdiCarSide;
+    if (
+      lower.includes("thuốc") ||
+      lower.includes("khám") ||
+      lower.includes("y tế")
+    )
+      return mdiMedicalBag;
+    if (
+      lower.includes("quà") ||
+      lower.includes("tiệc") ||
+      lower.includes("mừng")
+    )
+      return mdiGift;
+    return mdiLightbulbOutline;
+  };
 
-      // 1. Tính toán chi tiêu tùy ý trong tháng từ danh sách transactions
-      const discSpending: Record<string, number> = {};
-      const thisMonth = getLocalMonthString();
-      const thisMonthExpenses = transactions.filter(
-        (t) => t.type === "expense" && t.date?.startsWith(thisMonth),
-      );
-
-      thisMonthExpenses.forEach((t) => {
-        const cat = t.category || "Khác";
-        discSpending[cat] = (discSpending[cat] || 0) + (t.amount || 0);
-      });
-
-      // Nếu chưa có giao dịch trong tháng, thêm mẫu mặc định để thuật toán chạy
-      if (Object.keys(discSpending).length === 0) {
-        discSpending["Ăn uống ngoài"] = 1200000;
-        discSpending["Cà phê"] = 350000;
-        discSpending["Mua sắm"] = 800000;
-        discSpending["Thuốc hút"] = 600000;
-      }
-
-      // 2. Gọi đồng thời 2 API: Giải quyết thâm hụt và Khai phá quy luật
-      const [deficitRes, patternRes] = await Promise.allSettled([
-        api.ml.solveDeficit({
-          deficit_amount: targetSavings,
-          monthly_discretionary_spending: discSpending,
-          savings_monthly_target: targetSavings,
-        }),
-        api.ml.patterns({
-          transactions: transactions.map((t) => ({
-            id: t.id,
-            date: t.date,
-            type: t.type,
-            amount: t.amount,
-            category: t.category,
-            description: t.description || "",
-          })),
-        }),
-      ]);
-
-      let newDeficit: MLDeficitResponse | null = null;
-      let newPattern: MLPatternResponse | null = null;
-
-      if (deficitRes.status === "fulfilled" && deficitRes.value) {
-        newDeficit = deficitRes.value as MLDeficitResponse;
-        setDeficitResult(newDeficit);
-      }
-      if (patternRes.status === "fulfilled" && patternRes.value) {
-        newPattern = patternRes.value as MLPatternResponse;
-        setPatternResult(newPattern);
-      }
-
-      const now = Date.now();
-      setCachedTimestamp(now);
-      setAppliedOptimized(false);
-
-      // Lưu / cập nhật cache khi chạy thành công
+  const handleRunOptimizer = useCallback(
+    async (overrideAmount?: string) => {
+      setIsOptimizing(true);
       try {
-        localStorage.setItem(
-          "ml_optimizer_cache",
-          JSON.stringify({
-            deficitResult: newDeficit ?? deficitResult,
-            patternResult: newPattern ?? patternResult,
-            customDeficitInput: amountStr,
-            timestamp: now,
-          }),
+        const amountStr =
+          overrideAmount !== undefined ? overrideAmount : customDeficitInput;
+        const targetSavings = Math.max(
+          100000,
+          parseInt(amountStr.replace(/\D/g, "") || "1000000", 10),
         );
-      } catch (e) {
-        console.warn("[Optimizer] Error saving cache:", e);
-      }
 
-      toast.success("Đã phân tích và lưu kế hoạch tiết kiệm mới!");
-    } catch (err: any) {
-      console.error("[Optimizer] Error running ML algorithms:", err);
-      toast.error("Không thể tải kế hoạch tối ưu: " + (err.message || "Lỗi mạng"));
-    } finally {
-      setIsOptimizing(false);
-    }
-  }, [transactions, customDeficitInput, deficitResult, patternResult]);
+        // 1. Tính toán chi tiêu tùy ý trong tháng từ danh sách transactions
+        const discSpending: Record<string, number> = {};
+        const thisMonth = getLocalMonthString();
+        const thisMonthExpenses = transactions.filter(
+          (t) => t.type === "expense" && t.date?.startsWith(thisMonth),
+        );
+
+        thisMonthExpenses.forEach((t) => {
+          const cat = t.category || "Khác";
+          discSpending[cat] = (discSpending[cat] || 0) + (t.amount || 0);
+        });
+
+        // Nếu chưa có giao dịch trong tháng, thêm mẫu mặc định để thuật toán chạy
+        if (Object.keys(discSpending).length === 0) {
+          discSpending["Ăn uống ngoài"] = 1200000;
+          discSpending["Cà phê"] = 350000;
+          discSpending["Mua sắm"] = 800000;
+          discSpending["Thuốc hút"] = 600000;
+        }
+
+        // 2. Gọi đồng thời 2 API: Giải quyết thâm hụt và Khai phá quy luật
+        const [deficitRes, patternRes] = await Promise.allSettled([
+          api.ml.solveDeficit({
+            deficit_amount: targetSavings,
+            monthly_discretionary_spending: discSpending,
+            savings_monthly_target: targetSavings,
+          }),
+          api.ml.patterns({
+            transactions: transactions.map((t) => ({
+              id: t.id,
+              date: t.date,
+              type: t.type,
+              amount: t.amount,
+              category: t.category,
+              description: t.description || "",
+            })),
+          }),
+        ]);
+
+        let newDeficit: MLDeficitResponse | null = null;
+        let newPattern: MLPatternResponse | null = null;
+
+        if (deficitRes.status === "fulfilled" && deficitRes.value) {
+          newDeficit = deficitRes.value as MLDeficitResponse;
+          setDeficitResult(newDeficit);
+        }
+        if (patternRes.status === "fulfilled" && patternRes.value) {
+          newPattern = patternRes.value as MLPatternResponse;
+          setPatternResult(newPattern);
+        }
+
+        const now = Date.now();
+        setCachedTimestamp(now);
+        setAppliedOptimized(false);
+
+        // Lưu / cập nhật cache khi chạy thành công
+        try {
+          localStorage.setItem(
+            "ml_optimizer_cache",
+            JSON.stringify({
+              deficitResult: newDeficit ?? deficitResult,
+              patternResult: newPattern ?? patternResult,
+              customDeficitInput: amountStr,
+              timestamp: now,
+            }),
+          );
+        } catch (e) {
+          console.warn("[Optimizer] Error saving cache:", e);
+        }
+
+        toast.success("Đã phân tích và lưu kế hoạch tiết kiệm mới!");
+      } catch (err: any) {
+        console.error("[Optimizer] Error running ML algorithms:", err);
+        toast.error(
+          "Không thể tải kế hoạch tối ưu: " + (err.message || "Lỗi mạng"),
+        );
+      } finally {
+        setIsOptimizing(false);
+      }
+    },
+    [transactions, customDeficitInput, deficitResult, patternResult],
+  );
 
   useEffect(() => {
     // Chỉ tự động chạy nếu chưa có dữ liệu cache
@@ -487,7 +581,9 @@ export default function FinanceBudget({
     if (Array.isArray(patternResult.rules) && patternResult.rules.length > 0) {
       const sortedRules = [...patternResult.rules]
         .filter((r) => r.confidence > 0.25)
-        .sort((a, b) => (b.confidence * (b.lift || 1)) - (a.confidence * (a.lift || 1)));
+        .sort(
+          (a, b) => b.confidence * (b.lift || 1) - a.confidence * (a.lift || 1),
+        );
 
       sortedRules.slice(0, 2).forEach((rule, idx) => {
         const fromCat = rule.antecedents.join(", ");
@@ -500,18 +596,23 @@ export default function FinanceBudget({
           iconColor: "text-purple-600 dark:text-purple-400",
           title: `Hành vi liên đới: ${fromCat} ➔ ${toCat}`,
           description: `Khi phát sinh chi tiêu cho "${fromCat}", có ${confPct}% xác suất bạn sẽ chi tiêu tiếp cho "${toCat}". Đề xuất đặt trước hạn mức khi mua sắm các nhóm này.`,
-          badge: `Tương quan ${rule.lift ? rule.lift.toFixed(1) + 'x' : confPct + '%'}`,
-          badgeColor: "bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/50",
+          badge: `Tương quan ${rule.lift ? rule.lift.toFixed(1) + "x" : confPct + "%"}`,
+          badgeColor:
+            "bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/50",
         });
       });
     }
 
     // 2. Phân tích Clusters (Phân cụm thói quen từ K-Means)
-    if (Array.isArray(patternResult.clusters) && patternResult.clusters.length > 0) {
+    if (
+      Array.isArray(patternResult.clusters) &&
+      patternResult.clusters.length > 0
+    ) {
       patternResult.clusters.forEach((cl, idx) => {
-        const topCats = Array.isArray(cl.top_categories) && cl.top_categories.length > 0
-          ? cl.top_categories.slice(0, 2).join(", ")
-          : "Chi tiêu tổng hợp";
+        const topCats =
+          Array.isArray(cl.top_categories) && cl.top_categories.length > 0
+            ? cl.top_categories.slice(0, 2).join(", ")
+            : "Chi tiêu tổng hợp";
         const dayIdx = Math.abs(Math.round(cl.avg_day_of_week)) % 7;
         const dayName = dayLabels[dayIdx] || "Trong tuần";
         const isWeekend = dayIdx === 0 || dayIdx === 5 || dayIdx === 6;
@@ -525,7 +626,8 @@ export default function FinanceBudget({
             title: `Thời điểm chi tiêu cao điểm (${dayName})`,
             description: `Tần suất giao dịch tập trung nhiều vào ${dayName} với nhóm chủ đạo "${topCats}". Mức chi trung bình khoảng ${formatVND(cl.avg_amount)}/giao dịch.`,
             badge: `${cl.count} giao dịch`,
-            badgeColor: "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50",
+            badgeColor:
+              "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50",
           });
         } else if (cl.avg_amount < 200000 && cl.count >= 2) {
           insights.push({
@@ -536,7 +638,8 @@ export default function FinanceBudget({
             title: `Chi tiêu nhỏ lẻ thường nhật (${topCats})`,
             description: `Nhóm chi tiêu nhỏ (${topCats}) phát sinh ${cl.count} lần với trung bình ${formatVND(cl.avg_amount)}/lần. Tích lũy các khoản nhỏ này chiếm phần đáng kể trong tháng.`,
             badge: "Thường nhật",
-            badgeColor: "bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/50",
+            badgeColor:
+              "bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/50",
           });
         } else {
           insights.push({
@@ -547,7 +650,8 @@ export default function FinanceBudget({
             title: `Nhóm chi tiêu chủ lực (${topCats})`,
             description: `Chi tiêu thường phát sinh vào ${dayName} với mức trung bình ${formatVND(cl.avg_amount)}/lần. Đã ghi nhận ${cl.count} giao dịch.`,
             badge: `${cl.count} lần`,
-            badgeColor: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/50",
+            badgeColor:
+              "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/50",
           });
         }
       });
@@ -573,13 +677,20 @@ export default function FinanceBudget({
     | "workDays"
     | "taskAmount";
 
-  const [activeKeypadField, setActiveKeypadField] = useState<KeypadField | null>(null);
+  const [activeKeypadField, setActiveKeypadField] =
+    useState<KeypadField | null>(null);
 
   const handleKeypadPress = useCallback((key: string) => {
     setActiveKeypadField((field) => {
       if (!field) return null;
 
-      if (field === "originalAmount" || field === "monthlyPayment" || field === "grossSalary" || field === "netSalary" || field === "taskAmount") {
+      if (
+        field === "originalAmount" ||
+        field === "monthlyPayment" ||
+        field === "grossSalary" ||
+        field === "netSalary" ||
+        field === "taskAmount"
+      ) {
         let setter: React.Dispatch<React.SetStateAction<string>>;
         if (field === "originalAmount") setter = setOriginalAmount;
         else if (field === "monthlyPayment") setter = setMonthlyPayment;
@@ -601,8 +712,14 @@ export default function FinanceBudget({
           if (rawDigits === "0") rawDigits = "";
           return numFmt(rawDigits + key);
         });
-      } else if (field === "totalInstallments" || field === "paidInstallments") {
-        const setter = field === "totalInstallments" ? setTotalInstallments : setPaidInstallments;
+      } else if (
+        field === "totalInstallments" ||
+        field === "paidInstallments"
+      ) {
+        const setter =
+          field === "totalInstallments"
+            ? setTotalInstallments
+            : setPaidInstallments;
         setter((prev) => {
           let rawDigits = prev.replace(/\D/g, "");
           if (key === "C") return "0";
@@ -615,8 +732,17 @@ export default function FinanceBudget({
           if (parseInt(combined) <= 360) return combined;
           return prev;
         });
-      } else if (field === "paymentDay" || field === "receiveDay" || field === "workDays") {
-        const setter = field === "paymentDay" ? setPaymentDay : field === "receiveDay" ? setReceiveDay : setWorkDays;
+      } else if (
+        field === "paymentDay" ||
+        field === "receiveDay" ||
+        field === "workDays"
+      ) {
+        const setter =
+          field === "paymentDay"
+            ? setPaymentDay
+            : field === "receiveDay"
+              ? setReceiveDay
+              : setWorkDays;
         setter((prev) => {
           let rawDigits = prev.replace(/\D/g, "");
           if (key === "C") return "1";
@@ -639,14 +765,31 @@ export default function FinanceBudget({
   const handleKeypadPreset = (val: string | number) => {
     if (!activeKeypadField) return;
 
-    if (activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment" || activeKeypadField === "grossSalary" || activeKeypadField === "netSalary" || activeKeypadField === "taskAmount") {
+    if (
+      activeKeypadField === "originalAmount" ||
+      activeKeypadField === "monthlyPayment" ||
+      activeKeypadField === "grossSalary" ||
+      activeKeypadField === "netSalary" ||
+      activeKeypadField === "taskAmount"
+    ) {
       let currentVal = "";
       let setter: (v: string) => void = setOriginalAmount;
-      if (activeKeypadField === "originalAmount") { currentVal = originalAmount; setter = setOriginalAmount; }
-      else if (activeKeypadField === "monthlyPayment") { currentVal = monthlyPayment; setter = setMonthlyPayment; }
-      else if (activeKeypadField === "grossSalary") { currentVal = grossSalary; setter = setGrossSalary; }
-      else if (activeKeypadField === "netSalary") { currentVal = netSalary; setter = setNetSalary; }
-      else { currentVal = taskAmount; setter = setTaskAmount; }
+      if (activeKeypadField === "originalAmount") {
+        currentVal = originalAmount;
+        setter = setOriginalAmount;
+      } else if (activeKeypadField === "monthlyPayment") {
+        currentVal = monthlyPayment;
+        setter = setMonthlyPayment;
+      } else if (activeKeypadField === "grossSalary") {
+        currentVal = grossSalary;
+        setter = setGrossSalary;
+      } else if (activeKeypadField === "netSalary") {
+        currentVal = netSalary;
+        setter = setNetSalary;
+      } else {
+        currentVal = taskAmount;
+        setter = setTaskAmount;
+      }
 
       if (typeof val === "number") {
         const currentRaw = parseInt(currentVal.replace(/\D/g, "")) || 0;
@@ -753,9 +896,10 @@ export default function FinanceBudget({
       return;
     }
 
-    const calculatedMonthlyPayment = rawMonthly > 0
-      ? rawMonthly
-      : calcInstallmentAmount(rawAmount, computedInterestRate, totalInst);
+    const calculatedMonthlyPayment =
+      rawMonthly > 0
+        ? rawMonthly
+        : calcInstallmentAmount(rawAmount, computedInterestRate, totalInst);
 
     const autoRate = computedInterestRate;
 
@@ -765,12 +909,15 @@ export default function FinanceBudget({
       totalInst,
       paidInst,
       startDate,
-      day
+      day,
     );
 
     // Tính số dư nợ dựa trên các kỳ chưa trả
     const unpaidInstallments = instData.slice(paidInst);
-    const balance = unpaidInstallments.reduce((s, i) => s + (i.amount - (i.paidAmount || 0)), 0);
+    const balance = unpaidInstallments.reduce(
+      (s, i) => s + (i.amount - (i.paidAmount || 0)),
+      0,
+    );
 
     const maturityDate =
       instData.length > 0 ? instData[instData.length - 1].dueDate : startDate;
@@ -808,7 +955,11 @@ export default function FinanceBudget({
     setDebtName(debt.name);
     setOriginalAmount(numFmt(String(debt.originalAmount)));
     setMonthlyPayment(numFmt(String(debt.monthlyPayment)));
-    const computedRate = calcInterestRate(debt.originalAmount, debt.monthlyPayment, debt.totalInstallments);
+    const computedRate = calcInterestRate(
+      debt.originalAmount,
+      debt.monthlyPayment,
+      debt.totalInstallments,
+    );
     setInterestRate(String(computedRate || debt.interestRate || 0));
     setPaymentDay(String(debt.paymentDay));
     setTotalInstallments(String(debt.totalInstallments));
@@ -825,6 +976,7 @@ export default function FinanceBudget({
     );
     setSelectedInstallments(nextUnpaid ? [nextUnpaid.index] : []);
     setPaymentNote("");
+    setDebtDetailTab("all");
   };
 
   const handlePaySubmit = async () => {
@@ -1124,8 +1276,6 @@ export default function FinanceBudget({
         ))}
       </div>
 
-
-
       {debts.length === 0 ? (
         <div className="bg-white/60 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-[28px] p-8 text-center text-slate-400">
           <Icon
@@ -1264,7 +1414,9 @@ export default function FinanceBudget({
                               Ngày bắt đầu
                             </span>
                             <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                              {debt.startDate ? debt.startDate.split('-').reverse().join('/') : '—'}
+                              {debt.startDate
+                                ? debt.startDate.split("-").reverse().join("/")
+                                : "—"}
                             </span>
                           </div>
                           <div className="bg-white/60 dark:bg-slate-800/60 rounded-xl p-2 border border-slate-100 dark:border-slate-700/60">
@@ -1272,7 +1424,9 @@ export default function FinanceBudget({
                               Lãi suất tự động
                             </span>
                             <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
-                              {debt.interestRate > 0 ? `${debt.interestRate}%` : '0% (Không lãi)'}
+                              {debt.interestRate > 0
+                                ? `${debt.interestRate}%`
+                                : "0% (Không lãi)"}
                             </span>
                           </div>
                         </div>
@@ -1289,7 +1443,10 @@ export default function FinanceBudget({
                                 <span className="text-[10px] text-slate-600 dark:text-slate-300 font-bold truncate">
                                   Kỳ {nextInst.index + 1}:{" "}
                                   <span className="text-slate-900 dark:text-white">
-                                    {nextInst.dueDate.split('-').reverse().join('/')}
+                                    {nextInst.dueDate
+                                      .split("-")
+                                      .reverse()
+                                      .join("/")}
                                   </span>{" "}
                                   ({formatVND(nextInst.amount)})
                                 </span>
@@ -1306,10 +1463,10 @@ export default function FinanceBudget({
                           </div>
                           <button
                             onClick={() => handlePayOpen(debt)}
-                            className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-[9px] px-3 py-1.5 rounded-lg hover:opacity-80 transition-all cursor-pointer flex items-center gap-1 shadow-sm shrink-0"
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-[10px] px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0"
                           >
-                            <Icon path={mdiCurrencyUsd} size={0.667} />
-                            Thanh toán
+                            <Icon path={mdiInformationOutline} size={0.6} />
+                            Chi tiết & Trả nợ
                           </button>
                         </div>
 
@@ -1319,7 +1476,8 @@ export default function FinanceBudget({
                         ).length > 0 && (
                           <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
                             <span className="text-[9px] font-bold text-slate-400 block uppercase mb-1.5">
-                              Lịch thanh toán các kỳ tiếp theo (Hạn ngày {debt.paymentDay} hàng tháng)
+                              Lịch thanh toán các kỳ tiếp theo (Hạn ngày{" "}
+                              {debt.paymentDay} hàng tháng)
                             </span>
                             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
                               {debt.installments
@@ -1337,7 +1495,12 @@ export default function FinanceBudget({
                                       className={`text-[9px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1 ${isOverdue ? "bg-rose-50 border-rose-100 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300" : "bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-600 dark:text-slate-300"}`}
                                     >
                                       <span>Kỳ {inst.index + 1}:</span>
-                                      <span>{inst.dueDate.split('-').reverse().join('/')}</span>
+                                      <span>
+                                        {inst.dueDate
+                                          .split("-")
+                                          .reverse()
+                                          .join("/")}
+                                      </span>
                                     </span>
                                   );
                                 })}
@@ -1547,7 +1710,10 @@ export default function FinanceBudget({
             Cấu hình lương
           </h3>
           <div className="space-y-3">
-            <div onClick={() => setActiveKeypadField("grossSalary")} className="cursor-pointer group">
+            <div
+              onClick={() => setActiveKeypadField("grossSalary")}
+              className="cursor-pointer group"
+            >
               <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
                 <span>Lương gross (VND)</span>
                 <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
@@ -1562,7 +1728,10 @@ export default function FinanceBudget({
                 className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-bold rounded-xl px-3 py-2.5 outline-none dark:text-white cursor-pointer group-hover:border-blue-500 transition-colors"
               />
             </div>
-            <div onClick={() => setActiveKeypadField("netSalary")} className="cursor-pointer group">
+            <div
+              onClick={() => setActiveKeypadField("netSalary")}
+              className="cursor-pointer group"
+            >
               <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
                 <span>Lương thực nhận (VND) *</span>
                 <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
@@ -1578,7 +1747,10 @@ export default function FinanceBudget({
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div onClick={() => setActiveKeypadField("receiveDay")} className="cursor-pointer group">
+              <div
+                onClick={() => setActiveKeypadField("receiveDay")}
+                className="cursor-pointer group"
+              >
                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
                   <span>Ngày nhận lương</span>
                   <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
@@ -1592,7 +1764,10 @@ export default function FinanceBudget({
                   className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 text-xs font-bold rounded-xl px-3 py-2.5 outline-none dark:text-white cursor-pointer group-hover:border-blue-500 transition-colors"
                 />
               </div>
-              <div onClick={() => setActiveKeypadField("workDays")} className="cursor-pointer group">
+              <div
+                onClick={() => setActiveKeypadField("workDays")}
+                className="cursor-pointer group"
+              >
                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 flex items-center justify-between">
                   <span>Số ngày công</span>
                   <span className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
@@ -1973,7 +2148,10 @@ export default function FinanceBudget({
                         placeholder="Tên khoản chi"
                         className="w-full bg-white dark:bg-slate-600 border border-slate-100 dark:border-slate-500 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none dark:text-white"
                       />
-                      <div onClick={() => setActiveKeypadField("taskAmount")} className="cursor-pointer group relative">
+                      <div
+                        onClick={() => setActiveKeypadField("taskAmount")}
+                        className="cursor-pointer group relative"
+                      >
                         <input
                           type="text"
                           readOnly
@@ -2149,8 +2327,12 @@ export default function FinanceBudget({
                 <Icon path={mdiPiggyBank} size={1} />
               </div>
               <div>
-                <h2 className="text-base font-black tracking-tight">Kế Hoạch Tiết Kiệm</h2>
-                <p className="text-xs text-indigo-200">Lộ trình cắt giảm & cân đối ngân sách thông minh</p>
+                <h2 className="text-base font-black tracking-tight">
+                  Kế Hoạch Tiết Kiệm
+                </h2>
+                <p className="text-xs text-indigo-200">
+                  Lộ trình cắt giảm & cân đối ngân sách thông minh
+                </p>
               </div>
             </div>
             <button
@@ -2159,7 +2341,11 @@ export default function FinanceBudget({
               className="px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-xl active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
               title="Chạy lại mô hình phân tích ML"
             >
-              <Icon path={isOptimizing ? mdiLoading : mdiRefresh} size={0.7} className={isOptimizing ? "animate-spin" : ""} />
+              <Icon
+                path={isOptimizing ? mdiLoading : mdiRefresh}
+                size={0.7}
+                className={isOptimizing ? "animate-spin" : ""}
+              />
               <span>{isOptimizing ? "Đang tính..." : "Chạy lại"}</span>
             </button>
           </div>
@@ -2212,7 +2398,9 @@ export default function FinanceBudget({
                 placeholder="Nhập số tiền mục tiêu..."
                 className="bg-transparent text-white font-black text-sm w-full outline-none placeholder:text-white/40"
               />
-              <span className="text-xs text-white/80 font-bold pr-1 shrink-0">đ</span>
+              <span className="text-xs text-white/80 font-bold pr-1 shrink-0">
+                đ
+              </span>
               <button
                 type="button"
                 onClick={() => handleRunOptimizer()}
@@ -2224,14 +2412,13 @@ export default function FinanceBudget({
             </div>
 
             {/* Quick Chips */}
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 pt-0.5">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 pt-0.5">
               {[
                 { label: "500k", val: "500000" },
                 { label: "1 triệu", val: "1000000" },
                 { label: "1.5 triệu", val: "1500000" },
                 { label: "2 triệu", val: "2000000" },
                 { label: "3 triệu", val: "3000000" },
-                { label: "5 triệu", val: "5000000" },
               ].map((item) => {
                 const isSelected = customDeficitInput === item.val;
                 return (
@@ -2263,8 +2450,12 @@ export default function FinanceBudget({
                 <Icon path={mdiLightbulbOutline} size={0.85} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Kế hoạch Cắt giảm Đề xuất</h3>
-                <p className="text-[11px] text-slate-400">Điều chỉnh các khoản chi tiêu tùy ý</p>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Kế hoạch Cắt giảm Đề xuất
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Điều chỉnh các khoản chi tiêu tùy ý
+                </p>
               </div>
             </div>
             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/50">
@@ -2272,41 +2463,176 @@ export default function FinanceBudget({
             </span>
           </div>
 
-          {/* Categories list */}
+          {/* Categories list as Collapsible Accordion */}
           {deficitResult?.resolution_plan?.[0]?.details ? (
-            <div className="space-y-2.5">
-              {Object.entries(deficitResult.resolution_plan[0].details).map(([cat, val]: [string, any]) => {
-                if (!val || typeof val !== "object" || !val.suggested_cut) return null;
-                const cutPct = Math.round((val.suggested_cut / val.current_spending) * 100) || 40;
+            <div className="space-y-2">
+              {(() => {
+                const entries = Object.entries(
+                  deficitResult.resolution_plan[0].details,
+                ).filter(
+                  ([_, val]: [string, any]) =>
+                    val && typeof val === "object" && val.suggested_cut > 0,
+                );
+                if (entries.length === 0) return null;
+                const totalCut = entries.reduce(
+                  (sum, [_, v]: [string, any]) => sum + (v.suggested_cut || 0),
+                  0,
+                );
+
                 return (
-                  <div key={cat} className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{cat}</span>
-                      <span className="text-[10px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full">
-                        Giảm {formatVND(val.suggested_cut)} (-{cutPct}%)
+                  <div className="flex items-center justify-between pb-1 px-1">
+                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                      Tổng cắt giảm:{" "}
+                      <span className="font-extrabold text-rose-500 dark:text-rose-400">
+                        -{formatFullVND(totalCut)}
+                      </span>{" "}
+                      <span className="text-[10px] text-slate-400">
+                        ({entries.length} danh mục)
                       </span>
                     </div>
-
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">
-                        Hiện tại: <span className="line-through">{formatVND(val.current_spending)}</span>
-                      </span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        Gợi ý mới: {formatVND(val.target_spending)}
-                      </span>
-                    </div>
-
-                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${100 - cutPct}%` }} />
-                    </div>
+                    {expandedPlanCat !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedPlanCat(null)}
+                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                      >
+                        Thu gọn
+                      </button>
+                    )}
                   </div>
                 );
-              })}
+              })()}
+
+              <div className="bg-slate-50/80 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800/80 divide-y divide-slate-100 dark:divide-slate-800/80 overflow-hidden">
+                {Object.entries(deficitResult.resolution_plan[0].details).map(
+                  ([cat, val]: [string, any], idx) => {
+                    if (!val || typeof val !== "object" || !val.suggested_cut)
+                      return null;
+                    const isExpanded =
+                      expandedPlanCat === cat ||
+                      (expandedPlanCat === null && idx === 0);
+                    const cutPct =
+                      Math.round(
+                        (val.suggested_cut / val.current_spending) * 100,
+                      ) || 40;
+                    const catIcon = getPlanCategoryIcon(cat);
+
+                    return (
+                      <div key={cat} className="transition-colors">
+                        {/* Accordion Row Header */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedPlanCat((prev) => {
+                              const currentlyOpen =
+                                prev === cat || (prev === null && idx === 0);
+                              return currentlyOpen ? "" : cat;
+                            });
+                          }}
+                          className="w-full py-3 px-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-xl bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0 border border-orange-200/50 dark:border-orange-800/40">
+                              <Icon path={catIcon} size={0.7} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                              {cat}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-extrabold text-rose-500 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200/40 dark:border-rose-800/40">
+                              -{formatVND(val.suggested_cut)}
+                            </span>
+                            <div
+                              className={`text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
+                                isExpanded ? "rotate-90 text-indigo-500" : ""
+                              }`}
+                            >
+                              <Icon path={mdiChevronRight} size={0.75} />
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Accordion Detail Body */}
+                        <AnimatePresence initial={false}>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden bg-white/80 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800/80"
+                            >
+                              <div className="p-3.5 space-y-2 text-xs">
+                                {/* Dòng 1: Hiện tại */}
+                                <div className="flex items-center justify-between py-1 border-b border-slate-100 dark:border-slate-800/50">
+                                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                    Chi tiêu hiện tại
+                                  </span>
+                                  <span className="font-semibold text-slate-500 dark:text-slate-400 line-through">
+                                    {formatFullVND(val.current_spending)}
+                                  </span>
+                                </div>
+
+                                {/* Dòng 2: Gợi ý mới */}
+                                <div className="flex items-center justify-between py-1 border-b border-slate-100 dark:border-slate-800/50">
+                                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                                    Gợi ý ngân sách mới
+                                  </span>
+                                  <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                                    {formatFullVND(val.target_spending)}
+                                  </span>
+                                </div>
+
+                                {/* Dòng 3: Cắt giảm */}
+                                <div className="flex items-center justify-between py-1 border-b border-slate-100 dark:border-slate-800/50">
+                                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                                    Mức cắt giảm
+                                  </span>
+                                  <span className="font-extrabold text-rose-500 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full text-[11px]">
+                                    -{formatFullVND(val.suggested_cut)} (-
+                                    {cutPct}%)
+                                  </span>
+                                </div>
+
+                                {/* Thanh Progress */}
+                                <div className="pt-1.5 space-y-1">
+                                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                      style={{
+                                        width: `${Math.max(5, 100 - cutPct)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex justify-between items-center text-[9px] text-slate-400">
+                                    <span>Tiết kiệm {cutPct}%</span>
+                                    <span>Ngân sách mới {100 - cutPct}%</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
             </div>
           ) : (
             <div className="py-6 text-center text-slate-400 space-y-2">
-              <Icon path={isOptimizing ? mdiLoading : mdiCreation} size={1.2} className={`mx-auto ${isOptimizing ? "animate-spin text-indigo-500" : ""}`} />
-              <p className="text-xs">{isOptimizing ? "Đang tính toán ngân sách tiết kiệm tối ưu..." : "Bấm 'Chạy lại' hoặc 'Tính toán' để nạp gợi ý cắt giảm."}</p>
+              <Icon
+                path={isOptimizing ? mdiLoading : mdiCreation}
+                size={1.2}
+                className={`mx-auto ${isOptimizing ? "animate-spin text-indigo-500" : ""}`}
+              />
+              <p className="text-xs">
+                {isOptimizing
+                  ? "Đang tính toán ngân sách tiết kiệm tối ưu..."
+                  : "Bấm 'Chạy lại' hoặc 'Tính toán' để nạp gợi ý cắt giảm."}
+              </p>
             </div>
           )}
 
@@ -2322,8 +2648,15 @@ export default function FinanceBudget({
                 : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 active:scale-98"
             }`}
           >
-            <Icon path={appliedOptimized ? mdiCheckAll : mdiPiggyBank} size={0.75} />
-            <span>{appliedOptimized ? "Đã áp dụng kế hoạch này" : "Áp dụng mục tiêu cắt giảm này"}</span>
+            <Icon
+              path={appliedOptimized ? mdiCheckAll : mdiPiggyBank}
+              size={0.75}
+            />
+            <span>
+              {appliedOptimized
+                ? "Đã áp dụng kế hoạch này"
+                : "Áp dụng mục tiêu cắt giảm này"}
+            </span>
           </button>
         </div>
 
@@ -2335,13 +2668,14 @@ export default function FinanceBudget({
                 <Icon path={mdiMagnify} size={0.85} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Thói Quen Tiêu Dùng Đáng Lưu Ý</h3>
-                <p className="text-[11px] text-slate-400">Phân tích học máy từ lịch sử giao dịch thực tế</p>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Thói Quen Tiêu Dùng
+                </h3>
               </div>
             </div>
             {habitInsights.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400 border border-purple-200/50">
-                {habitInsights.length} quy luật AI
+                Top {habitInsights.length}
               </span>
             )}
           </div>
@@ -2349,8 +2683,14 @@ export default function FinanceBudget({
           <div className="space-y-2.5">
             {isOptimizing ? (
               <div className="py-6 text-center text-slate-400 space-y-2">
-                <Icon path={mdiLoading} size={1.2} className="mx-auto animate-spin text-purple-500" />
-                <p className="text-xs">Đang phân tích thói quen từ giao dịch...</p>
+                <Icon
+                  path={mdiLoading}
+                  size={1.2}
+                  className="mx-auto animate-spin text-purple-500"
+                />
+                <p className="text-xs">
+                  Đang phân tích thói quen từ giao dịch...
+                </p>
               </div>
             ) : habitInsights.length > 0 ? (
               habitInsights.map((insight) => (
@@ -2358,7 +2698,9 @@ export default function FinanceBudget({
                   key={insight.id}
                   className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-3 transition-all hover:shadow-sm"
                 >
-                  <div className={`w-8 h-8 rounded-xl ${insight.iconBg} flex items-center justify-center ${insight.iconColor} shrink-0 mt-0.5`}>
+                  <div
+                    className={`w-8 h-8 rounded-xl ${insight.iconBg} flex items-center justify-center ${insight.iconColor} shrink-0 mt-0.5`}
+                  >
                     <Icon path={insight.icon} size={0.75} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -2367,7 +2709,9 @@ export default function FinanceBudget({
                         {insight.title}
                       </span>
                       {insight.badge && (
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${insight.badgeColor || "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${insight.badgeColor || "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}
+                        >
                           {insight.badge}
                         </span>
                       )}
@@ -2387,7 +2731,8 @@ export default function FinanceBudget({
                   Chưa đủ dữ liệu để trích xuất quy luật
                 </p>
                 <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                  Thêm từ 3-5 giao dịch chi tiêu trong tháng, sau đó bấm "Chạy lại" để mô hình AI tự động phát hiện thói quen của bạn.
+                  Thêm từ 3-5 giao dịch chi tiêu trong tháng, sau đó bấm "Chạy
+                  lại" để mô hình AI tự động phát hiện thói quen của bạn.
                 </p>
               </div>
             )}
@@ -2448,29 +2793,54 @@ export default function FinanceBudget({
         </motion.div>
       </AnimatePresence>
 
-      {/* Payment modal portal */}
+      {/* Payment & Debt Detail Bottom Sheet Modal Portal */}
       {createPortal(
         <AnimatePresence>
           {paymentDebtId &&
             (() => {
               const debt = debts.find((d) => d.id === paymentDebtId);
               if (!debt) return null;
+              const meta = debtTypeMeta[debt.type] || debtTypeMeta.installment;
               const unpaid = debt.installments.filter(
                 (i) => i.status === "pending" || i.status === "partial",
               );
+              const paidList = debt.installments.filter(
+                (i) => i.status === "paid",
+              );
+              const paidPct = calcPaidPercent(debt);
+              const totalPaidAmount = calcTotalPaid(debt);
+              const nextUnpaid = getNextInstallment(debt.installments);
+              const overdueCount = getOverdueCount(debt.installments);
+
+              const filteredInstallments = debt.installments.filter((i) => {
+                if (debtDetailTab === "unpaid")
+                  return i.status === "pending" || i.status === "partial";
+                if (debtDetailTab === "paid") return i.status === "paid";
+                return true;
+              });
+
+              const selectedTotal = selectedInstallments.reduce((s, idx) => {
+                const inst = debt.installments.find((i) => i.index === idx);
+                return s + (inst?.amount || 0);
+              }, 0);
+
+              const allUnpaidSelected =
+                unpaid.length > 0 &&
+                unpaid.every((i) => selectedInstallments.includes(i.index));
+
               return (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 overflow-hidden z-50 bg-slate-900/40 backdrop-blur-md flex items-end justify-center"
+                  className="fixed inset-0 overflow-hidden z-50 bg-slate-900/50 backdrop-blur-md flex items-end justify-center"
                   onClick={() => setPaymentDebtId(null)}
                 >
                   <motion.div
                     initial={{ y: "100%" }}
                     animate={{ y: 0 }}
                     exit={{ y: "100%" }}
-                    transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                    transition={{ type: "spring", damping: 26, stiffness: 240 }}
                     drag="y"
                     dragControls={dragControlsPayment}
                     dragListener={false}
@@ -2482,8 +2852,9 @@ export default function FinanceBudget({
                       }
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[80vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+                    className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] max-h-[88vh] flex flex-col overflow-hidden shadow-[0_-12px_48px_rgba(0,0,0,0.25)] border-t border-white/20 dark:border-slate-800"
                   >
+                    {/* ── Gradient Hero Header ── */}
                     <div
                       onPointerDown={(e) => {
                         e.stopPropagation();
@@ -2492,97 +2863,368 @@ export default function FinanceBudget({
                       onTouchStart={(e) => {
                         e.stopPropagation();
                       }}
-                      style={{ touchAction: "none" }}
-                      className="w-full pt-4 pb-3 px-6 cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
+                      style={{
+                        touchAction: "none",
+                        background: meta.gradientBg,
+                      }}
+                      className="relative p-5 pt-3 text-white overflow-hidden shrink-0 shadow-inner select-none"
                     >
-                      <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="text-base font-bold text-slate-800 dark:text-white">
-                            Thanh toán
-                          </h3>
-                          <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-                            {debt.name} — {formatVND(debt.currentBalance)} còn
-                            lại
-                          </p>
+                      {/* Ambient lighting circles */}
+                      <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-white/15 blur-2xl pointer-events-none" />
+                      <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full bg-black/15 blur-xl pointer-events-none" />
+
+                      {/* Drag Notch */}
+                      <div className="w-12 h-1.5 bg-white/40 rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing" />
+
+                      {/* Top Bar: Badge & Close Button */}
+                      <div className="flex items-center justify-between gap-2 relative z-10">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md flex items-center gap-1.5 shadow-sm border border-white/25">
+                          <Icon path={meta.icon} size={0.55} />
+                          {meta.label}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          {overdueCount > 0 && (
+                            <span className="text-[10px] font-bold bg-rose-500/90 text-white px-2 py-0.5 rounded-full border border-rose-300/40 shadow-sm animate-pulse">
+                              Quá hạn {overdueCount} kỳ
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setPaymentDebtId(null)}
+                            className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 active:scale-90 backdrop-blur-md flex items-center justify-center text-white transition-all cursor-pointer"
+                          >
+                            <Icon path={mdiClose} size={0.65} />
+                          </button>
                         </div>
+                      </div>
+
+                      {/* Debt Title & Dư nợ còn lại */}
+                      <div className="mt-2.5 relative z-10">
+                        <h2 className="text-lg font-black tracking-tight text-white truncate">
+                          {debt.name}
+                        </h2>
+                        <div className="flex items-baseline justify-between gap-2 mt-1">
+                          <div>
+                            <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider block">
+                              Dư nợ còn lại
+                            </span>
+                            <span className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-sm">
+                              {formatVND(debt.currentBalance)}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold text-white/80 block">
+                              Đã trả {debt.paidInstallments}/
+                              {debt.totalInstallments} kỳ
+                            </span>
+                            <span className="text-xs font-black text-white px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm inline-block mt-0.5">
+                              {paidPct}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar Glow */}
+                      <div className="w-full h-2 bg-black/25 rounded-full overflow-hidden p-0.5 mt-3 relative z-10 backdrop-blur-sm">
+                        <div
+                          className="h-full bg-white rounded-full transition-all shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+                          style={{ width: `${paidPct}%` }}
+                        />
                       </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 pt-2">
-                      <div className="space-y-2 mb-5">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Chọn kỳ thanh toán
-                        </p>
-                        {unpaid.map((inst) => (
-                          <label
-                            key={inst.index}
-                            className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:border-slate-200"
+                    {/* ── Overview Metrics Strip ── */}
+                    <div className="grid grid-cols-3 gap-2 px-5 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 text-center shrink-0">
+                      <div className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700/60 shadow-xs">
+                        <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase block">
+                          Gốc ban đầu
+                        </span>
+                        <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 mt-0.5 block truncate">
+                          {formatVND(debt.originalAmount)}
+                        </span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700/60 shadow-xs">
+                        <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase block">
+                          Đã thanh toán
+                        </span>
+                        <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
+                          {formatVND(totalPaidAmount)}
+                        </span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700/60 shadow-xs">
+                        <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase block">
+                          Mỗi kỳ (#{debt.paymentDay})
+                        </span>
+                        <span className="text-[11px] font-black text-blue-600 dark:text-blue-400 mt-0.5 block truncate">
+                          {formatVND(debt.monthlyPayment)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* ── Scrollable Installment Details & Interactive List ── */}
+                    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-3 space-y-3">
+                      {/* Filter Tabs & Quick Select */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                          <button
+                            type="button"
+                            onClick={() => setDebtDetailTab("all")}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                              debtDetailTab === "all"
+                                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
+                            }`}
                           >
-                            <input
-                              type="checkbox"
-                              checked={selectedInstallments.includes(
-                                inst.index,
-                              )}
-                              onChange={() =>
-                                setSelectedInstallments((prev) =>
-                                  prev.includes(inst.index)
-                                    ? prev.filter((i) => i !== inst.index)
-                                    : [...prev, inst.index],
-                                )
+                            Tất cả ({debt.installments.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDebtDetailTab("unpaid")}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                              debtDetailTab === "unpaid"
+                                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
+                            }`}
+                          >
+                            Chưa trả ({unpaid.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDebtDetailTab("paid")}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                              debtDetailTab === "paid"
+                                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
+                            }`}
+                          >
+                            Đã trả ({paidList.length})
+                          </button>
+                        </div>
+
+                        {unpaid.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (allUnpaidSelected) {
+                                setSelectedInstallments([]);
+                              } else {
+                                setSelectedInstallments(
+                                  unpaid.map((i) => i.index),
+                                );
                               }
-                              className="w-4 h-4 rounded border-slate-300 focus:ring-slate-900"
-                            />
-                            <div className="flex-1 flex items-center justify-between">
-                              <div>
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                  Kỳ {inst.index + 1}
-                                </span>
-                                <span className="text-[9px] text-slate-400 ml-2">
-                                  Hạn: {inst.dueDate ? inst.dueDate.split('-').reverse().join('/') : '—'}
-                                </span>
+                            }}
+                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 shrink-0"
+                          >
+                            <Icon path={mdiCheckAll} size={0.55} />
+                            {allUnpaidSelected ? "Bỏ chọn" : "Chọn tất cả"}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Installments List */}
+                      <div className="space-y-2">
+                        {filteredInstallments.length === 0 ? (
+                          <div className="text-center py-6 text-slate-400 text-xs font-semibold">
+                            Không có kỳ nào trong mục này
+                          </div>
+                        ) : (
+                          filteredInstallments.map((inst) => {
+                            const isPaid = inst.status === "paid";
+                            const isOverdue =
+                              !isPaid && inst.dueDate < getLocalDateString();
+                            const isNext = nextUnpaid?.index === inst.index;
+                            const isSelected = selectedInstallments.includes(
+                              inst.index,
+                            );
+
+                            return (
+                              <div
+                                key={inst.index}
+                                onClick={() => {
+                                  if (!isPaid) {
+                                    setSelectedInstallments((prev) =>
+                                      prev.includes(inst.index)
+                                        ? prev.filter((i) => i !== inst.index)
+                                        : [...prev, inst.index],
+                                    );
+                                  }
+                                }}
+                                className={`p-3 rounded-2xl border transition-all select-none flex items-center justify-between gap-3 ${
+                                  isPaid
+                                    ? "bg-slate-50/70 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800 opacity-80 cursor-default"
+                                    : isSelected
+                                      ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700 shadow-sm cursor-pointer"
+                                      : isOverdue
+                                        ? "bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 cursor-pointer hover:border-rose-300"
+                                        : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 cursor-pointer hover:border-slate-200"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {isPaid ? (
+                                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                      <Icon path={mdiCheck} size={0.6} />
+                                    </div>
+                                  ) : (
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => {}} // Handled by container onClick
+                                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                                    />
+                                  )}
+
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs font-bold text-slate-800 dark:text-white">
+                                        Kỳ {inst.index + 1}
+                                      </span>
+                                      {isPaid ? (
+                                        <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                          <Icon
+                                            path={mdiCheckCircle}
+                                            size={0.4}
+                                          />
+                                          Đã thanh toán
+                                        </span>
+                                      ) : isOverdue ? (
+                                        <span className="text-[9px] font-extrabold text-rose-700 bg-rose-100 dark:bg-rose-950/80 dark:text-rose-300 px-2 py-0.5 rounded-full flex items-center gap-0.5 animate-pulse">
+                                          <Icon
+                                            path={mdiAlertCircleOutline}
+                                            size={0.4}
+                                          />
+                                          Quá hạn
+                                        </span>
+                                      ) : isNext ? (
+                                        <span className="text-[9px] font-extrabold text-indigo-700 bg-indigo-100 dark:bg-indigo-950/80 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                                          Kỳ hiện tại
+                                        </span>
+                                      ) : null}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                        <Icon
+                                          path={mdiCalendarMonth}
+                                          size={0.45}
+                                        />
+                                        Hạn:{" "}
+                                        {inst.dueDate
+                                          ? inst.dueDate
+                                              .split("-")
+                                              .reverse()
+                                              .join("/")
+                                          : "—"}
+                                      </span>
+                                      {inst.paidDate && (
+                                        <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 flex items-center gap-0.5">
+                                          <Icon path={mdiHistory} size={0.45} />
+                                          Trả:{" "}
+                                          {inst.paidDate
+                                            .split("-")
+                                            .reverse()
+                                            .join("/")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                  <span
+                                    className={`text-xs font-black block ${
+                                      isPaid
+                                        ? "text-slate-400 line-through dark:text-slate-500"
+                                        : isOverdue
+                                          ? "text-rose-600 dark:text-rose-400"
+                                          : "text-slate-800 dark:text-white"
+                                    }`}
+                                  >
+                                    {formatVND(inst.amount)}
+                                  </span>
+                                </div>
                               </div>
-                              <span className="text-xs font-extrabold text-slate-800 dark:text-white">
-                                {formatVND(inst.amount)}
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* ── Payment Form & Action Area (If unpaid items exist) ── */}
+                      {unpaid.length > 0 ? (
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                              Ghi chú thanh toán (Tùy chọn)
+                            </label>
+                            <input
+                              type="text"
+                              value={paymentNote}
+                              onChange={(e) => setPaymentNote(e.target.value)}
+                              placeholder="VD: Chuyển khoản Vietcombank, Momo..."
+                              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-xs font-semibold outline-none dark:text-white focus:border-blue-500 transition-colors"
+                            />
+                          </div>
+
+                          {/* Selected Total Strip */}
+                          <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/90 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/60">
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                                Đã chọn thanh toán
+                              </span>
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                {selectedInstallments.length} kỳ
                               </span>
                             </div>
-                          </label>
-                        ))}
-                      </div>
-                      <div className="mb-5 space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                          Ghi chú
-                        </label>
-                        <input
-                          type="text"
-                          value={paymentNote}
-                          onChange={(e) => setPaymentNote(e.target.value)}
-                          placeholder="VD: Chuyển khoản ACB..."
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[16px] px-4 py-2.5 text-sm font-semibold outline-none dark:text-white"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 mb-5">
-                        <span className="text-xs font-semibold text-slate-500">
-                          Tổng thanh toán:
-                        </span>
-                        <span className="text-sm font-extrabold text-slate-900 dark:text-white">
-                          {formatVND(
-                            selectedInstallments.reduce((s, idx) => {
-                              const inst = debt.installments.find(
-                                (i) => i.index === idx,
-                              );
-                              return s + (inst?.amount || 0);
-                            }, 0),
-                          )}
-                        </span>
-                      </div>
-                      <button
-                        onClick={handlePaySubmit}
-                        disabled={selectedInstallments.length === 0}
-                        className="w-full bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-black text-sm py-4 rounded-[20px] hover:opacity-90 disabled:opacity-40 cursor-pointer transition-all shadow-md"
-                      >
-                        Xác nhận thanh toán {selectedInstallments.length} kỳ
-                      </button>
+                            <div className="text-right">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                                Tổng tiền
+                              </span>
+                              <span className="text-sm font-black text-blue-600 dark:text-blue-400">
+                                {formatVND(selectedTotal)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Gradient Action Button */}
+                          <button
+                            type="button"
+                            onClick={handlePaySubmit}
+                            disabled={selectedInstallments.length === 0}
+                            style={{
+                              background:
+                                selectedInstallments.length > 0
+                                  ? meta.gradientBg
+                                  : undefined,
+                            }}
+                            className={`w-full text-white font-black text-sm py-3.5 rounded-2xl transition-all shadow-lg active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 ${
+                              selectedInstallments.length === 0
+                                ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none"
+                                : "shadow-indigo-500/25 hover:brightness-110"
+                            }`}
+                          >
+                            <Icon path={mdiCurrencyUsd} size={0.75} />
+                            <span>
+                              {selectedInstallments.length === 0
+                                ? "Chọn ít nhất 1 kỳ để thanh toán"
+                                : `Xác nhận thanh toán ${selectedInstallments.length} kỳ (${formatVND(selectedTotal)})`}
+                            </span>
+                          </button>
+                        </div>
+                      ) : (
+                        /* Fully paid celebration banner */
+                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border border-emerald-500/20 text-center">
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-2">
+                            <Icon path={mdiCheckCircle} size={1} />
+                          </div>
+                          <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-300">
+                            Khoản nợ đã được tất toán 100%!
+                          </h4>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            Bạn đã hoàn thành tất cả các kỳ thanh toán của khoản
+                            này.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 </motion.div>
@@ -2658,24 +3300,26 @@ export default function FinanceBudget({
                 >
                   {/* Debt Type Selector */}
                   <div className="grid grid-cols-3 gap-2">
-                    {(["installment", "credit_card", "friend"] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setDebtType(t)}
-                        className={`py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                          debtType === t
-                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-sm"
-                            : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100"
-                        }`}
-                      >
-                        {t === "installment"
-                          ? "Trả góp"
-                          : t === "credit_card"
-                            ? "Thẻ TD"
-                            : "Bạn bè"}
-                      </button>
-                    ))}
+                    {(["installment", "credit_card", "friend"] as const).map(
+                      (t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setDebtType(t)}
+                          className={`py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            debtType === t
+                              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-sm"
+                              : "bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-100"
+                          }`}
+                        >
+                          {t === "installment"
+                            ? "Trả góp"
+                            : t === "credit_card"
+                              ? "Thẻ TD"
+                              : "Bạn bè"}
+                        </button>
+                      ),
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -2708,7 +3352,9 @@ export default function FinanceBudget({
                         </label>
                         <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl px-3.5 py-3 text-slate-800 dark:text-white group-hover:border-blue-500 transition-colors flex items-center justify-between">
                           <span>{originalAmount || "0"}</span>
-                          <span className="text-[10px] text-slate-400 font-medium">VND</span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            VND
+                          </span>
                         </div>
                       </div>
 
@@ -2725,13 +3371,17 @@ export default function FinanceBudget({
                         </label>
                         <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl px-3.5 py-3 text-slate-800 dark:text-white group-hover:border-blue-500 transition-colors flex items-center justify-between">
                           <span>{monthlyPayment || "0"}</span>
-                          <span className="text-[10px] text-slate-400 font-medium">VND</span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            VND
+                          </span>
                         </div>
                       </div>
 
                       {/* Tổng số kỳ - Opens Keypad */}
                       <div
-                        onClick={() => setActiveKeypadField("totalInstallments")}
+                        onClick={() =>
+                          setActiveKeypadField("totalInstallments")
+                        }
                         className="cursor-pointer group"
                       >
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block mb-1 flex items-center justify-between">
@@ -2742,7 +3392,9 @@ export default function FinanceBudget({
                         </label>
                         <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl px-3.5 py-3 text-slate-800 dark:text-white group-hover:border-blue-500 transition-colors flex items-center justify-between">
                           <span>{totalInstallments || "1"}</span>
-                          <span className="text-[10px] text-slate-400 font-medium">Tháng</span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            Tháng
+                          </span>
                         </div>
                       </div>
 
@@ -2766,12 +3418,18 @@ export default function FinanceBudget({
                       <div>
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1 flex items-center justify-between">
                           <span>Lãi suất (%)</span>
-                          <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">Tự động</span>
+                          <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
+                            Tự động
+                          </span>
                         </label>
                         <input
                           type="text"
                           readOnly
-                          value={computedInterestRate > 0 ? `${computedInterestRate}%` : "0%"}
+                          value={
+                            computedInterestRate > 0
+                              ? `${computedInterestRate}%`
+                              : "0%"
+                          }
                           className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs font-black rounded-xl px-3.5 py-3 text-slate-700 dark:text-slate-200 cursor-not-allowed"
                         />
                       </div>
@@ -2780,12 +3438,18 @@ export default function FinanceBudget({
                       <div>
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1 flex items-center justify-between">
                           <span>Tiền lãi (VND)</span>
-                          <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">Tự động</span>
+                          <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
+                            Tự động
+                          </span>
                         </label>
                         <input
                           type="text"
                           readOnly
-                          value={computedInterestAmount > 0 ? `+${numFmt(String(computedInterestAmount))}` : "0đ"}
+                          value={
+                            computedInterestAmount > 0
+                              ? `+${numFmt(String(computedInterestAmount))}`
+                              : "0đ"
+                          }
                           className={`w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs font-black rounded-xl px-3.5 py-3 cursor-not-allowed ${computedInterestAmount > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"}`}
                         />
                       </div>
@@ -2802,7 +3466,10 @@ export default function FinanceBudget({
                           </span>
                         </label>
                         <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl px-3.5 py-3 text-slate-800 dark:text-white group-hover:border-blue-500 transition-colors flex items-center justify-between">
-                          <span>Đã trả: {paidInstallments || "0"} / {totalInstallments || "1"} kỳ</span>
+                          <span>
+                            Đã trả: {paidInstallments || "0"} /{" "}
+                            {totalInstallments || "1"} kỳ
+                          </span>
                         </div>
                       </div>
 
@@ -2838,8 +3505,10 @@ export default function FinanceBudget({
 
                   {/* Live Interest & Installment Schedule Previews */}
                   {(() => {
-                    const rawAmt = parseInt(originalAmount.replace(/\D/g, "")) || 0;
-                    const rawMonthly = parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
+                    const rawAmt =
+                      parseInt(originalAmount.replace(/\D/g, "")) || 0;
+                    const rawMonthly =
+                      parseInt(monthlyPayment.replace(/\D/g, "")) || 0;
                     const totalInst = parseInt(totalInstallments) || 0;
                     const paidInst = parseInt(paidInstallments) || 0;
                     const day = parseInt(paymentDay) || 12;
@@ -2854,10 +3523,11 @@ export default function FinanceBudget({
                       totalInst,
                       paidInst,
                       startDate,
-                      day
+                      day,
                     );
                     const firstDueDate = tempInsts[0]?.dueDate;
-                    const lastDueDate = tempInsts[tempInsts.length - 1]?.dueDate;
+                    const lastDueDate =
+                      tempInsts[tempInsts.length - 1]?.dueDate;
 
                     const fmtDate = (dStr?: string) => {
                       if (!dStr) return "—";
@@ -2869,19 +3539,48 @@ export default function FinanceBudget({
                       <div className="space-y-2 pt-1">
                         {rawMonthly > 0 && (
                           <div className="text-[10px] bg-slate-100 dark:bg-slate-800/80 rounded-xl p-3 flex items-center justify-between text-slate-600 dark:text-slate-300 font-semibold border border-slate-200/60 dark:border-slate-700">
-                            <span>Tổng phải trả: <strong className="text-slate-900 dark:text-white font-extrabold">{formatVND(totalPay)}</strong></span>
-                            <span>Lãi tự động: <strong className={interestAmt > 0 ? "text-rose-500 dark:text-rose-400 font-black" : "text-emerald-600 font-bold"}>{interestAmt > 0 ? `+${formatVND(interestAmt)} (${computedInterestRate}%)` : "0% (Không lãi)"}</strong></span>
+                            <span>
+                              Tổng phải trả:{" "}
+                              <strong className="text-slate-900 dark:text-white font-extrabold">
+                                {formatVND(totalPay)}
+                              </strong>
+                            </span>
+                            <span>
+                              Lãi tự động:{" "}
+                              <strong
+                                className={
+                                  interestAmt > 0
+                                    ? "text-rose-500 dark:text-rose-400 font-black"
+                                    : "text-emerald-600 font-bold"
+                                }
+                              >
+                                {interestAmt > 0
+                                  ? `+${formatVND(interestAmt)} (${computedInterestRate}%)`
+                                  : "0% (Không lãi)"}
+                              </strong>
+                            </span>
                           </div>
                         )}
 
                         {startDate && day > 0 && (
                           <div className="text-[10px] bg-blue-50/80 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 rounded-xl p-3 space-y-1">
                             <div className="flex items-center justify-between font-bold text-blue-900 dark:text-blue-200">
-                              <span>Kỳ 1 ({paidInst > 0 ? "Đã trả" : "Hạn đóng"}): <strong className="text-blue-700 dark:text-blue-300">{fmtDate(firstDueDate)}</strong></span>
-                              <span>Tất toán: <strong className="text-blue-700 dark:text-blue-300">{fmtDate(lastDueDate)}</strong></span>
+                              <span>
+                                Kỳ 1 ({paidInst > 0 ? "Đã trả" : "Hạn đóng"}):{" "}
+                                <strong className="text-blue-700 dark:text-blue-300">
+                                  {fmtDate(firstDueDate)}
+                                </strong>
+                              </span>
+                              <span>
+                                Tất toán:{" "}
+                                <strong className="text-blue-700 dark:text-blue-300">
+                                  {fmtDate(lastDueDate)}
+                                </strong>
+                              </span>
                             </div>
                             <p className="text-[9px] text-blue-700/80 dark:text-blue-300/80 leading-normal">
-                              💡 Hạn ngày {day} hàng tháng {"->"} Kỳ 1: {fmtDate(firstDueDate)}
+                              💡 Hạn ngày {day} hàng tháng {"->"} Kỳ 1:{" "}
+                              {fmtDate(firstDueDate)}
                             </p>
                           </div>
                         )}
@@ -2976,9 +3675,13 @@ export default function FinanceBudget({
                     </span>
                     <span className="text-xl font-black text-slate-900 dark:text-white tracking-tight truncate block">
                       {activeKeypadField === "originalAmount"
-                        ? originalAmount ? `${originalAmount} đ` : "0 đ"
+                        ? originalAmount
+                          ? `${originalAmount} đ`
+                          : "0 đ"
                         : activeKeypadField === "monthlyPayment"
-                          ? monthlyPayment ? `${monthlyPayment} đ` : "0 đ"
+                          ? monthlyPayment
+                            ? `${monthlyPayment} đ`
+                            : "0 đ"
                           : activeKeypadField === "totalInstallments"
                             ? `${totalInstallments || "1"} kỳ`
                             : activeKeypadField === "paymentDay"
@@ -2986,14 +3689,20 @@ export default function FinanceBudget({
                               : activeKeypadField === "paidInstallments"
                                 ? `${paidInstallments || "0"} kỳ`
                                 : activeKeypadField === "grossSalary"
-                                  ? grossSalary ? `${grossSalary} đ` : "0 đ"
+                                  ? grossSalary
+                                    ? `${grossSalary} đ`
+                                    : "0 đ"
                                   : activeKeypadField === "netSalary"
-                                    ? netSalary ? `${netSalary} đ` : "0 đ"
+                                    ? netSalary
+                                      ? `${netSalary} đ`
+                                      : "0 đ"
                                     : activeKeypadField === "receiveDay"
                                       ? `Ngày ${receiveDay || "1"}`
                                       : activeKeypadField === "workDays"
                                         ? `${workDays || "26"} ngày`
-                                        : taskAmount ? `${taskAmount} đ` : "0 đ"}
+                                        : taskAmount
+                                          ? `${taskAmount} đ`
+                                          : "0 đ"}
                     </span>
                   </div>
                   <button
@@ -3051,7 +3760,8 @@ export default function FinanceBudget({
                       ))}
                     </>
                   )}
-                  {(activeKeypadField === "grossSalary" || activeKeypadField === "netSalary") && (
+                  {(activeKeypadField === "grossSalary" ||
+                    activeKeypadField === "netSalary") && (
                     <>
                       {[
                         { label: "+1tr", val: 1000000 },
@@ -3123,7 +3833,8 @@ export default function FinanceBudget({
                       ))}
                     </>
                   )}
-                  {(activeKeypadField === "receiveDay" || activeKeypadField === "workDays") && (
+                  {(activeKeypadField === "receiveDay" ||
+                    activeKeypadField === "workDays") && (
                     <>
                       {[1, 5, 10, 15, 20, 25, 26, 28, 30].map((d) => (
                         <button
@@ -3132,7 +3843,9 @@ export default function FinanceBudget({
                           onClick={() => handleKeypadPreset(d)}
                           className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer transition-colors"
                         >
-                          {activeKeypadField === "receiveDay" ? `Ngày ${d}` : `${d} ngày`}
+                          {activeKeypadField === "receiveDay"
+                            ? `Ngày ${d}`
+                            : `${d} ngày`}
                         </button>
                       ))}
                     </>
@@ -3179,7 +3892,11 @@ export default function FinanceBudget({
                   >
                     0
                   </button>
-                  {activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment" || activeKeypadField === "grossSalary" || activeKeypadField === "netSalary" || activeKeypadField === "taskAmount" ? (
+                  {activeKeypadField === "originalAmount" ||
+                  activeKeypadField === "monthlyPayment" ||
+                  activeKeypadField === "grossSalary" ||
+                  activeKeypadField === "netSalary" ||
+                  activeKeypadField === "taskAmount" ? (
                     <button
                       type="button"
                       onClick={() => handleKeypadPress("000")}
@@ -3196,7 +3913,11 @@ export default function FinanceBudget({
                       ⌫
                     </button>
                   )}
-                  {(activeKeypadField === "originalAmount" || activeKeypadField === "monthlyPayment" || activeKeypadField === "grossSalary" || activeKeypadField === "netSalary" || activeKeypadField === "taskAmount") && (
+                  {(activeKeypadField === "originalAmount" ||
+                    activeKeypadField === "monthlyPayment" ||
+                    activeKeypadField === "grossSalary" ||
+                    activeKeypadField === "netSalary" ||
+                    activeKeypadField === "taskAmount") && (
                     <button
                       type="button"
                       onClick={() => handleKeypadPress("BACK")}
