@@ -12,7 +12,7 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import ToastProvider, { aiToast } from "./components/ToastProvider";
+import ToastProvider from "./components/ToastProvider";
 import Navbar from "./components/Navbar";
 import Dashboard from "./components/Dashboard";
 import Ledger from "./components/Ledger";
@@ -87,7 +87,6 @@ function AppContent() {
   const isInitialLoading =
     txLoading || budgetLoading || debtLoading || saveLoading;
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
-  const [alertsChecked, setAlertsChecked] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("dark_mode");
     if (saved !== null) return saved === "true";
@@ -240,35 +239,6 @@ function AppContent() {
       document.body.removeChild(textArea);
     }
   }, [salaryConfig, fixedCats, fixedTasks, totalFixed, currentMonth, debts, transactions]);
-
-  const checkAiAlerts = useCallback(async () => {
-    if (alertsChecked) return;
-    setAlertsChecked(true);
-    try {
-      const response = await fetch("/.netlify/functions/gemini-advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transactions,
-          budgets,
-          debts,
-          savings,
-          promptType: "alerts",
-        }),
-      });
-      const data = await response.json();
-      if (data.text && data.text !== "OK") {
-        const alerts = data.text.split("\n").filter((l: string) => l.trim());
-        alerts.forEach((alert: string) => {
-          aiToast(alert, { type: "warning", duration: 300000 });
-        });
-      }
-    } catch {}
-  }, [transactions, budgets, debts, savings, alertsChecked]);
-
-  useEffect(() => {
-    if (!isInitialLoading) checkAiAlerts();
-  }, [isInitialLoading, checkAiAlerts]);
 
   useEffect(() => {
     if (isOnline) scheduleSync();
