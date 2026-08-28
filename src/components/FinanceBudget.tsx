@@ -314,16 +314,63 @@ export default function FinanceBudget({
     [],
   );
 
-  // ── ML Optimizer states ───────────────────────────────────────────────────
+  // ── ML Optimizer states & Cache ───────────────────────────────────────────
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [deficitResult, setDeficitResult] = useState<MLDeficitResponse | null>(null);
-  const [patternResult, setPatternResult] = useState<MLPatternResponse | null>(null);
-  const [customDeficitInput, setCustomDeficitInput] = useState("1500000");
+  const [deficitResult, setDeficitResult] = useState<MLDeficitResponse | null>(() => {
+    try {
+      const saved = localStorage.getItem("ml_optimizer_cache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.deficitResult || null;
+      }
+    } catch (e) {
+      console.warn("Failed to load ml_optimizer_cache:", e);
+    }
+    return null;
+  });
+  const [patternResult, setPatternResult] = useState<MLPatternResponse | null>(() => {
+    try {
+      const saved = localStorage.getItem("ml_optimizer_cache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.patternResult || null;
+      }
+    } catch (e) {
+      console.warn("Failed to load ml_optimizer_cache:", e);
+    }
+    return null;
+  });
+  const [customDeficitInput, setCustomDeficitInput] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("ml_optimizer_cache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.customDeficitInput) return String(parsed.customDeficitInput);
+      }
+    } catch (e) {}
+    return "1500000";
+  });
+  const [cachedTimestamp, setCachedTimestamp] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem("ml_optimizer_cache");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.timestamp || null;
+      }
+    } catch (e) {}
+    return null;
+  });
   const [appliedOptimized, setAppliedOptimized] = useState(false);
 
-  const handleRunOptimizer = useCallback(async () => {
+  const handleRunOptimizer = useCallback(async (overrideAmount?: string) => {
     setIsOptimizing(true);
     try {
+      const amountStr = overrideAmount !== undefined ? overrideAmount : customDeficitInput;
+      const targetSavings = Math.max(
+        100000,
+        parseInt(amountStr.replace(/\D/g, "") || "1000000", 10),
+      );
+
       // 1. Tính toán chi tiêu tùy ý trong tháng từ danh sách transactions
       const discSpending: Record<string, number> = {};
       const thisMonth = getLocalMonthString();
@@ -344,17 +391,12 @@ export default function FinanceBudget({
         discSpending["Thuốc hút"] = 600000;
       }
 
-      const deficitAmount = Math.max(
-        100000,
-        parseInt(customDeficitInput.replace(/\D/g, "") || "1500000", 10),
-      );
-
       // 2. Gọi đồng thời 2 API: Giải quyết thâm hụt và Khai phá quy luật
       const [deficitRes, patternRes] = await Promise.allSettled([
         api.ml.solveDeficit({
-          deficit_amount: deficitAmount,
+          deficit_amount: targetSavings,
           monthly_discretionary_spending: discSpending,
-          savings_monthly_target: 1000000,
+          savings_monthly_target: targetSavings,
         }),
         api.ml.patterns({
           transactions: transactions.map((t) => ({
@@ -368,22 +410,48 @@ export default function FinanceBudget({
         }),
       ]);
 
+      let newDeficit: MLDeficitResponse | null = null;
+      let newPattern: MLPatternResponse | null = null;
+
       if (deficitRes.status === "fulfilled" && deficitRes.value) {
-        setDeficitResult(deficitRes.value as MLDeficitResponse);
+        newDeficit = deficitRes.value as MLDeficitResponse;
+        setDeficitResult(newDeficit);
       }
       if (patternRes.status === "fulfilled" && patternRes.value) {
-        setPatternResult(patternRes.value as MLPatternResponse);
+        newPattern = patternRes.value as MLPatternResponse;
+        setPatternResult(newPattern);
       }
 
-      toast.success("Đã cập nhật kế hoạch tối ưu!");
+      const now = Date.now();
+      setCachedTimestamp(now);
+      setAppliedOptimized(false);
+
+      // Lưu / cập nhật cache khi chạy thành công
+      try {
+        localStorage.setItem(
+          "ml_optimizer_cache",
+          JSON.stringify({
+            deficitResult: newDeficit ?? deficitResult,
+            patternResult: newPattern ?? patternResult,
+            customDeficitInput: amountStr,
+            timestamp: now,
+          }),
+        );
+      } catch (e) {
+        console.warn("[Optimizer] Error saving cache:", e);
+      }
+
+      toast.success("Đã phân tích và lưu kế hoạch tiết kiệm mới!");
     } catch (err: any) {
       console.error("[Optimizer] Error running ML algorithms:", err);
+      toast.error("Không thể tải kế hoạch tối ưu: " + (err.message || "Lỗi mạng"));
     } finally {
       setIsOptimizing(false);
     }
-  }, [transactions, customDeficitInput]);
+  }, [transactions, customDeficitInput, deficitResult, patternResult]);
 
   useEffect(() => {
+    // Chỉ tự động chạy nếu chưa có dữ liệu cache
     if (activeTab === "optimizer" && !deficitResult && !isOptimizing) {
       handleRunOptimizer();
     }
@@ -1964,185 +2032,255 @@ export default function FinanceBudget({
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER OPTIMIZER (ML FINANCE OPTIMIZER LAYER)
+  // RENDER OPTIMIZER (TIẾT KIỆM & TỐI ƯU CHI TIÊU)
   // ═══════════════════════════════════════════════════════════════════════════
-  const renderOptimizer = () => (
-    <div className="space-y-4">
-      {/* 1. Status & Goal Header */}
-      <div className="bg-gradient-to-br from-indigo-600 to-slate-900 text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white">
-              <Icon path={mdiAutoFix} size={1} />
+  const renderOptimizer = () => {
+    const formattedInputValue = () => {
+      const n = parseInt(customDeficitInput.replace(/\D/g, "") || "0", 10);
+      return n > 0 ? new Intl.NumberFormat("vi-VN").format(n) : "";
+    };
+
+    return (
+      <div className="space-y-4">
+        {/* 1. Status & Goal Header */}
+        <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white shrink-0">
+                <Icon path={mdiPiggyBank} size={1} />
+              </div>
+              <div>
+                <h2 className="text-base font-black tracking-tight">Kế Hoạch Tiết Kiệm</h2>
+                <p className="text-xs text-indigo-200">Lộ trình cắt giảm & cân đối ngân sách thông minh</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-black tracking-tight">Gợi Ý Tối Ưu Chi Tiêu</h2>
-              <p className="text-xs text-indigo-200">Kế hoạch cân đối tài chính & thói quen</p>
+            <button
+              onClick={() => handleRunOptimizer()}
+              disabled={isOptimizing}
+              className="px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-xl active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              title="Chạy lại mô hình phân tích ML"
+            >
+              <Icon path={isOptimizing ? mdiLoading : mdiRefresh} size={0.7} className={isOptimizing ? "animate-spin" : ""} />
+              <span>{isOptimizing ? "Đang tính..." : "Chạy lại"}</span>
+            </button>
+          </div>
+
+          {/* Cache Status Badge */}
+          {cachedTimestamp && (
+            <div className="mt-3 flex items-center gap-1.5 text-[10px] text-indigo-200 bg-white/10 px-2.5 py-1 rounded-lg w-fit">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>
+                Đã lưu cache:{" "}
+                {new Date(cachedTimestamp).toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                {new Date(cachedTimestamp).toLocaleDateString("vi-VN", {
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
+
+          {/* Target Savings Amount Picker & Custom Input */}
+          <div className="mt-4 pt-3.5 border-t border-white/15 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-100">
+                <Icon path={mdiTarget} size={0.65} />
+                <span>Mục tiêu muốn tiết kiệm thêm tháng này:</span>
+              </div>
+            </div>
+
+            {/* Custom Input Field */}
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20 focus-within:border-white focus-within:bg-white/15 transition-all">
+              <div className="pl-2.5 text-white/70">
+                <Icon path={mdiCash} size={0.8} />
+              </div>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formattedInputValue()}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  setCustomDeficitInput(raw);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleRunOptimizer();
+                  }
+                }}
+                placeholder="Nhập số tiền mục tiêu..."
+                className="bg-transparent text-white font-black text-sm w-full outline-none placeholder:text-white/40"
+              />
+              <span className="text-xs text-white/80 font-bold pr-1 shrink-0">đ</span>
+              <button
+                type="button"
+                onClick={() => handleRunOptimizer()}
+                disabled={isOptimizing}
+                className="px-3 py-1.5 bg-white text-indigo-900 rounded-xl text-xs font-black hover:bg-indigo-50 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-50"
+              >
+                Tính toán
+              </button>
+            </div>
+
+            {/* Quick Chips */}
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 pt-0.5">
+              {[
+                { label: "500k", val: "500000" },
+                { label: "1 triệu", val: "1000000" },
+                { label: "1.5 triệu", val: "1500000" },
+                { label: "2 triệu", val: "2000000" },
+                { label: "3 triệu", val: "3000000" },
+                { label: "5 triệu", val: "5000000" },
+              ].map((item) => {
+                const isSelected = customDeficitInput === item.val;
+                return (
+                  <button
+                    key={item.val}
+                    onClick={() => {
+                      setCustomDeficitInput(item.val);
+                      handleRunOptimizer(item.val);
+                    }}
+                    className={`py-1.5 px-2 rounded-xl text-[11px] font-black transition-all cursor-pointer text-center ${
+                      isSelected
+                        ? "bg-white text-indigo-900 shadow-md"
+                        : "bg-white/15 text-white hover:bg-white/25"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
+        </div>
+
+        {/* 2. Suggested Cut Plan */}
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+                <Icon path={mdiLightbulbOutline} size={0.85} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Kế hoạch Cắt giảm Đề xuất</h3>
+                <p className="text-[11px] text-slate-400">Điều chỉnh các khoản chi tiêu tùy ý</p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/50">
+              Khả thi cao
+            </span>
+          </div>
+
+          {/* Categories list */}
+          {deficitResult?.resolution_plan?.[0]?.details ? (
+            <div className="space-y-2.5">
+              {Object.entries(deficitResult.resolution_plan[0].details).map(([cat, val]: [string, any]) => {
+                if (!val || typeof val !== "object" || !val.suggested_cut) return null;
+                const cutPct = Math.round((val.suggested_cut / val.current_spending) * 100) || 40;
+                return (
+                  <div key={cat} className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{cat}</span>
+                      <span className="text-[10px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full">
+                        Giảm {formatVND(val.suggested_cut)} (-{cutPct}%)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">
+                        Hiện tại: <span className="line-through">{formatVND(val.current_spending)}</span>
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        Gợi ý mới: {formatVND(val.target_spending)}
+                      </span>
+                    </div>
+
+                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${100 - cutPct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-slate-400 space-y-2">
+              <Icon path={isOptimizing ? mdiLoading : mdiCreation} size={1.2} className={`mx-auto ${isOptimizing ? "animate-spin text-indigo-500" : ""}`} />
+              <p className="text-xs">{isOptimizing ? "Đang tính toán ngân sách tiết kiệm tối ưu..." : "Bấm 'Chạy lại' hoặc 'Tính toán' để nạp gợi ý cắt giảm."}</p>
+            </div>
+          )}
+
           <button
-            onClick={handleRunOptimizer}
-            disabled={isOptimizing}
-            className="px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-xl active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            onClick={() => {
+              setAppliedOptimized(true);
+              toast.success("Đã ghi nhận mục tiêu tiết kiệm mới!");
+            }}
+            disabled={appliedOptimized}
+            className={`w-full min-h-[44px] rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
+              appliedOptimized
+                ? "bg-emerald-600 text-white"
+                : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 active:scale-98"
+            }`}
           >
-            <Icon path={isOptimizing ? mdiLoading : mdiRefresh} size={0.7} className={isOptimizing ? "animate-spin" : ""} />
-            <span>{isOptimizing ? "Đang tính..." : "Làm mới"}</span>
+            <Icon path={appliedOptimized ? mdiCheckAll : mdiPiggyBank} size={0.75} />
+            <span>{appliedOptimized ? "Đã áp dụng kế hoạch này" : "Áp dụng mục tiêu cắt giảm này"}</span>
           </button>
         </div>
 
-        {/* Target Savings Amount Picker */}
-        <div className="mt-4 pt-3 border-t border-white/15 space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-200">
-            <Icon path={mdiTarget} size={0.65} />
-            <span>Mục tiêu muốn tiết kiệm thêm tháng này:</span>
-          </div>
-          <div className="grid grid-cols-4 gap-1.5">
-            {[
-              { label: "500k", val: "500000" },
-              { label: "1 triệu", val: "1000000" },
-              { label: "1.5 triệu", val: "1500000" },
-              { label: "2 triệu", val: "2000000" },
-            ].map((item) => (
-              <button
-                key={item.val}
-                onClick={() => setCustomDeficitInput(item.val)}
-                className={`py-2 rounded-xl text-xs font-black transition-all cursor-pointer text-center ${
-                  customDeficitInput === item.val
-                    ? "bg-white text-indigo-900 shadow-md"
-                    : "bg-white/15 text-white hover:bg-white/25"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Suggested Cut Plan */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3.5">
-        <div className="flex items-center justify-between">
+        {/* 3. Spending Habits & Insights */}
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
-              <Icon path={mdiLightbulbOutline} size={0.85} />
+            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center">
+              <Icon path={mdiMagnify} size={0.85} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Kế hoạch Cắt giảm Đề xuất</h3>
-              <p className="text-[11px] text-slate-400">Điều chỉnh các khoản chi tiêu tùy ý</p>
-            </div>
-          </div>
-          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/50">
-            Khả thi cao
-          </span>
-        </div>
-
-        {/* Categories list */}
-        {deficitResult?.resolution_plan?.[0]?.details ? (
-          <div className="space-y-2.5">
-            {Object.entries(deficitResult.resolution_plan[0].details).map(([cat, val]: [string, any]) => {
-              if (!val || typeof val !== "object" || !val.suggested_cut) return null;
-              const cutPct = Math.round((val.suggested_cut / val.current_spending) * 100) || 40;
-              return (
-                <div key={cat} className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{cat}</span>
-                    <span className="text-[10px] font-black text-rose-500 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full">
-                      Giảm {formatVND(val.suggested_cut)} (-{cutPct}%)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">
-                      Hiện tại: <span className="line-through">{formatVND(val.current_spending)}</span>
-                    </span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      Gợi ý mới: {formatVND(val.target_spending)}
-                    </span>
-                  </div>
-
-                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${100 - cutPct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-6 text-center text-slate-400 space-y-2">
-            <Icon path={isOptimizing ? mdiLoading : mdiCreation} size={1.2} className={`mx-auto ${isOptimizing ? "animate-spin text-indigo-500" : ""}`} />
-            <p className="text-xs">{isOptimizing ? "Đang tính toán ngân sách tối ưu..." : "Bấm 'Làm mới' để nạp gợi ý cắt giảm."}</p>
-          </div>
-        )}
-
-        <button
-          onClick={() => {
-            setAppliedOptimized(true);
-            toast.success("Đã ghi nhận mục tiêu ngân sách mới!");
-          }}
-          disabled={appliedOptimized}
-          className={`w-full min-h-[44px] rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
-            appliedOptimized
-              ? "bg-emerald-600 text-white"
-              : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 active:scale-98"
-          }`}
-        >
-          <Icon path={appliedOptimized ? mdiCheckAll : mdiAutoFix} size={0.75} />
-          <span>{appliedOptimized ? "Đã áp dụng kế hoạch này" : "Áp dụng mục tiêu cắt giảm này"}</span>
-        </button>
-      </div>
-
-      {/* 3. Spending Habits & Insights */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center">
-            <Icon path={mdiMagnify} size={0.85} />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Thói Quen Tiêu Dùng Đáng Lưu Ý</h3>
-            <p className="text-[11px] text-slate-400">Phân tích tự động từ lịch sử giao dịch</p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-              <Icon path={mdiCoffee} size={0.7} />
-            </div>
-            <div>
-              <span className="font-bold block text-slate-800 dark:text-slate-100">Chi tiêu sinh hoạt thường ngày</span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                Các khoản chi nhỏ lẻ (Cà phê, Ăn uống) phát sinh thường xuyên. Cắt giảm 10-20% nhóm này sẽ tích lũy được khoản tiền đáng kể.
-              </span>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Thói Quen Tiêu Dùng Đáng Lưu Ý</h3>
+              <p className="text-[11px] text-slate-400">Phân tích tự động từ lịch sử giao dịch</p>
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-              <Icon path={mdiCalendarClock} size={0.7} />
+          <div className="space-y-2">
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <Icon path={mdiCoffee} size={0.7} />
+              </div>
+              <div>
+                <span className="font-bold block text-slate-800 dark:text-slate-100">Chi tiêu sinh hoạt thường ngày</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  Các khoản chi nhỏ lẻ (Cà phê, Ăn uống) phát sinh thường xuyên. Cắt giảm 10-20% nhóm này sẽ tích lũy được khoản tiền đáng kể.
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="font-bold block text-slate-800 dark:text-slate-100">Thời điểm chi tiêu cao điểm</span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                Tần suất phát sinh chi tiêu thường tăng vào Thứ Sáu và Cuối tuần. Nên đặt trước ngân sách cố định cho 2 ngày này.
-              </span>
-            </div>
-          </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
-              <Icon path={mdiCartOutline} size={0.7} />
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                <Icon path={mdiCalendarClock} size={0.7} />
+              </div>
+              <div>
+                <span className="font-bold block text-slate-800 dark:text-slate-100">Thời điểm chi tiêu cao điểm</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  Tần suất phát sinh chi tiêu thường tăng vào Thứ Sáu và Cuối tuần. Nên đặt trước ngân sách cố định cho 2 ngày này.
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="font-bold block text-slate-800 dark:text-slate-100">Hành vi mua sắm liên đới</span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                Các dịp đi mua sắm thường kéo theo chi tiêu ăn uống ngoài dự kiến.
-              </span>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <Icon path={mdiCartOutline} size={0.7} />
+              </div>
+              <div>
+                <span className="font-bold block text-slate-800 dark:text-slate-100">Hành vi mua sắm liên đới</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  Các dịp đi mua sắm thường kéo theo chi tiêu ăn uống ngoài dự kiến.
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MAIN RENDER
@@ -2165,8 +2303,8 @@ export default function FinanceBudget({
           },
           {
             key: "optimizer" as ViewTab,
-            label: "Tối ưu ML",
-            icon: mdiAutoFix,
+            label: "Tiết kiệm",
+            icon: mdiPiggyBank,
           },
         ].map((tab) => (
           <button
