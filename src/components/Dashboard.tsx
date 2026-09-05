@@ -32,6 +32,8 @@ import {
   mdiSwapHorizontal,
   mdiCalendarClockOutline,
   mdiFire,
+  mdiFirework,
+  mdiGiftOutline,
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import {
@@ -42,9 +44,12 @@ import {
   SavingsGoal,
   UserProfile,
   MLForecastResponse,
+  SalaryConfig,
 } from "../types";
 import { api } from "../api/client";
 import { getLocalDateString } from "../utils/date";
+import { getUpcomingTetInfo } from "../utils/tetFinancialPlanner";
+import TetFinancialPlanner from "./TetFinancialPlanner";
 import {
   LineChart,
   Line,
@@ -74,6 +79,7 @@ interface DashboardProps {
   budgets?: Budget[];
   savings?: SavingsGoal[];
   totalFixed?: number;
+  salaryConfig?: SalaryConfig | null;
   onNavigateToTab: (tab: number) => void;
   username?: string;
   userProfile?: UserProfile;
@@ -86,6 +92,7 @@ export default function Dashboard({
   budgets = [],
   savings = [],
   totalFixed = 0,
+  salaryConfig,
   onNavigateToTab,
   username = "bạn",
   userProfile,
@@ -133,6 +140,7 @@ export default function Dashboard({
     (totalPayablesMonthly + expenseThisMonth);
 
   const netDebt = totalDebtBalance - totalReceivables;
+  const tetCountdown = useMemo(() => getUpcomingTetInfo(), []);
 
   const totalIncomeAllTime = transactions
     .filter((t) => t.type === "income")
@@ -221,6 +229,7 @@ export default function Dashboard({
   const [spendingTab, setSpendingTab] = useState<"expense" | "income">(
     "expense",
   );
+  const [showTetPlannerModal, setShowTetPlannerModal] = useState(false);
 
   // ── ML Finance Forecasting Layer with Stale-While-Revalidate Cache ──
   const [mlForecast, setMlForecast] = useState<MLForecastResponse | null>(
@@ -795,6 +804,31 @@ export default function Dashboard({
             </span>
           </div>
         )}
+
+        {/* 🧧 Tet Countdown Mini-Widget */}
+        <div
+          onClick={() => setShowTetPlannerModal(true)}
+          className="mt-2.5 p-3 bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 dark:from-rose-950/30 dark:via-amber-950/30 dark:to-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 rounded-2xl flex items-center justify-between gap-2 cursor-pointer hover:shadow-xs transition-all select-none group"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 text-white shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+              <Icon path={mdiFirework} size={0.7} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider block truncate">
+                Lộ trình Đón Tết {tetCountdown.solarYear} ({tetCountdown.lunarAnimal})
+              </span>
+              <p className="text-xs font-black text-slate-800 dark:text-white truncate">
+                🎆 Còn {tetCountdown.daysToSolar} ngày Tết Tây • 🌸 {tetCountdown.daysToLunar} ngày Tết Ta
+              </p>
+            </div>
+          </div>
+          <Icon
+            path={mdiChevronRight}
+            size={0.75}
+            className="text-rose-400 shrink-0 group-hover:translate-x-0.5 transition-transform"
+          />
+        </div>
 
         {/* 4-chip grid */}
         <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-100">
@@ -2160,6 +2194,49 @@ export default function Dashboard({
             })()}
         </AnimatePresence>,
         document.body,
+      )}
+
+      {/* 🌸 Tet Financial Planner Modal / Drawer */}
+      {createPortal(
+        <AnimatePresence>
+          {showTetPlannerModal && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowTetPlannerModal(false)}
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
+              />
+
+              {/* Modal Window / Sheet */}
+              <motion.div
+                initial={{ opacity: 0, y: "100%" }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: "100%" }}
+                transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                className="relative z-10 w-full max-w-2xl max-h-[92vh] flex flex-col bg-[#f8fafc] dark:bg-slate-950 rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden border border-amber-300/30 dark:border-amber-700/40"
+              >
+                {/* Scrollable Body */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4">
+                  <TetFinancialPlanner
+                    salaryConfig={salaryConfig}
+                    debts={debts}
+                    totalFixed={totalFixed}
+                    transactions={transactions}
+                    onNavigateToTab={(t) => {
+                      setShowTetPlannerModal(false);
+                      onNavigateToTab(t);
+                    }}
+                    onClose={() => setShowTetPlannerModal(false)}
+                  />
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
     </div>
   );

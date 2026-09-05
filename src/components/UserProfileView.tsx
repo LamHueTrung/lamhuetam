@@ -56,7 +56,7 @@ export default function UserProfileView({
   onUpdateProfile,
   onNavigateToTab,
   needRefresh = false,
-  updateServiceWorker = async () => {},
+  updateServiceWorker = async () => { },
   onResyncData,
 }: UserProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -542,7 +542,7 @@ export default function UserProfileView({
                 className="flex-1 sm:flex-initial px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 backdrop-blur-md cursor-pointer transition-all border border-white/10"
               >
                 <Icon path={mdiPencilOutline} size={0.75} />
-                <span>Chỉnh sửa hồ sơ</span>
+                {/* <span>Chỉnh sửa hồ sơ</span> */}
               </button>
             )}
           </div>
@@ -591,11 +591,10 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => !isEditing && toggleSection("profile_info")}
-            className={`flex items-center justify-between pb-3 ${
-              !isEditing && openSection !== "profile_info"
-                ? ""
-                : "border-b border-slate-100 dark:border-slate-800"
-            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_info"
+              ? ""
+              : "border-b border-slate-100 dark:border-slate-800"
+              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
@@ -885,11 +884,10 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => !isEditing && toggleSection("profile_skills")}
-            className={`flex items-center justify-between pb-3 ${
-              !isEditing && openSection !== "profile_skills"
-                ? ""
-                : "border-b border-slate-100 dark:border-slate-800"
-            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_skills"
+              ? ""
+              : "border-b border-slate-100 dark:border-slate-800"
+              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
@@ -1099,11 +1097,10 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
           <div
             onClick={() => !isEditing && toggleSection("profile_edu")}
-            className={`flex items-center justify-between pb-3 ${
-              !isEditing && openSection !== "profile_edu"
-                ? ""
-                : "border-b border-slate-100 dark:border-slate-800"
-            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_edu"
+              ? ""
+              : "border-b border-slate-100 dark:border-slate-800"
+              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
@@ -1195,11 +1192,10 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => !isEditing && toggleSection("profile_custom")}
-            className={`flex items-center justify-between pb-3 ${
-              !isEditing && openSection !== "profile_custom"
-                ? ""
-                : "border-b border-slate-100 dark:border-slate-800"
-            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_custom"
+              ? ""
+              : "border-b border-slate-100 dark:border-slate-800"
+              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
@@ -1382,9 +1378,8 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => toggleSection("finance_card")}
-            className={`flex items-center justify-between pb-3 ${
-              openSection !== "finance_card" ? "" : "border-b border-slate-100 dark:border-slate-800"
-            } cursor-pointer select-none`}
+            className={`flex items-center justify-between pb-3 ${openSection !== "finance_card" ? "" : "border-b border-slate-100 dark:border-slate-800"
+              } cursor-pointer select-none`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
@@ -1531,9 +1526,8 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => toggleSection("system_ai")}
-            className={`flex items-center justify-between pb-3 ${
-              openSection !== "system_ai" ? "" : "border-b border-slate-100 dark:border-slate-800"
-            } cursor-pointer select-none`}
+            className={`flex items-center justify-between pb-3 ${openSection !== "system_ai" ? "" : "border-b border-slate-100 dark:border-slate-800"
+              } cursor-pointer select-none`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400">
@@ -1782,9 +1776,8 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
           <div
             onClick={() => toggleSection("system_version")}
-            className={`flex items-center justify-between pb-3 ${
-              openSection !== "system_version" ? "" : "border-b border-slate-100 dark:border-slate-800"
-            } cursor-pointer select-none`}
+            className={`flex items-center justify-between pb-3 ${openSection !== "system_version" ? "" : "border-b border-slate-100 dark:border-slate-800"
+              } cursor-pointer select-none`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
@@ -1837,7 +1830,7 @@ export default function UserProfileView({
                       size={0.65}
                       className={isUpdating ? "animate-spin" : ""}
                     />
-                    <span>{isUpdating ? "Đang kiểm tra..." : "Kiểm tra bản cập nhật"}</span>
+                    <span>{isUpdating ? "Đang kiểm tra..." : "Cập nhật"}</span>
                   </button>
                 </div>
               </motion.div>

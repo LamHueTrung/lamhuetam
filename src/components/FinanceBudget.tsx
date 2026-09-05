@@ -25,6 +25,7 @@ import {
   mdiFormatListBulletedSquare,
   mdiTag,
   mdiFire,
+  mdiFirework,
   mdiCoffee,
   mdiLightningBolt,
   mdiCarSide,
@@ -85,6 +86,7 @@ import {
   MLOptimizeDebtResponse,
 } from "../types";
 import DebtOptimizerDrawer from "./DebtOptimizerDrawer";
+import TetFinancialPlanner from "./TetFinancialPlanner";
 import { api } from "../api/client";
 import { useSalary } from "../hooks/useSalary";
 import { useFixedExpenses } from "../hooks/useFixedExpenses";
