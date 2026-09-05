@@ -64,6 +64,17 @@ export interface MonthlyPlan {
   remaining: number;
 }
 
+export interface TetPlannerStoredConfig {
+  id: string; // 'default'
+  netSalary: number;
+  expectedBonus: number;
+  solarExpense: number;
+  lunarExpense: number;
+  monthlyLiving: number;
+  initialSavings: number;
+  updatedAt: string;
+}
+
 // Legacy alias for backward compatibility
 export type Debt = DebtAccount;
 

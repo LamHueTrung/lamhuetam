@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Icon } from '@mdi/react';
+import toast from 'react-hot-toast';
 import {
   mdiFirework,
   mdiGiftOutline,
@@ -16,9 +17,9 @@ import {
   mdiCashMultiple,
   mdiLayersOutline,
   mdiChartAreaspline,
-  mdiTrendingUp,
-  mdiCreditCardOutline,
-  mdiPiggyBankOutline,
+  mdiContentSave,
+  mdiRefresh,
+  mdiCheckCircle,
 } from '@mdi/js';
 import {
   ResponsiveContainer,
@@ -31,7 +32,6 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
-  ReferenceArea,
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -41,6 +41,11 @@ import {
 import { DebtAccount, Transaction, SalaryConfig } from '../types';
 import { useSalary } from '../hooks/useSalary';
 import { calcRemainingBalance } from '../lib/debtUtils';
+import {
+  saveTetPlannerConfigDB,
+  getTetPlannerConfigDB,
+  clearTetPlannerConfigDB,
+} from '../db';
 
 interface TetFinancialPlannerProps {
   salaryConfig?: SalaryConfig | null;
@@ -158,25 +163,82 @@ export default function TetFinancialPlanner({
   const [monthlyLiving, setMonthlyLiving] = useState<number>(ledgerMonthlyAvg);
   const [initialSavings, setInitialSavings] = useState<number>(defaultInitialSavings);
 
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [activeTab, setActiveTab] = useState<'chart' | 'timeline'>('chart');
   const [chartMode, setChartMode] = useState<'overview' | 'breakdown'>('overview');
 
-  // Đồng bộ khi salaryConfig hoặc ledger thay đổi
+  // Nạp cấu hình đã lưu từ DB khi khởi động
   useEffect(() => {
-    if (salaryConfig?.netSalary && salaryConfig.netSalary > 0) {
+    getTetPlannerConfigDB().then((saved) => {
+      if (saved) {
+        if (typeof saved.netSalary === 'number') setNetSalary(saved.netSalary);
+        if (typeof saved.expectedBonus === 'number') setExpectedBonus(saved.expectedBonus);
+        if (typeof saved.solarExpense === 'number') setSolarExpense(saved.solarExpense);
+        if (typeof saved.lunarExpense === 'number') setLunarExpense(saved.lunarExpense);
+        if (typeof saved.monthlyLiving === 'number') setMonthlyLiving(saved.monthlyLiving);
+        if (typeof saved.initialSavings === 'number') setInitialSavings(saved.initialSavings);
+        if (saved.updatedAt) setSavedAt(saved.updatedAt);
+      }
+    });
+  }, []);
+
+  // Đồng bộ khi salaryConfig hoặc ledger thay đổi (khi chưa có saved config ghi đè)
+  useEffect(() => {
+    if (!savedAt && salaryConfig?.netSalary && salaryConfig.netSalary > 0) {
       setNetSalary(salaryConfig.netSalary);
       setExpectedBonus(salaryConfig.netSalary);
     }
-  }, [salaryConfig]);
+  }, [salaryConfig, savedAt]);
 
   useEffect(() => {
+    if (!savedAt) {
+      setMonthlyLiving(ledgerMonthlyAvg);
+    }
+  }, [ledgerMonthlyAvg, savedAt]);
+
+  useEffect(() => {
+    if (!savedAt) {
+      setInitialSavings(defaultInitialSavings);
+    }
+  }, [defaultInitialSavings, savedAt]);
+
+  // Hành động Lưu cấu hình vào DB
+  const handleSaveToDB = async () => {
+    try {
+      setIsSaving(true);
+      const res = await saveTetPlannerConfigDB({
+        netSalary,
+        expectedBonus,
+        solarExpense,
+        lunarExpense,
+        monthlyLiving,
+        initialSavings,
+        updatedAt: new Date().toISOString(),
+      });
+      setSavedAt(res.updatedAt);
+      toast.success('✓ Đã lưu tuỳ chỉnh Kế hoạch Tết vào cơ sở dữ liệu!');
+    } catch (err: any) {
+      toast.error('Lỗi khi lưu cấu hình: ' + (err?.message || 'Không xác định'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Hành động Khôi phục mặc định
+  const handleResetToDefaults = async () => {
+    await clearTetPlannerConfigDB();
+    setNetSalary(defaultNetSalary);
+    setExpectedBonus(defaultNetSalary);
+    setSolarExpense(2000000);
+    setLunarExpense(8000000);
     setMonthlyLiving(ledgerMonthlyAvg);
-  }, [ledgerMonthlyAvg]);
-
-  useEffect(() => {
     setInitialSavings(defaultInitialSavings);
-  }, [defaultInitialSavings]);
+    setSavedAt(null);
+    toast.success('✓ Đã khôi phục các giá trị mặc định theo Sổ cái & Lương!');
+  };
 
   // Sinh kết quả dự phóng với dữ liệu nợ thực tế
   const projection = useMemo(() => {
@@ -763,6 +825,43 @@ export default function TetFinancialPlanner({
                       Theo Sổ cái ({formatCompactVND(defaultInitialSavings)})
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* 💾 Thanh Lưu Cấu Hình Vào Database & Khôi Phục */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] self-start sm:self-center">
+                  {savedAt ? (
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <Icon path={mdiCheckCircle} size={0.65} />
+                      <span>
+                        Đã lưu cấu hình cá nhân (lúc {new Date(savedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(savedAt).toLocaleDateString('vi-VN')})
+                      </span>
+                    </span>
+                  ) : (
+                    <span>💡 Các số liệu trên đang lấy theo Sổ cái & Lương mặc định.</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={handleResetToDefaults}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 border border-slate-200/80 dark:border-slate-700/80"
+                  >
+                    <Icon path={mdiRefresh} size={0.65} />
+                    <span>Khôi phục mặc định</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveToDB}
+                    disabled={isSaving}
+                    className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 disabled:opacity-50"
+                  >
+                    <Icon path={mdiContentSave} size={0.65} />
+                    <span>{isSaving ? 'Đang lưu...' : 'Lưu cấu hình vào DB'}</span>
+                  </button>
                 </div>
               </div>
             </div>
