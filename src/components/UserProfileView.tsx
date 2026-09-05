@@ -1785,7 +1785,7 @@ export default function UserProfileView({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Phiên bản Ứng dụng & Cập nhật</span>
+                  <span>Phiên bản Ứng dụng</span>
                   <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
                     v{__APP_VERSION__}
                   </span>
@@ -1848,7 +1848,7 @@ export default function UserProfileView({
             className="w-full py-3 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all disabled:opacity-50"
           >
             <Icon path={mdiContentSave} size={0.9} />
-            <span>{isSaving ? "Đang lưu..." : "Lưu toàn bộ hồ sơ"}</span>
+            <span className="w-full">{isSaving ? "Đang lưu..." : "Lưu toàn bộ hồ sơ"}</span>
           </button>
         )}
       </div>
