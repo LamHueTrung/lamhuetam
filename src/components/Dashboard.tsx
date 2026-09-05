@@ -2225,6 +2225,7 @@ export default function Dashboard({
                     debts={debts}
                     totalFixed={totalFixed}
                     transactions={transactions}
+                    initialSavings={Math.max(0, totalIncomeAllTime - totalExpenseAllTime)}
                     onNavigateToTab={(t) => {
                       setShowTetPlannerModal(false);
                       onNavigateToTab(t);

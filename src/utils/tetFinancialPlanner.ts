@@ -111,13 +111,21 @@ export function getUpcomingTetInfo(now = new Date()): TetCountdownInfo {
   };
 }
 
+export interface DebtPlanItem {
+  id: string;
+  name?: string;
+  currentBalance: number;
+  monthlyPayment: number;
+}
+
 export interface TetPlannerConfig {
   netSalary: number;
   expectedBonus: number;
   solarNewYearExpense: number;
   lunarNewYearExpense: number;
   monthlyFixedExpense: number;
-  monthlyDebtPayment: number;
+  monthlyDebtPayment?: number;
+  debts?: DebtPlanItem[];
   monthlyLivingBudget: number;
   initialSavings?: number;
 }
@@ -167,6 +175,16 @@ export function generateTetProjection(config: TetPlannerConfig, now = new Date()
   const months: TetMonthMilestone[] = [];
   let runningFund = config.initialSavings || 0;
 
+  // Khởi tạo bản sao số dư nợ để mô phỏng khấu trừ từng tháng
+  const simDebts = config.debts && config.debts.length > 0
+    ? config.debts.map(d => ({
+        id: d.id,
+        name: d.name,
+        remainingBalance: Math.max(0, d.currentBalance),
+        monthlyPayment: Math.max(0, d.monthlyPayment),
+      }))
+    : null;
+
   // Lặp từ tháng hiện tại đến tháng có Tết Ta
   const endYear = countdown.lunarDate.getFullYear();
   const endMonth = countdown.lunarDate.getMonth();
@@ -196,7 +214,22 @@ export function generateTetProjection(config: TetPlannerConfig, now = new Date()
     // Thưởng Tết được nhận vào tháng Tết Ta (hoặc tháng 1 nếu Tết Ta tháng 1)
     const bonus = isLunarMonth ? (config.expectedBonus || 0) : 0;
     const fixedExpense = config.monthlyFixedExpense || 0;
-    const debtPayment = config.monthlyDebtPayment || 0;
+
+    // Tính khấu trừ nợ thực tế cho tháng này
+    let debtPayment = 0;
+    if (simDebts) {
+      for (const d of simDebts) {
+        if (d.remainingBalance > 0) {
+          const installment = d.monthlyPayment > 0 ? d.monthlyPayment : d.remainingBalance;
+          const pay = Math.min(installment, d.remainingBalance);
+          debtPayment += pay;
+          d.remainingBalance -= pay;
+        }
+      }
+    } else {
+      debtPayment = config.monthlyDebtPayment || 0;
+    }
+
     const livingBudget = config.monthlyLivingBudget || 0;
 
     let holidayExpense = 0;
