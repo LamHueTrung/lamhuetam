@@ -21,6 +21,9 @@ import {
   mdiCreditCardOutline,
   mdiPiggyBankOutline,
   mdiTune,
+  mdiCalendarSyncOutline,
+  mdiShapeOutline,
+  mdiCloudSyncOutline,
 } from '@mdi/js';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -92,7 +95,7 @@ export default function CacheManagerSection({
       await loadStats(false);
       const sizeText = formatBytes(result.totalBytesCleaned);
       toast.success(
-        `Dọn dẹp nhanh thành công! Đã giải phóng ~${sizeText} và dọn ${result.pwaCleaned} bộ nhớ tĩnh.`,
+        `Dọn nhanh thành công! Đã giải phóng ~${sizeText} và dọn ${result.pwaCleaned} bộ nhớ tĩnh.`,
         { duration: 4000 }
       );
     } catch (err) {
@@ -163,13 +166,13 @@ export default function CacheManagerSection({
           !isOpen ? '' : 'border-b border-slate-100 dark:border-slate-800'
         } cursor-pointer select-none`}
       >
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 shrink-0">
             <Icon path={mdiHarddisk} size={0.9} />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>Quản lý Bộ nhớ đệm & Dung lượng</span>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+              <span>Quản lý Bộ nhớ đệm</span>
               {stats?.estimate && (
                 <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">
                   {stats.estimate.usageFormatted}
@@ -177,14 +180,14 @@ export default function CacheManagerSection({
               )}
             </h2>
             <p className="text-[11px] text-slate-400">
-              Kiểm tra dung lượng lưu trữ cục bộ, dọn dẹp cache AI và cơ sở dữ liệu offline
+              Dung lượng lưu trữ cục bộ, cache AI & cơ sở dữ liệu offline
             </p>
           </div>
         </div>
         <Icon
           path={isOpen ? mdiChevronDown : mdiChevronRight}
           size={0.9}
-          className="text-slate-400"
+          className="text-slate-400 shrink-0"
         />
       </div>
 
@@ -197,13 +200,13 @@ export default function CacheManagerSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden space-y-4 pt-1"
           >
-            {/* Storage Progress Gauge Card */}
+            {/* Storage Progress Card */}
             <div className="p-4 bg-gradient-to-br from-slate-50 to-cyan-50/30 dark:from-slate-800/40 dark:to-cyan-950/20 rounded-2xl border border-slate-200/70 dark:border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse" />
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Dung lượng thiết bị đã cấp
+                    Dung lượng thiết bị
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -245,29 +248,30 @@ export default function CacheManagerSection({
                     Đã dùng: <strong className="text-cyan-600 dark:text-cyan-400">{stats?.estimate.usageFormatted || '0 B'}</strong>
                   </span>
                   <span>
-                    Hạn mức tối đa: <strong>{stats?.estimate.quotaFormatted || 'Không giới hạn'}</strong>
+                    Hạn mức: <strong>{stats?.estimate.quotaFormatted || 'Không giới hạn'}</strong>
                   </span>
                 </div>
               </div>
 
               {/* Quick Clean Action Banner */}
-              <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+              <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/50 flex flex-row items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300 min-w-0">
                   <Icon path={mdiShieldCheckOutline} size={0.7} className="text-emerald-500 shrink-0" />
-                  <span>Dọn an toàn: Giữ nguyên tài khoản, theme và dữ liệu quan trọng</span>
+                  <span className="truncate">Dọn an toàn (giữ tài khoản & dữ liệu)</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleQuickClean}
                   disabled={isCleaning}
-                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                  title="Dọn dẹp nhanh các tệp đệm an toàn"
                 >
                   <Icon
                     path={isCleaning ? mdiLoading : mdiLightningBoltOutline}
                     size={0.65}
                     className={isCleaning ? 'animate-spin' : ''}
                   />
-                  <span>{isCleaning ? 'Đang dọn dẹp...' : 'Dọn dẹp nhanh 1 chạm'}</span>
+                  <span>{isCleaning ? 'Đang dọn...' : 'Dọn dẹp nhanh'}</span>
                 </button>
               </div>
             </div>
@@ -276,193 +280,103 @@ export default function CacheManagerSection({
             <div className="space-y-3">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <Icon path={mdiLayersOutline} size={0.65} className="text-indigo-500" />
-                Phân bổ chi tiết các phân vùng bộ nhớ:
+                Phân bổ các phân vùng bộ nhớ:
               </span>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* 1. AI & Forecast Cache */}
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400">
-                        <Icon path={mdiRobot} size={0.7} />
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                          Bộ nhớ đệm Cố vấn AI
-                        </h3>
-                        <p className="text-[10px] text-slate-400">Dự báo tài chính & Phân tích thông minh</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/40 px-2 py-0.5 rounded-lg border border-violet-200/40">
-                      {formatBytes(stats?.localStorageStats.aiCacheSize || 0)}
-                    </span>
+              {/* 1. AI Cache Row Card */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 shrink-0">
+                    <Icon path={mdiRobot} size={0.75} />
                   </div>
-
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-1">
-                    <span>Số mục đệm đã lưu: <strong>{stats?.localStorageStats.aiCacheCount || 0} mục</strong></span>
-                    <button
-                      type="button"
-                      onClick={handleClearAICache}
-                      disabled={isCleaning || (stats?.localStorageStats.aiCacheCount === 0)}
-                      className="text-xs font-bold text-violet-600 hover:text-violet-700 dark:text-violet-400 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40"
-                    >
-                      <Icon path={mdiTrashCanOutline} size={0.55} />
-                      <span>Xóa cache AI</span>
-                    </button>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        Bộ đệm AI
+                      </h3>
+                      <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/40 px-1.5 py-0.2 rounded-md border border-violet-200/40 shrink-0">
+                        {formatBytes(stats?.localStorageStats.aiCacheSize || 0)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      Dự báo & Phân tích • {stats?.localStorageStats.aiCacheCount || 0} mục
+                    </p>
                   </div>
                 </div>
 
-                {/* 2. PWA Cache Storage */}
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-                        <Icon path={mdiServerNetwork} size={0.7} />
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                          Bộ nhớ tĩnh PWA & Web
-                        </h3>
-                        <p className="text-[10px] text-slate-400">File mã nguồn, biểu tượng & font offline</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-200/40">
-                      {stats?.cacheStorageStats.cacheCount || 0} kho cache
-                    </span>
-                  </div>
+                <button
+                  type="button"
+                  onClick={handleClearAICache}
+                  disabled={isCleaning || (stats?.localStorageStats.aiCacheCount === 0)}
+                  className="p-2 rounded-xl bg-violet-100/60 hover:bg-violet-200 dark:bg-violet-950/50 dark:hover:bg-violet-900/60 text-violet-600 dark:text-violet-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  title="Xóa cache AI"
+                >
+                  <Icon path={mdiTrashCanOutline} size={0.7} />
+                </button>
+              </div>
 
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-1">
-                    <span>Trạng thái: <strong>{stats?.cacheStorageStats.cacheCount ? 'Đã kích hoạt' : 'Chưa có cache'}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setConfirmModal({
-                          type: 'pwa',
-                          title: 'Xóa bộ nhớ tĩnh PWA?',
-                          message:
-                            'Hành động này sẽ xóa các file web đã lưu offline và tải lại phiên bản mới nhất từ máy chủ.',
-                          dangerLevel: 'medium',
-                        })
-                      }
-                      disabled={isCleaning}
-                      className="text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
-                    >
-                      <Icon path={mdiRefresh} size={0.55} />
-                      <span>Làm mới PWA</span>
-                    </button>
+              {/* 2. PWA Cache Row Card */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 shrink-0">
+                    <Icon path={mdiServerNetwork} size={0.75} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        Bộ nhớ tĩnh PWA
+                      </h3>
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/40 px-1.5 py-0.2 rounded-md border border-amber-200/40 shrink-0">
+                        {stats?.cacheStorageStats.cacheCount || 0} kho
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      Tệp giao diện & Icon • {stats?.cacheStorageStats.cacheCount ? 'Đã kích hoạt' : 'Chưa có'}
+                    </p>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfirmModal({
+                      type: 'pwa',
+                      title: 'Làm mới bộ nhớ tĩnh PWA?',
+                      message:
+                        'Hành động này sẽ xóa các tệp web đã lưu ngoại tuyến và tải lại phiên bản mới nhất từ máy chủ.',
+                      dangerLevel: 'medium',
+                    })
+                  }
+                  disabled={isCleaning}
+                  className="p-2 rounded-xl bg-amber-100/60 hover:bg-amber-200 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-600 dark:text-amber-400 transition-all cursor-pointer shrink-0"
+                  title="Làm mới bộ nhớ tĩnh PWA"
+                >
+                  <Icon path={mdiRefresh} size={0.7} />
+                </button>
               </div>
 
               {/* 3. Offline IndexedDB Database */}
               <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
-                      <Icon path={mdiDatabaseOutline} size={0.7} />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <Icon path={mdiDatabaseOutline} size={0.75} />
                     </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                        Cơ sở dữ liệu cục bộ (IndexedDB)
-                      </h3>
-                      <p className="text-[10px] text-slate-400">Lưu trữ ngoại tuyến cho giao dịch, sổ cái & nhật ký</p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          Dữ liệu Offline (IndexedDB)
+                        </h3>
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded-md border border-emerald-200/40 shrink-0">
+                          {stats?.indexedDBStats.totalRecords || 0} bản ghi
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        Sổ cái, giao dịch & nhật ký offline
+                      </p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-200/40">
-                    {stats?.indexedDBStats.totalRecords || 0} bản ghi
-                  </span>
-                </div>
 
-                {/* Table Record Counts Chips */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiFinance} size={0.5} className="text-cyan-500" />
-                      Giao dịch
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.transactions || 0}
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiTune} size={0.5} className="text-indigo-500" />
-                      Ngân sách
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.budgets || 0}
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiCreditCardOutline} size={0.5} className="text-rose-500" />
-                      Khoản nợ
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.debts || 0}
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiPiggyBankOutline} size={0.5} className="text-amber-500" />
-                      Tiết kiệm
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.savings || 0}
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiBookOpenVariant} size={0.5} className="text-purple-500" />
-                      Nhật ký
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.diary || 0}
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiLayersOutline} size={0.5} className="text-emerald-500" />
-                      Chi phí cố định
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.fixedExpenseTasks || 0}
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiLayersOutline} size={0.5} className="text-blue-500" />
-                      Danh mục
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.categories || 0}
-                    </span>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 mb-0.5">
-                      <Icon path={mdiRefresh} size={0.5} className="text-orange-500" />
-                      Hàng đợi sync
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {stats?.indexedDBStats.counts.syncQueue || 0}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Clear / Resync IndexedDB Action */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/50">
-                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                    <Icon path={mdiInformationOutline} size={0.55} />
-                    Dữ liệu trên đám mây an toàn, có thể đồng bộ lại bất kỳ lúc nào
-                  </span>
                   <button
                     type="button"
                     onClick={() =>
@@ -475,11 +389,102 @@ export default function CacheManagerSection({
                       })
                     }
                     disabled={isCleaning}
-                    className="text-xs font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline cursor-pointer flex items-center gap-1"
+                    className="p-2 rounded-xl bg-rose-100/60 hover:bg-rose-200 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-all cursor-pointer shrink-0"
+                    title="Xóa đệm & Tải lại từ đám mây"
                   >
-                    <Icon path={mdiTrashCanOutline} size={0.55} />
-                    <span>Xóa đệm & Tải lại</span>
+                    <Icon path={mdiTrashCanOutline} size={0.7} />
                   </button>
+                </div>
+
+                {/* Table Record Counts Chips */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiFinance} size={0.55} className="text-cyan-500 shrink-0" />
+                      Giao dịch
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.transactions || 0}
+                    </span>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiTune} size={0.55} className="text-indigo-500 shrink-0" />
+                      Ngân sách
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.budgets || 0}
+                    </span>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiCreditCardOutline} size={0.55} className="text-rose-500 shrink-0" />
+                      Khoản nợ
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.debts || 0}
+                    </span>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiPiggyBankOutline} size={0.55} className="text-amber-500 shrink-0" />
+                      Tiết kiệm
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.savings || 0}
+                    </span>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiBookOpenVariant} size={0.55} className="text-purple-500 shrink-0" />
+                      Nhật ký
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.diary || 0}
+                    </span>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiCalendarSyncOutline} size={0.55} className="text-emerald-500 shrink-0" />
+                      Cố định
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.fixedExpenseTasks || 0}
+                    </span>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiShapeOutline} size={0.55} className="text-blue-500 shrink-0" />
+                      Danh mục
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.categories || 0}
+                    </span>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Icon path={mdiCloudSyncOutline} size={0.55} className="text-orange-500 shrink-0" />
+                      Chờ đồng bộ
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {stats?.indexedDBStats.counts.syncQueue || 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Info safe note */}
+                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/50">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Icon path={mdiInformationOutline} size={0.55} className="shrink-0" />
+                    Dữ liệu trên đám mây an toàn, có thể đồng bộ lại bất kỳ lúc nào
+                  </span>
                 </div>
               </div>
             </div>
@@ -499,7 +504,7 @@ export default function CacheManagerSection({
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`p-2.5 rounded-2xl ${
+                  className={`p-2.5 rounded-2xl shrink-0 ${
                     confirmModal.dangerLevel === 'high'
                       ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'
                       : 'bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400'
@@ -545,7 +550,7 @@ export default function CacheManagerSection({
                   ) : (
                     <Icon path={mdiCheckCircle} size={0.6} />
                   )}
-                  <span>Xác nhận thực hiện</span>
+                  <span>Xác nhận</span>
                 </button>
               </div>
             </motion.div>
