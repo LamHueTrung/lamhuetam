@@ -56,4 +56,56 @@ export async function clearAllCaches() {
   ]);
 }
 
+export async function getDBRecordCounts() {
+  const [
+    transactions,
+    budgets,
+    debts,
+    savings,
+    categories,
+    fixedExpenseCategories,
+    fixedExpenseTasks,
+    salaryConfigs,
+    diary,
+    syncQueue,
+  ] = await Promise.all([
+    db.transactions.count().catch(() => 0),
+    db.budgets.count().catch(() => 0),
+    db.debts.count().catch(() => 0),
+    db.savings.count().catch(() => 0),
+    db.categories.count().catch(() => 0),
+    db.fixedExpenseCategories.count().catch(() => 0),
+    db.fixedExpenseTasks.count().catch(() => 0),
+    db.salaryConfigs.count().catch(() => 0),
+    db.diary.count().catch(() => 0),
+    db.syncQueue.count().catch(() => 0),
+  ]);
+
+  const totalRecords =
+    transactions +
+    budgets +
+    debts +
+    savings +
+    categories +
+    fixedExpenseCategories +
+    fixedExpenseTasks +
+    salaryConfigs +
+    diary;
+
+  return {
+    transactions,
+    budgets,
+    debts,
+    savings,
+    categories,
+    fixedExpenseCategories,
+    fixedExpenseTasks,
+    salaryConfigs,
+    diary,
+    syncQueue,
+    totalRecords,
+  };
+}
+
 export default db;
+

@@ -36,10 +36,13 @@ import {
   mdiPackageUp,
   mdiClockOutline,
   mdiLoading,
+  mdiCreditCardOutline,
+  mdiInformationOutline,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { UserProfile, CustomProfileField } from "../types";
+import CacheManagerSection from "./CacheManagerSection";
 
 interface UserProfileViewProps {
   profile: UserProfile;
@@ -47,6 +50,7 @@ interface UserProfileViewProps {
   onNavigateToTab?: (tab: number) => void;
   needRefresh?: boolean;
   updateServiceWorker?: (reloadPage?: boolean) => Promise<void>;
+  onResyncData?: () => void;
 }
 
 export default function UserProfileView({
@@ -55,6 +59,7 @@ export default function UserProfileView({
   onNavigateToTab,
   needRefresh = false,
   updateServiceWorker = async () => {},
+  onResyncData,
 }: UserProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -130,6 +135,15 @@ export default function UserProfileView({
   const [lastTestedAt, setLastTestedAt] = useState("");
   const [testingConnection, setTestingConnection] = useState(false);
   const [savingAiConfig, setSavingAiConfig] = useState(false);
+
+  // Credit Card Configuration states
+  const [creditCardStatementDay, setCreditCardStatementDay] = useState<number>(
+    profile.creditCardConfig?.statementDay || 20
+  );
+  const [creditCardName, setCreditCardName] = useState<string>(
+    profile.creditCardConfig?.cardName || ""
+  );
+  const [savingCardConfig, setSavingCardConfig] = useState(false);
 
   // Helper: lấy URL đăng ký API Key dựa trên provider hiện tại
   const getApiKeyUrl = () => {
@@ -233,9 +247,28 @@ export default function UserProfileView({
     setPhone(profile.phone || "");
     setEmails(profile.emails || []);
     setCustomFields(profile.customFields || []);
+    setCreditCardStatementDay(profile.creditCardConfig?.statementDay || 20);
+    setCreditCardName(profile.creditCardConfig?.cardName || "");
 
     fetchAiConfig();
   }, [profile]);
+
+  const handleSaveCardConfig = async () => {
+    try {
+      setSavingCardConfig(true);
+      await onUpdateProfile({
+        creditCardConfig: {
+          statementDay: Number(creditCardStatementDay) || 20,
+          cardName: creditCardName.trim(),
+        },
+      });
+      toast.success("Đã lưu cấu hình ngày sao kê thẻ tín dụng!");
+    } catch (err: any) {
+      toast.error("Lỗi khi lưu cấu hình thẻ: " + err.message);
+    } finally {
+      setSavingCardConfig(false);
+    }
+  };
 
   const handleTestAiConnection = async () => {
     try {
@@ -322,6 +355,10 @@ export default function UserProfileView({
         phone,
         emails,
         customFields,
+        creditCardConfig: {
+          statementDay: Number(creditCardStatementDay) || 20,
+          cardName: creditCardName.trim(),
+        },
       };
 
       await onUpdateProfile(updatedData);
@@ -1417,6 +1454,133 @@ export default function UserProfileView({
                   className="flex-1 py-2.5 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-violet-200/50"
                 >
                   {savingAiConfig ? "Đang lưu..." : "Lưu cấu hình"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* SECTION 7: Quản lý Bộ nhớ đệm & Dung lượng */}
+      <CacheManagerSection
+        isOpen={openSection === 7}
+        onToggle={() => setOpenSection(openSection === 7 ? null : 7)}
+        onResyncRequired={onResyncData}
+      />
+
+      {/* SECTION 8: Cấu hình Thẻ tín dụng & Ngày sao kê */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div
+          onClick={() => setOpenSection(openSection === 8 ? null : 8)}
+          className={`flex items-center justify-between pb-3 ${
+            openSection !== 8 ? "" : "border-b border-slate-100 dark:border-slate-800"
+          } cursor-pointer select-none`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+              <Icon path={mdiCreditCardOutline} size={0.9} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Cấu hình Thẻ tín dụng & Sao kê</span>
+                <span className="text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-200/40">
+                  Ngày {creditCardStatementDay} hàng tháng
+                </span>
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Thiết lập ngày sao kê thẻ tín dụng và quy tắc nhắc nhở hạn thanh toán
+              </p>
+            </div>
+          </div>
+          <Icon
+            path={openSection === 8 ? mdiChevronDown : mdiChevronRight}
+            size={0.9}
+            className="text-slate-400"
+          />
+        </div>
+
+        <AnimatePresence>
+          {openSection === 8 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-4 pt-1"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Ngày sao kê hàng tháng */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Icon path={mdiCalendar} size={0.6} className="text-blue-500" />
+                    Ngày sao kê thẻ hàng tháng:
+                  </label>
+                  <select
+                    value={creditCardStatementDay}
+                    onChange={(e) => setCreditCardStatementDay(parseInt(e.target.value, 10) || 20)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-bold"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d}>
+                        Ngày {d} hàng tháng {d === 20 ? "(Mặc định phổ biến)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tên thẻ / Ngân hàng */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Icon path={mdiCreditCardOutline} size={0.6} className="text-indigo-500" />
+                    Tên thẻ / Ngân hàng phát hành (tùy chọn):
+                  </label>
+                  <input
+                    type="text"
+                    value={creditCardName}
+                    onChange={(e) => setCreditCardName(e.target.value)}
+                    placeholder="VD: VPBank StepUp, Techcombank Visa..."
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                  >
+                  </input>
+                </div>
+              </div>
+
+              {/* Informational Callout */}
+              <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 rounded-2xl space-y-1.5 text-xs text-blue-900 dark:text-blue-200">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <Icon path={mdiInformationOutline} size={0.7} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>Quy tắc Hạn thanh toán & Cảnh báo:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-blue-800/90 dark:text-blue-300 pl-1 leading-relaxed">
+                  <li>
+                    Hạn hoàn trả mặc định: <strong>trước ngày sao kê 1 ngày</strong> (tức là <strong>Ngày {Number(creditCardStatementDay) - 1 || 19}</strong> hàng tháng).
+                  </li>
+                  <li>
+                    Khoản chi phát sinh <em>trước ngày {creditCardStatementDay}</em> sẽ có hạn trả vào <strong>ngày {Number(creditCardStatementDay) - 1 || 19} tháng này</strong>.
+                  </li>
+                  <li>
+                    Khoản chi phát sinh <em>từ ngày {creditCardStatementDay} trở đi</em> sẽ có hạn trả vào <strong>ngày {Number(creditCardStatementDay) - 1 || 19} tháng kế tiếp</strong>.
+                  </li>
+                  <li>
+                    Nếu tới 1 ngày trước ngày sao kê mà chưa tích <strong>"Đã thanh toán"</strong>, hệ thống sẽ <strong>highlight viền đỏ</strong> và hiển thị banner cảnh báo trên Sổ cái.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Save Card Config Action Button */}
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleSaveCardConfig}
+                  disabled={savingCardConfig}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-blue-200/50 disabled:opacity-50"
+                >
+                  {savingCardConfig ? (
+                    <Icon path={mdiLoading} size={0.6} className="animate-spin" />
+                  ) : (
+                    <Icon path={mdiContentSave} size={0.6} />
+                  )}
+                  <span>{savingCardConfig ? "Đang lưu..." : "Lưu cấu hình Thẻ tín dụng"}</span>
                 </button>
               </div>
             </motion.div>

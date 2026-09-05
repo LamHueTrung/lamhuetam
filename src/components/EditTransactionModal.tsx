@@ -7,18 +7,21 @@ import {
   mdiCogOutline,
   mdiBank,
   mdiCash,
-  mdiWalletOutline,
+  mdiCreditCardOutline,
   mdiCalendar,
   mdiClose,
   mdiPlus,
   mdiMinus,
+  mdiCheckCircle,
+  mdiAlertCircleOutline,
+  mdiInformationOutline,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
-
 import { getLocalDateString } from "../utils/date";
+import { calcCreditCardDueDate } from "../lib/debtUtils";
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -27,12 +30,13 @@ interface EditTransactionModalProps {
   onClose: () => void;
   onUpdateTransaction: (id: string, data: Partial<Transaction>) => void;
   onOpenCategoryManager?: () => void;
+  statementDay?: number;
 }
 
 const wallets = [
   { name: "Ngân hàng", icon: mdiBank },
   { name: "Tiền mặt", icon: mdiCash },
-  { name: "Ví điện tử", icon: mdiWalletOutline },
+  { name: "Thẻ tín dụng", icon: mdiCreditCardOutline },
 ];
 
 export default function EditTransactionModal({
@@ -42,6 +46,7 @@ export default function EditTransactionModal({
   onClose,
   onUpdateTransaction,
   onOpenCategoryManager,
+  statementDay = 20,
 }: EditTransactionModalProps) {
   const [type, setType] = useState<"expense" | "income">("expense");
   const [amountStr, setAmountStr] = useState("");
@@ -49,6 +54,8 @@ export default function EditTransactionModal({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [wallet, setWallet] = useState("Ngân hàng");
+  const [isCreditCardPaid, setIsCreditCardPaid] = useState(false);
+  const [creditCardDueDate, setCreditCardDueDate] = useState<string | undefined>(undefined);
   const dragControls = useDragControls();
   const [showKeypad, setShowKeypad] = useState(false);
 
@@ -60,9 +67,16 @@ export default function EditTransactionModal({
       setDescription(transaction.description);
       setCategory(transaction.category);
       setWallet(transaction.wallet);
+      setIsCreditCardPaid(!!transaction.isCreditCardPaid);
+      setCreditCardDueDate(
+        transaction.creditCardDueDate ||
+          (transaction.wallet === "Thẻ tín dụng"
+            ? calcCreditCardDueDate(transaction.date, statementDay)
+            : undefined)
+      );
       setShowKeypad(false);
     }
-  }, [isOpen, transaction]);
+  }, [isOpen, transaction, statementDay]);
 
   const handleKeypadPress = useCallback((key: string) => {
     setAmountStr((prev) => {
@@ -150,6 +164,11 @@ export default function EditTransactionModal({
       return;
     }
 
+    const isCreditCard = wallet === "Thẻ tín dụng" && type === "expense";
+    const finalDueDate = isCreditCard
+      ? (creditCardDueDate || calcCreditCardDueDate(selectedDate, statementDay))
+      : undefined;
+
     onUpdateTransaction(transaction.id, {
       type,
       amount: amountNum,
@@ -157,6 +176,9 @@ export default function EditTransactionModal({
       date: selectedDate,
       description: description || `Giao dịch ${category}`,
       wallet,
+      isCreditCardPaid: isCreditCard ? isCreditCardPaid : undefined,
+      creditCardPaidDate: isCreditCard && isCreditCardPaid ? (transaction.creditCardPaidDate || getLocalDateString()) : undefined,
+      creditCardDueDate: finalDueDate,
     });
 
     onClose();
@@ -440,6 +462,48 @@ export default function EditTransactionModal({
                       );
                     })}
                   </div>
+
+                  {wallet === "Thẻ tín dụng" && type === "expense" && (
+                    <div className="space-y-2 p-3.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 rounded-2xl">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <Icon path={mdiCreditCardOutline} size={0.7} className="text-indigo-500" />
+                          Hạn thanh toán thẻ:
+                        </span>
+                        <span className="font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-200/40">
+                          {(creditCardDueDate || calcCreditCardDueDate(selectedDate, statementDay)).split("-").reverse().join("/")}
+                        </span>
+                      </div>
+
+                      <div
+                        onClick={() => setIsCreditCardPaid(!isCreditCardPaid)}
+                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                          isCreditCardPaid
+                            ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                            : "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                          <Icon
+                            path={isCreditCardPaid ? mdiCheckCircle : mdiAlertCircleOutline}
+                            size={0.8}
+                            className={isCreditCardPaid ? "text-emerald-600" : "text-amber-600"}
+                          />
+                          <span>
+                            {isCreditCardPaid
+                              ? "✓ Đã hoàn trả tiền cho thẻ này"
+                              : "⚠️ Chưa hoàn trả (Cần thanh toán trước ngày sao kê)"}
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={isCreditCardPaid}
+                          onChange={(e) => setIsCreditCardPaid(e.target.checked)}
+                          className="w-4 h-4 rounded text-emerald-600 cursor-pointer pointer-events-none"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <motion.button

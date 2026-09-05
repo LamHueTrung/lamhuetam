@@ -8,17 +8,19 @@ import {
   mdiCogOutline,
   mdiBank,
   mdiCash,
-  mdiWalletOutline,
+  mdiCreditCardOutline,
   mdiCalendar,
   mdiAutoFix,
   mdiCheck,
   mdiClose,
+  mdiInformationOutline,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
 import { getLocalDateString } from "../utils/date";
+import { calcCreditCardDueDate } from "../lib/debtUtils";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -26,12 +28,13 @@ interface QuickAddModalProps {
   onAddTransaction: (transaction: Omit<Transaction, "id">) => void;
   categories: Category[];
   onOpenCategoryManager: () => void;
+  statementDay?: number;
 }
 
 const wallets = [
   { name: "Ngân hàng", icon: mdiBank },
   { name: "Tiền mặt", icon: mdiCash },
-  { name: "Ví điện tử", icon: mdiWalletOutline },
+  { name: "Thẻ tín dụng", icon: mdiCreditCardOutline },
 ];
 
 export default function QuickAddModal({
@@ -40,6 +43,7 @@ export default function QuickAddModal({
   onAddTransaction,
   categories: propCategories,
   onOpenCategoryManager,
+  statementDay = 20,
 }: QuickAddModalProps) {
   const [type, setType] = useState<"expense" | "income">("expense");
   const [amountStr, setAmountStr] = useState("");
@@ -210,6 +214,11 @@ export default function QuickAddModal({
     const targetCategory =
       category || (propCategories.length > 0 ? propCategories[0].name : "Khác");
 
+    const isCreditCard = wallet === "Thẻ tín dụng" && type === "expense";
+    const creditCardDueDate = isCreditCard
+      ? calcCreditCardDueDate(selectedDate, statementDay)
+      : undefined;
+
     onAddTransaction({
       type,
       amount: amountNum,
@@ -217,6 +226,8 @@ export default function QuickAddModal({
       date: selectedDate,
       description: description.trim() || `Giao dịch ${targetCategory}`,
       wallet: wallet || "Ngân hàng",
+      isCreditCardPaid: isCreditCard ? false : undefined,
+      creditCardDueDate,
     });
 
     // Reset Form
@@ -516,6 +527,19 @@ export default function QuickAddModal({
                       );
                     })}
                   </div>
+
+                  {wallet === "Thẻ tín dụng" && type === "expense" && (
+                    <div className="p-3 bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/50 rounded-2xl flex items-center gap-2 text-[11px] text-indigo-700 dark:text-indigo-300">
+                      <Icon path={mdiInformationOutline} size={0.7} className="text-indigo-500 shrink-0" />
+                      <span>
+                        Hạn thanh toán:{" "}
+                        <strong className="font-bold underline">
+                          {calcCreditCardDueDate(selectedDate, statementDay).split("-").reverse().join("/")}
+                        </strong>{" "}
+                        (Trước ngày sao kê {statementDay} hàng tháng 1 ngày).
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* SUBMIT BUTTON */}

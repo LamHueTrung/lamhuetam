@@ -8,6 +8,9 @@ export interface Transaction {
   wallet: string;
   isRecurring?: boolean;
   frequency?: 'none' | 'weekly' | 'monthly';
+  isCreditCardPaid?: boolean;
+  creditCardPaidDate?: string;
+  creditCardDueDate?: string;
 }
 
 export interface Budget {
@@ -205,6 +208,10 @@ export interface UserProfile {
   phone: string;
   emails: string[];
   customFields: CustomProfileField[];
+  creditCardConfig?: {
+    statementDay: number;
+    cardName?: string;
+  };
   updatedAt?: string;
 }
 
