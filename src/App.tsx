@@ -463,6 +463,7 @@ function AppContent() {
                   onUpdateTransaction={handleUpdateTransaction}
                   categories={categories}
                   onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
+                  statementDay={userProfile?.creditCardConfig?.statementDay || 20}
                 />
               )}
               {currentTab === 4 && (
@@ -522,6 +523,7 @@ function AppContent() {
         onAddTransaction={handleAddTransaction}
         categories={categories}
         onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
+        statementDay={userProfile?.creditCardConfig?.statementDay || 20}
       />
 
       <CategoryManager

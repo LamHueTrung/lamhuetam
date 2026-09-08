@@ -16,10 +16,17 @@ import {
   mdiInformationOutline,
   mdiBank,
   mdiCash,
-  mdiWalletOutline,
+  mdiCreditCardOutline,
   mdiClose,
   mdiAlertCircleOutline,
   mdiShieldAlertOutline,
+  mdiCheckCircle,
+  mdiCheckboxBlankCircleOutline,
+  mdiCheckboxMarkedCircle,
+  mdiAlertDecagramOutline,
+  mdiCheckboxMarked,
+  mdiCheckboxBlankOutline,
+  mdiCheckAll,
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { Transaction, Category, MLAnomalyItem } from "../types";
@@ -27,15 +34,16 @@ import { api } from "../api/client";
 import { iconMap } from "../lib/iconMap";
 import EditTransactionModal from "./EditTransactionModal";
 import { getLocalDateString } from "../utils/date";
+import { checkCreditCardDueStatus, calcCreditCardDueDate } from "../lib/debtUtils";
 import toast from "react-hot-toast";
 
 interface LedgerProps {
   transactions: Transaction[];
   onDeleteTransaction: (id: string) => void;
-
   onUpdateTransaction: (id: string, data: Partial<Transaction>) => void;
   categories: Category[];
   onOpenCategoryManager?: () => void;
+  statementDay?: number;
 }
 
 const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -75,6 +83,7 @@ export default function Ledger({
   onUpdateTransaction,
   categories,
   onOpenCategoryManager,
+  statementDay = 20,
 }: LedgerProps) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -82,8 +91,13 @@ export default function Ledger({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
   const [walletFilter, setWalletFilter] = useState<
-    "all" | "Ngân hàng" | "Tiền mặt" | "Ví điện tử"
+    "all" | "Ngân hàng" | "Tiền mặt" | "Thẻ tín dụng"
   >("all");
+  const [creditCardStatusFilter, setCreditCardStatusFilter] = useState<
+    "all" | "unpaid" | "paid"
+  >("all");
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
@@ -92,6 +106,55 @@ export default function Ledger({
   const [moreActionTx, setMoreActionTx] = useState<Transaction | null>(null);
   const dragControlsAction = useDragControls();
   const dragControlsDetail = useDragControls();
+
+  // Single-item toggle Credit Card Paid status
+  const handleToggleCreditCardPaid = useCallback(
+    (e: React.MouseEvent, tx: Transaction) => {
+      e.stopPropagation();
+      const nextPaid = !tx.isCreditCardPaid;
+      const nowStr = getLocalDateString();
+      onUpdateTransaction(tx.id, {
+        isCreditCardPaid: nextPaid,
+        creditCardPaidDate: nextPaid ? nowStr : undefined,
+      });
+      if (nextPaid) {
+        toast.success("✓ Đã đánh dấu hoàn trả khoản chi thẻ!");
+      } else {
+        toast("Đã chuyển về trạng thái chưa thanh toán");
+      }
+    },
+    [onUpdateTransaction]
+  );
+
+  // Batch selection toggle
+  const handleToggleSelectTx = useCallback((id: string) => {
+    setSelectedTxIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  // Batch Settle selected transactions
+  const handleBatchSettle = useCallback(() => {
+    if (selectedTxIds.size === 0) return;
+    const nowStr = getLocalDateString();
+    selectedTxIds.forEach((id) => {
+      onUpdateTransaction(id, {
+        isCreditCardPaid: true,
+        creditCardPaidDate: nowStr,
+      });
+    });
+    toast.success(
+      `Đã đánh dấu hoàn trả thành công ${selectedTxIds.size} khoản chi thẻ!`
+    );
+    setSelectedTxIds(new Set());
+    setIsBatchMode(false);
+  }, [selectedTxIds, onUpdateTransaction]);
 
   // ── ML Anomalies State ──
   const [anomalies, setAnomalies] = useState<MLAnomalyItem[]>([]);
@@ -289,6 +352,13 @@ export default function Ledger({
       return t.wallet === walletFilter;
     })
     .filter((t) => {
+      if (walletFilter === "Thẻ tín dụng") {
+        if (creditCardStatusFilter === "unpaid") return !t.isCreditCardPaid;
+        if (creditCardStatusFilter === "paid") return !!t.isCreditCardPaid;
+      }
+      return true;
+    })
+    .filter((t) => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
@@ -305,6 +375,39 @@ export default function Ledger({
   const selectedExpense = selectedTxs
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
+
+  // Credit Card Due Warnings & Stats
+  const creditCardTxs = useMemo(() => {
+    return transactions.filter(
+      (t) => t.wallet === "Thẻ tín dụng" && t.type === "expense"
+    );
+  }, [transactions]);
+
+  const creditCardUnpaidTxs = useMemo(() => {
+    return creditCardTxs.filter((t) => !t.isCreditCardPaid);
+  }, [creditCardTxs]);
+
+  const creditCardUnpaidTotal = useMemo(() => {
+    return creditCardUnpaidTxs.reduce((s, t) => s + t.amount, 0);
+  }, [creditCardUnpaidTxs]);
+
+  const creditCardDueSoonTxs = useMemo(() => {
+    return creditCardUnpaidTxs.filter((t) => {
+      const st = checkCreditCardDueStatus(t, statementDay);
+      return st.isOverdue || st.isDueSoon;
+    });
+  }, [creditCardUnpaidTxs, statementDay]);
+
+  const creditCardDueSoonAmount = useMemo(() => {
+    return creditCardDueSoonTxs.reduce((s, t) => s + t.amount, 0);
+  }, [creditCardDueSoonTxs]);
+
+  // Selected batch total amount
+  const selectedBatchAmount = useMemo(() => {
+    return selectedTxs
+      .filter((t) => selectedTxIds.has(t.id))
+      .reduce((s, t) => s + t.amount, 0);
+  }, [selectedTxs, selectedTxIds]);
 
   const monthName = firstDayOfMonth.toLocaleDateString("vi-VN", {
     month: "long",
@@ -523,18 +626,133 @@ export default function Ledger({
             <Icon path={mdiCash} size={0.875} />
           </button>
           <button
-            onClick={() => setWalletFilter("Ví điện tử")}
-            title="Ví điện tử"
-            className={`p-2.5 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-              walletFilter === "Ví điện tử"
+            onClick={() => {
+              setWalletFilter("Thẻ tín dụng");
+            }}
+            title="Thẻ tín dụng"
+            className={`p-2.5 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 relative ${
+              walletFilter === "Thẻ tín dụng"
                 ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-[0_4px_12px_rgba(15,23,42,0.15)]"
                 : "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
             }`}
           >
-            <Icon path={mdiWalletOutline} size={0.875} />
+            <Icon path={mdiCreditCardOutline} size={0.875} />
+            {creditCardDueSoonTxs.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900" />
+            )}
           </button>
         </div>
+
+        {/* Credit Card Specific Sub-filter & Batch Tools */}
+        {walletFilter === "Thẻ tín dụng" && (
+          <div className="p-3 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200/50 dark:border-blue-800/40 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1">
+                <Icon path={mdiCreditCardOutline} size={0.65} className="text-blue-600 dark:text-blue-400" />
+                <span>Quản lý nợ thẻ: Hạn ngày {Number(statementDay) - 1 || 19}</span>
+              </span>
+              <button
+                onClick={() => {
+                  setIsBatchMode(!isBatchMode);
+                  if (isBatchMode) setSelectedTxIds(new Set());
+                }}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-xl transition-all cursor-pointer flex items-center gap-1 ${
+                  isBatchMode
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                    : "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700"
+                }`}
+              >
+                <Icon path={isBatchMode ? mdiClose : mdiCheckAll} size={0.55} />
+                <span>{isBatchMode ? "Tắt chọn nhiều" : "Chọn nhiều"}</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <button
+                onClick={() => setCreditCardStatusFilter("all")}
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                  creditCardStatusFilter === "all"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                Tất cả ({creditCardTxs.length})
+              </button>
+
+              <button
+                onClick={() => setCreditCardStatusFilter("unpaid")}
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  creditCardStatusFilter === "unpaid"
+                    ? "bg-rose-600 text-white shadow-xs"
+                    : "bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60"
+                }`}
+              >
+                <span>Chưa thanh toán ({creditCardUnpaidTxs.length})</span>
+                {creditCardUnpaidTotal > 0 && (
+                  <span className="opacity-90 font-extrabold">• {formatVND(creditCardUnpaidTotal)}</span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setCreditCardStatusFilter("paid")}
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                  creditCardStatusFilter === "paid"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60"
+                }`}
+              >
+                Đã thanh toán
+              </button>
+
+              {isBatchMode && creditCardUnpaidTxs.length > 0 && (
+                <button
+                  onClick={() => {
+                    const unpaidIds = selectedTxs
+                      .filter((t) => t.wallet === "Thẻ tín dụng" && !t.isCreditCardPaid)
+                      .map((t) => t.id);
+                    setSelectedTxIds(new Set(unpaidIds));
+                  }}
+                  className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold bg-indigo-100 hover:bg-indigo-200 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 transition-all cursor-pointer ml-auto"
+                >
+                  Chọn tất cả chưa trả
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Credit Card Due Soon Global Warning Banner */}
+      {creditCardDueSoonTxs.length > 0 && walletFilter !== "Thẻ tín dụng" && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3.5 bg-gradient-to-r from-rose-500/15 via-amber-500/10 to-rose-500/15 dark:from-rose-950/40 dark:via-amber-950/30 dark:to-rose-950/40 border border-rose-300 dark:border-rose-900/60 rounded-2xl flex items-center justify-between gap-2 shadow-xs"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1.5 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 shrink-0">
+              <Icon path={mdiAlertDecagramOutline} size={0.8} />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200 truncate">
+                ⚠️ Có {creditCardDueSoonTxs.length} khoản nợ thẻ cần thanh toán trước ngày sao kê ({statementDay})
+              </h4>
+              <p className="text-[10px] text-rose-700/80 dark:text-rose-400 font-semibold">
+                Tổng tiền cần trả: <strong>{formatVND(creditCardDueSoonAmount)}</strong> (Hạn ngày {Number(statementDay) - 1 || 19})
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setWalletFilter("Thẻ tín dụng");
+              setCreditCardStatusFilter("unpaid");
+            }}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-bold shrink-0 transition-all cursor-pointer shadow-xs"
+          >
+            Thanh toán ngay
+          </button>
+        </motion.div>
+      )}
 
       {/* TRANSACTION LIST SECTION */}
       <div className="space-y-2">
@@ -617,16 +835,80 @@ export default function Ledger({
                 } = getCategoryMeta(transaction.category);
                 const isIncome = transaction.type === "income";
 
+                const ccStatus = checkCreditCardDueStatus(transaction, statementDay);
+                const isCreditCard = ccStatus.isCreditCard;
+                const isSelected = selectedTxIds.has(transaction.id);
+
                 return (
                   <div
                     key={transaction.id}
                     className="relative overflow-hidden"
                   >
                     <motion.div
-                      onClick={() => handleOpenDetail(transaction)}
-                      className={`bg-white dark:bg-slate-800 p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 dark:active:bg-slate-700/60 transition-colors relative z-10 ${idx > 0 ? "border-t border-slate-50 dark:border-slate-700/50" : ""}`}
+                      onClick={() => {
+                        if (isBatchMode) {
+                          handleToggleSelectTx(transaction.id);
+                        } else {
+                          handleOpenDetail(transaction);
+                        }
+                      }}
+                      className={`p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 dark:active:bg-slate-700/60 transition-all relative z-10 ${
+                        idx > 0 ? "border-t border-slate-50 dark:border-slate-700/50" : ""
+                      } ${
+                        isSelected
+                          ? "bg-indigo-50/90 dark:bg-indigo-950/50 border-l-4 border-l-indigo-600"
+                          : isCreditCard && !ccStatus.isPaid && (ccStatus.isOverdue || ccStatus.isDueSoon)
+                          ? "bg-rose-50/80 dark:bg-rose-950/40 border-l-4 border-l-rose-500"
+                          : isCreditCard && !ccStatus.isPaid
+                          ? "bg-blue-50/30 dark:bg-blue-950/20 border-l-4 border-l-blue-400"
+                          : "bg-white dark:bg-slate-800"
+                      }`}
                     >
-                      <div className="flex items-center gap-3.5">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Checkbox: Multi-select Mode OR 1-Tap Credit Card Paid Toggle */}
+                        {isBatchMode ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSelectTx(transaction.id);
+                            }}
+                            className="p-1 text-indigo-600 dark:text-indigo-400 cursor-pointer shrink-0"
+                          >
+                            <Icon
+                              path={isSelected ? mdiCheckboxMarked : mdiCheckboxBlankOutline}
+                              size={0.9}
+                            />
+                          </button>
+                        ) : isCreditCard ? (
+                          <button
+                            type="button"
+                            title={
+                              ccStatus.isPaid
+                                ? "Đã thanh toán (Bấm để hủy)"
+                                : "Bấm để đánh dấu đã thanh toán thẻ"
+                            }
+                            onClick={(e) => handleToggleCreditCardPaid(e, transaction)}
+                            className="p-1 hover:scale-110 transition-transform cursor-pointer shrink-0"
+                          >
+                            <Icon
+                              path={
+                                ccStatus.isPaid
+                                  ? mdiCheckCircle
+                                  : mdiCheckboxBlankCircleOutline
+                              }
+                              size={0.9}
+                              className={
+                                ccStatus.isPaid
+                                  ? "text-emerald-500 dark:text-emerald-400"
+                                  : ccStatus.isOverdue || ccStatus.isDueSoon
+                                  ? "text-rose-500 dark:text-rose-400 animate-pulse"
+                                  : "text-slate-400 hover:text-blue-500"
+                              }
+                            />
+                          </button>
+                        ) : null}
+
                         <div
                           className={`w-11 h-11 rounded-full ${bg} ${text} flex items-center justify-center shrink-0`}
                         >
@@ -651,13 +933,42 @@ export default function Ledger({
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                             <span className="flex items-center gap-0.5">
-                              <Icon path={mdiWallet} size={0.75} />
+                              <Icon
+                                path={isCreditCard ? mdiCreditCardOutline : mdiWallet}
+                                size={0.75}
+                                className={isCreditCard ? "text-indigo-500" : ""}
+                              />
                               {transaction.wallet}
                             </span>
+
                             {!selectedDate && (
                               <span>• {transaction.date.split("-").reverse().join("/")}</span>
+                            )}
+
+                            {/* Credit Card Specific Status Badges */}
+                            {isCreditCard && (
+                              <>
+                                {ccStatus.isPaid ? (
+                                  <span className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[8px] font-extrabold px-1.5 py-0.2 rounded-md">
+                                    ✓ Đã trả thẻ
+                                  </span>
+                                ) : ccStatus.isOverdue ? (
+                                  <span className="bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-[8px] font-black px-1.5 py-0.2 rounded-md">
+                                    ⚠️ Quá hạn trả thẻ ({ccStatus.dueDate.split("-").reverse().join("/")})
+                                  </span>
+                                ) : ccStatus.isDueSoon ? (
+                                  <span className="bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-[8px] font-black px-1.5 py-0.2 rounded-md">
+                                    ⚠️ Cần trả thẻ ({ccStatus.dueDate.split("-").reverse().join("/")})
+                                  </span>
+                                ) : (
+                                  <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[8px] font-bold px-1.5 py-0.2 rounded-md">
+                                    Hạn: {ccStatus.dueDate.split("-").reverse().join("/")}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
@@ -674,15 +985,17 @@ export default function Ledger({
                             {transaction.category}
                           </span>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMoreActionTx(transaction);
-                          }}
-                          className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-300 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-300 transition-colors cursor-pointer shrink-0"
-                        >
-                          <Icon path={mdiDotsHorizontal} size={0.875} />
-                        </button>
+                        {!isBatchMode && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMoreActionTx(transaction);
+                            }}
+                            className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-300 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-300 transition-colors cursor-pointer shrink-0"
+                          >
+                            <Icon path={mdiDotsHorizontal} size={0.875} />
+                          </button>
+                        )}
                       </div>
                     </motion.div>
                   </div>
@@ -741,18 +1054,57 @@ export default function Ledger({
                   <h3 className="text-sm font-bold text-slate-800">Tùy chọn</h3>
                 </div>
                 <div className="space-y-2">
+                  {moreActionTx.wallet === "Thẻ tín dụng" && moreActionTx.type === "expense" && (
+                    <button
+                      onClick={(e) => {
+                        handleToggleCreditCardPaid(e, moreActionTx);
+                        setMoreActionTx(null);
+                      }}
+                      className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      <div
+                        className={`p-2 rounded-xl ${
+                          moreActionTx.isCreditCardPaid
+                            ? "bg-amber-50 text-amber-600 dark:bg-amber-950/60"
+                            : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60"
+                        }`}
+                      >
+                        <Icon
+                          path={
+                            moreActionTx.isCreditCardPaid
+                              ? mdiAlertCircleOutline
+                              : mdiCheckCircle
+                          }
+                          size={1}
+                        />
+                      </div>
+                      <div className="text-left">
+                        <span className="text-sm font-bold text-slate-800 dark:text-white block">
+                          {moreActionTx.isCreditCardPaid
+                            ? "Đánh dấu chưa thanh toán"
+                            : "Đánh dấu đã thanh toán thẻ"}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {moreActionTx.isCreditCardPaid
+                            ? "Chuyển trạng thái nợ cần hoàn trả"
+                            : "Xác nhận đã hoàn trả khoản chi thẻ tín dụng này"}
+                        </span>
+                      </div>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       setEditingTransaction(moreActionTx);
                       setMoreActionTx(null);
                     }}
-                    className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
-                    <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
+                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                       <Icon path={mdiPencilOutline} size={1} />
                     </div>
                     <div className="text-left">
-                      <span className="text-sm font-bold text-slate-800 block">
+                      <span className="text-sm font-bold text-slate-800 dark:text-white block">
                         Chỉnh sửa giao dịch
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">
@@ -760,18 +1112,19 @@ export default function Ledger({
                       </span>
                     </div>
                   </button>
+
                   <button
                     onClick={() => {
                       onDeleteTransaction(moreActionTx.id);
                       setMoreActionTx(null);
                     }}
-                    className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-rose-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                   >
-                    <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                    <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
                       <Icon path={mdiDeleteOutline} size={1} />
                     </div>
                     <div className="text-left">
-                      <span className="text-sm font-bold text-rose-600 block">
+                      <span className="text-sm font-bold text-rose-600 dark:text-rose-400 block">
                         Xóa giao dịch
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">
@@ -814,7 +1167,7 @@ export default function Ledger({
                   }
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)]"
+                className="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] p-6 pb-10 shadow-[0_-12px_48px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col overflow-y-auto"
               >
                 <div
                   onPointerDown={(e) => {
@@ -825,12 +1178,12 @@ export default function Ledger({
                     e.stopPropagation();
                   }}
                   style={{ touchAction: "none" }}
-                  className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing touch-none select-none"
+                  className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 cursor-grab active:cursor-grabbing touch-none select-none"
                 />
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-slate-900 rounded-full" />
-                    <h3 className="text-base font-bold text-slate-800">
+                    <span className="w-2 h-2 bg-slate-900 dark:bg-white rounded-full" />
+                    <h3 className="text-base font-bold text-slate-800 dark:text-white">
                       Chi Tiết Giao Dịch
                     </h3>
                   </div>
@@ -853,16 +1206,23 @@ export default function Ledger({
                   };
                   const color = cat?.color || "slate";
                   const IconComp = iconMap[cat?.icon || "Tag"];
+                  const ccStatus = checkCreditCardDueStatus(tx, statementDay);
 
                   return (
                     <div className="space-y-4">
                       {anomalyMap.get(tx.id) && (
-                        <div className={`p-3 rounded-2xl border flex items-start gap-2.5 ${
-                          anomalyMap.get(tx.id)?.severity === "critical"
-                            ? "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
-                            : "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-300"
-                        }`}>
-                          <Icon path={mdiShieldAlertOutline} size={0.9} className="shrink-0 mt-0.5 text-rose-500" />
+                        <div
+                          className={`p-3 rounded-2xl border flex items-start gap-2.5 ${
+                            anomalyMap.get(tx.id)?.severity === "critical"
+                              ? "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
+                              : "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-300"
+                          }`}
+                        >
+                          <Icon
+                            path={mdiShieldAlertOutline}
+                            size={0.9}
+                            className="shrink-0 mt-0.5 text-rose-500"
+                          />
                           <div className="text-xs">
                             <span className="font-bold block">
                               {anomalyMap.get(tx.id)?.severity === "critical"
@@ -876,13 +1236,74 @@ export default function Ledger({
                         </div>
                       )}
 
-                      <div className="bg-slate-50 rounded-[24px] p-5 text-center">
+                      {/* Credit Card Specific Status Card in Detail */}
+                      {ccStatus.isCreditCard && (
+                        <div
+                          className={`p-4 rounded-2xl border flex flex-col gap-2 ${
+                            ccStatus.isPaid
+                              ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50"
+                              : ccStatus.isOverdue || ccStatus.isDueSoon
+                              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50"
+                              : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span className="flex items-center gap-1.5 text-slate-800 dark:text-white">
+                              <Icon path={mdiCreditCardOutline} size={0.8} className="text-indigo-500" />
+                              Thanh toán Thẻ tín dụng
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                                ccStatus.isPaid
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                                  : "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300"
+                              }`}
+                            >
+                              {ccStatus.isPaid ? "✓ Đã thanh toán" : "⚠️ Chưa hoàn trả"}
+                            </span>
+                          </div>
+
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
+                            <p>
+                              Hạn thanh toán:{" "}
+                              <strong>{ccStatus.dueDate.split("-").reverse().join("/")}</strong>{" "}
+                              (Trước ngày sao kê {statementDay} hàng tháng).
+                            </p>
+                            {tx.creditCardPaidDate && (
+                              <p className="text-emerald-700 dark:text-emerald-400">
+                                Đã thanh toán vào: {tx.creditCardPaidDate.split("-").reverse().join("/")}
+                              </p>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              handleToggleCreditCardPaid(e, tx);
+                              setDetailTransaction({
+                                ...tx,
+                                isCreditCardPaid: !tx.isCreditCardPaid,
+                                creditCardPaidDate: !tx.isCreditCardPaid ? getLocalDateString() : undefined,
+                              });
+                            }}
+                            className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs ${
+                              ccStatus.isPaid
+                                ? "bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            }`}
+                          >
+                            <Icon path={ccStatus.isPaid ? mdiClose : mdiCheckCircle} size={0.7} />
+                            <span>{ccStatus.isPaid ? "Hủy trạng thái đã thanh toán" : "Xác nhận Đã thanh toán khoản này"}</span>
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="bg-slate-50 dark:bg-slate-800 rounded-[24px] p-5 text-center">
                         <div
                           className={`w-14 h-14 rounded-full ${colorMap[color] || colorMap.slate} flex items-center justify-center mx-auto mb-3`}
                         >
                           <IconComp className="w-7 h-7" />
                         </div>
-                        <h2 className="text-lg font-bold text-slate-800">
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-white">
                           {tx.description}
                         </h2>
                         <span
@@ -894,31 +1315,31 @@ export default function Ledger({
                       </div>
 
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-800">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             Danh mục
                           </span>
-                          <span className="text-xs font-bold text-slate-700">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                             {tx.category}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-800">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             Ngày
                           </span>
-                          <span className="text-xs font-bold text-slate-700">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                             {getDateLabel(tx.date)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-800">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             Ví
                           </span>
-                          <span className="text-xs font-bold text-slate-700">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                             {tx.wallet}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                        <div className="flex items-center justify-between py-2 border-b border-slate-50 dark:border-slate-800">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             Loại
                           </span>
@@ -936,7 +1357,7 @@ export default function Ledger({
                             setEditingTransaction(tx);
                             setDetailTransaction(null);
                           }}
-                          className="flex-1 bg-slate-900 text-white font-bold text-xs py-3 rounded-xl hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs py-3 rounded-xl hover:bg-slate-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <Icon path={mdiPencilOutline} size={0.875} />
                           Chỉnh sửa
@@ -946,7 +1367,7 @@ export default function Ledger({
                             onDeleteTransaction(tx.id);
                             setDetailTransaction(null);
                           }}
-                          className="flex-1 bg-white border border-rose-100 text-rose-600 font-bold text-xs py-3 rounded-xl hover:bg-rose-50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          className="flex-1 bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-bold text-xs py-3 rounded-xl hover:bg-rose-50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <Icon path={mdiDeleteOutline} size={0.875} />
                           Xóa
@@ -962,6 +1383,45 @@ export default function Ledger({
         document.body,
       )}
 
+      {/* FLOATING BATCH ACTION BAR */}
+      <AnimatePresence>
+        {selectedTxIds.size > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            className="fixed bottom-24 left-4 right-4 max-w-md mx-auto z-40 bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white rounded-3xl p-4 shadow-2xl flex items-center justify-between border border-slate-700/80"
+          >
+            <div className="flex flex-col min-w-0 pr-2">
+              <span className="text-xs font-bold truncate">
+                Đã chọn {selectedTxIds.size} khoản nợ thẻ
+              </span>
+              <span className="text-[11px] text-emerald-400 font-extrabold">
+                Tổng: {formatVND(selectedBatchAmount)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedTxIds(new Set())}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Bỏ chọn
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchSettle}
+                className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Icon path={mdiCheckCircle} size={0.65} />
+                <span>Thanh toán ({selectedTxIds.size})</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* EDIT TRANSACTION MODAL */}
       <EditTransactionModal
         isOpen={!!editingTransaction}
@@ -970,6 +1430,7 @@ export default function Ledger({
         onClose={() => setEditingTransaction(null)}
         onUpdateTransaction={onUpdateTransaction}
         onOpenCategoryManager={onOpenCategoryManager}
+        statementDay={statementDay}
       />
     </div>
   );

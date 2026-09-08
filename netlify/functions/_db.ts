@@ -30,6 +30,9 @@ const TransactionSchema = new mongoose.Schema(
       enum: ["none", "weekly", "monthly"],
       default: "none",
     },
+    isCreditCardPaid: { type: Boolean, default: false },
+    creditCardPaidDate: { type: String, default: null },
+    creditCardDueDate: { type: String, default: null },
   },
   { versionKey: false },
 );
@@ -275,6 +278,10 @@ const UserProfileSchema = new mongoose.Schema(
         category: { type: String, default: "Khác" },
       },
     ],
+    creditCardConfig: {
+      statementDay: { type: Number, default: 20 },
+      cardName: { type: String, default: "" },
+    },
     updatedAt: { type: Date, default: Date.now },
   },
   { versionKey: false },

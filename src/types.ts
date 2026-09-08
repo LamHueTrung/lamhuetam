@@ -8,6 +8,9 @@ export interface Transaction {
   wallet: string;
   isRecurring?: boolean;
   frequency?: 'none' | 'weekly' | 'monthly';
+  isCreditCardPaid?: boolean;
+  creditCardPaidDate?: string;
+  creditCardDueDate?: string;
 }
 
 export interface Budget {
@@ -59,6 +62,17 @@ export interface MonthlyPlan {
   variableExpenses: number;
   savings: number;
   remaining: number;
+}
+
+export interface TetPlannerStoredConfig {
+  id: string; // 'default'
+  netSalary: number;
+  expectedBonus: number;
+  solarExpense: number;
+  lunarExpense: number;
+  monthlyLiving: number;
+  initialSavings: number;
+  updatedAt: string;
 }
 
 // Legacy alias for backward compatibility
@@ -205,6 +219,10 @@ export interface UserProfile {
   phone: string;
   emails: string[];
   customFields: CustomProfileField[];
+  creditCardConfig?: {
+    statementDay: number;
+    cardName?: string;
+  };
   updatedAt?: string;
 }
 
