@@ -100,9 +100,6 @@ export default function DebtOptimizerDrawer({
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     Kế Hoạch Trả Nợ Tối Ưu
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-medium">
-                      Trợ lý AI
-                    </span>
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Tự động phân bổ dòng tiền giúp tiết kiệm lãi và tất toán sớm
