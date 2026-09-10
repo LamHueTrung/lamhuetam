@@ -350,8 +350,17 @@ export interface MLDebtInput {
   name: string;
   total_balance: number;
   annual_rate: number;
+  type?: 'installment' | 'credit_card' | 'friend';
   due_date?: string | null;
   min_payment?: number | null;
+  installment_amount?: number | null;
+  installments?: Array<{
+    index: number;
+    dueDate: string;
+    amount: number;
+    paidAmount: number;
+    status: string;
+  }>;
 }
 
 export interface MLDailyCashflowInput {

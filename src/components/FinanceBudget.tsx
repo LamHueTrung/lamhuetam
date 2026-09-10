@@ -615,41 +615,69 @@ export default function FinanceBudget({
           );
         }
 
-        // Fallback tạo chuỗi 30 ngày an toàn dựa trên số dư hiện tại
+        // Fallback / Dòng tiền 30 ngày thực tế dựa trên số dư hiện tại, ngày nhận lương và chi tiêu cố định
         if (dailyCashflows.length < 7) {
           const today = new Date();
           const baseBalance = transactions.reduce(
             (acc, t) => acc + (t.type === "income" ? t.amount : -t.amount),
             0,
           );
+          const totalFixedMonthly = (fixedTasks || []).reduce(
+            (sum, task) => sum + (task.amount || 0),
+            0,
+          );
+          const dailyFixedExpense = Math.round(totalFixedMonthly / 30);
+          const payday = salaryConfig?.receiveDay || 4;
+          const netSalary = salaryConfig?.netSalary || 0;
+
+          let runningBalance = Math.max(0, baseBalance);
           dailyCashflows = Array.from({ length: 30 }, (_, i) => {
             const d = new Date(today);
             d.setDate(today.getDate() + i);
+            const dateStr = d.toISOString().split("T")[0];
+            const isPayday = d.getDate() === payday;
+
+            if (isPayday && i > 0) {
+              runningBalance += netSalary;
+            }
+            runningBalance = Math.max(0, runningBalance - dailyFixedExpense);
+
             return {
-              date: d.toISOString().split("T")[0],
-              available: Math.max(500000, baseBalance - i * 50000),
+              date: dateStr,
+              available: Math.max(0, runningBalance),
             };
           });
         }
 
-        // 2. Chuyển đổi format nợ sang chuẩn input Lớp 3
+        // 2. Chuyển đổi format nợ sang chuẩn input Lớp 3 với loại nợ và kỳ trả góp
         const mappedDebts = activeDebts.map((d) => {
           const nextUnpaid = d.installments?.find(
             (i) => i.status === "pending" || i.status === "partial",
           );
+          const debtType = d.type || (d.installments && d.installments.length > 0 ? "installment" : "credit_card");
+
           return {
             id: d.id,
             name: d.name,
             total_balance: d.currentBalance,
             annual_rate: d.interestRate
               ? d.interestRate / 100
-              : d.type === "credit_card"
+              : debtType === "credit_card"
                 ? 0.3
-                : d.type === "installment"
+                : debtType === "installment"
                   ? 0.15
                   : 0.0,
-            due_date: nextUnpaid?.dueDate || null,
+            type: debtType as "installment" | "credit_card" | "friend",
+            due_date: nextUnpaid?.dueDate || (d.paymentDay ? `2026-09-${String(d.paymentDay).padStart(2, "0")}` : null),
             min_payment: d.monthlyPayment || null,
+            installment_amount: d.monthlyPayment || (nextUnpaid ? nextUnpaid.amount : null),
+            installments: (d.installments || []).map((inst) => ({
+              index: inst.index,
+              dueDate: inst.dueDate,
+              amount: inst.amount,
+              paidAmount: inst.paidAmount || 0,
+              status: inst.status,
+            })),
           };
         });
 
