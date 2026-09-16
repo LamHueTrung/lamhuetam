@@ -56,7 +56,7 @@ export default function UserProfileView({
   onUpdateProfile,
   onNavigateToTab,
   needRefresh = false,
-  updateServiceWorker = async () => { },
+  updateServiceWorker = async () => {},
   onResyncData,
 }: UserProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -140,10 +140,10 @@ export default function UserProfileView({
 
   // Credit Card Configuration states
   const [creditCardStatementDay, setCreditCardStatementDay] = useState<number>(
-    profile.creditCardConfig?.statementDay || 20
+    profile.creditCardConfig?.statementDay || 20,
   );
   const [creditCardName, setCreditCardName] = useState<string>(
-    profile.creditCardConfig?.cardName || ""
+    profile.creditCardConfig?.cardName || "",
   );
   const [savingCardConfig, setSavingCardConfig] = useState(false);
 
@@ -291,7 +291,9 @@ export default function UserProfileView({
       } else {
         setTestStatus(data.status || "invalid_key");
         setTestMessage(data.error || "Không thể kết nối với mô hình");
-        toast.error("Kiểm tra thất bại: " + (data.error || "Lỗi không xác định"));
+        toast.error(
+          "Kiểm tra thất bại: " + (data.error || "Lỗi không xác định"),
+        );
       }
       setLastTestedAt(new Date().toLocaleTimeString());
     } catch (err: any) {
@@ -492,10 +494,6 @@ export default function UserProfileView({
                 }}
                 className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-md"
               />
-              <span
-                className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full"
-                title="Trực tuyến"
-              />
             </div>
 
             <div>
@@ -591,10 +589,11 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => !isEditing && toggleSection("profile_info")}
-            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_info"
-              ? ""
-              : "border-b border-slate-100 dark:border-slate-800"
-              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${
+              !isEditing && openSection !== "profile_info"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
@@ -611,7 +610,11 @@ export default function UserProfileView({
             </div>
             {!isEditing && (
               <Icon
-                path={openSection === "profile_info" ? mdiChevronDown : mdiChevronRight}
+                path={
+                  openSection === "profile_info"
+                    ? mdiChevronDown
+                    : mdiChevronRight
+                }
                 size={0.9}
                 className="text-slate-400"
               />
@@ -836,7 +839,8 @@ export default function UserProfileView({
                           Quê quán & Bối cảnh sống
                         </span>
                         <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                          {livingContext || "Chưa cập nhật thông tin bối cảnh sống."}
+                          {livingContext ||
+                            "Chưa cập nhật thông tin bối cảnh sống."}
                         </p>
                       </div>
                     </div>
@@ -884,10 +888,11 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => !isEditing && toggleSection("profile_skills")}
-            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_skills"
-              ? ""
-              : "border-b border-slate-100 dark:border-slate-800"
-              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${
+              !isEditing && openSection !== "profile_skills"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
@@ -904,7 +909,11 @@ export default function UserProfileView({
             </div>
             {!isEditing && (
               <Icon
-                path={openSection === "profile_skills" ? mdiChevronDown : mdiChevronRight}
+                path={
+                  openSection === "profile_skills"
+                    ? mdiChevronDown
+                    : mdiChevronRight
+                }
                 size={0.9}
                 className="text-slate-400"
               />
@@ -1038,7 +1047,9 @@ export default function UserProfileView({
                         <input
                           type="text"
                           value={newCompanyTechInput}
-                          onChange={(e) => setNewCompanyTechInput(e.target.value)}
+                          onChange={(e) =>
+                            setNewCompanyTechInput(e.target.value)
+                          }
                           onKeyDown={(e) =>
                             e.key === "Enter" &&
                             (e.preventDefault(), handleAddCompanyTech())
@@ -1097,10 +1108,11 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
           <div
             onClick={() => !isEditing && toggleSection("profile_edu")}
-            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_edu"
-              ? ""
-              : "border-b border-slate-100 dark:border-slate-800"
-              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${
+              !isEditing && openSection !== "profile_edu"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
@@ -1117,7 +1129,11 @@ export default function UserProfileView({
             </div>
             {!isEditing && (
               <Icon
-                path={openSection === "profile_edu" ? mdiChevronDown : mdiChevronRight}
+                path={
+                  openSection === "profile_edu"
+                    ? mdiChevronDown
+                    : mdiChevronRight
+                }
                 size={0.9}
                 className="text-slate-400"
               />
@@ -1192,10 +1208,11 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => !isEditing && toggleSection("profile_custom")}
-            className={`flex items-center justify-between pb-3 ${!isEditing && openSection !== "profile_custom"
-              ? ""
-              : "border-b border-slate-100 dark:border-slate-800"
-              } ${!isEditing ? "cursor-pointer select-none" : ""}`}
+            className={`flex items-center justify-between pb-3 ${
+              !isEditing && openSection !== "profile_custom"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } ${!isEditing ? "cursor-pointer select-none" : ""}`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
@@ -1212,7 +1229,11 @@ export default function UserProfileView({
             </div>
             {!isEditing && (
               <Icon
-                path={openSection === "profile_custom" ? mdiChevronDown : mdiChevronRight}
+                path={
+                  openSection === "profile_custom"
+                    ? mdiChevronDown
+                    : mdiChevronRight
+                }
                 size={0.9}
                 className="text-slate-400"
               />
@@ -1378,8 +1399,11 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => toggleSection("finance_card")}
-            className={`flex items-center justify-between pb-3 ${openSection !== "finance_card" ? "" : "border-b border-slate-100 dark:border-slate-800"
-              } cursor-pointer select-none`}
+            className={`flex items-center justify-between pb-3 ${
+              openSection !== "finance_card"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } cursor-pointer select-none`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
@@ -1390,12 +1414,17 @@ export default function UserProfileView({
                   <span>Cấu hình Thẻ tín dụng</span>
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  Thiết lập ngày sao kê thẻ tín dụng và quy tắc nhắc nhở hạn thanh toán
+                  Thiết lập ngày sao kê thẻ tín dụng và quy tắc nhắc nhở hạn
+                  thanh toán
                 </p>
               </div>
             </div>
             <Icon
-              path={openSection === "finance_card" ? mdiChevronDown : mdiChevronRight}
+              path={
+                openSection === "finance_card"
+                  ? mdiChevronDown
+                  : mdiChevronRight
+              }
               size={0.9}
               className="text-slate-400"
             />
@@ -1414,19 +1443,26 @@ export default function UserProfileView({
                   {/* Ngày sao kê hàng tháng */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                      <Icon path={mdiCalendar} size={0.6} className="text-blue-500" />
+                      <Icon
+                        path={mdiCalendar}
+                        size={0.6}
+                        className="text-blue-500"
+                      />
                       Ngày sao kê:
                     </label>
                     <select
                       value={creditCardStatementDay}
                       onChange={(e) =>
-                        setCreditCardStatementDay(parseInt(e.target.value, 10) || 20)
+                        setCreditCardStatementDay(
+                          parseInt(e.target.value, 10) || 20,
+                        )
                       }
                       className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-bold"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                         <option key={d} value={d}>
-                          Ngày {d} hàng tháng {d === 20 ? "(Mặc định phổ biến)" : ""}
+                          Ngày {d} hàng tháng{" "}
+                          {d === 20 ? "(Mặc định phổ biến)" : ""}
                         </option>
                       ))}
                     </select>
@@ -1435,7 +1471,11 @@ export default function UserProfileView({
                   {/* Tên thẻ / Ngân hàng */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                      <Icon path={mdiCreditCardOutline} size={0.6} className="text-indigo-500" />
+                      <Icon
+                        path={mdiCreditCardOutline}
+                        size={0.6}
+                        className="text-indigo-500"
+                      />
                       Tên thẻ (tùy chọn):
                     </label>
                     <input
@@ -1460,20 +1500,38 @@ export default function UserProfileView({
                   </div>
                   <ul className="list-disc list-inside space-y-1 text-[11px] text-blue-800/90 dark:text-blue-300 pl-1 leading-relaxed">
                     <li>
-                      Hạn hoàn trả mặc định: <strong>trước ngày sao kê 1 ngày</strong> (tức là{" "}
-                      <strong>Ngày {Number(creditCardStatementDay) - 1 || 19}</strong> hàng tháng).
+                      Hạn hoàn trả mặc định:{" "}
+                      <strong>trước ngày sao kê 1 ngày</strong> (tức là{" "}
+                      <strong>
+                        Ngày {Number(creditCardStatementDay) - 1 || 19}
+                      </strong>{" "}
+                      hàng tháng).
                     </li>
                     <li>
-                      Khoản chi phát sinh <em>trước ngày {creditCardStatementDay}</em> sẽ có hạn trả vào{" "}
-                      <strong>ngày {Number(creditCardStatementDay) - 1 || 19} tháng này</strong>.
+                      Khoản chi phát sinh{" "}
+                      <em>trước ngày {creditCardStatementDay}</em> sẽ có hạn trả
+                      vào{" "}
+                      <strong>
+                        ngày {Number(creditCardStatementDay) - 1 || 19} tháng
+                        này
+                      </strong>
+                      .
                     </li>
                     <li>
-                      Khoản chi phát sinh <em>từ ngày {creditCardStatementDay} trở đi</em> sẽ có hạn trả vào{" "}
-                      <strong>ngày {Number(creditCardStatementDay) - 1 || 19} tháng kế tiếp</strong>.
+                      Khoản chi phát sinh{" "}
+                      <em>từ ngày {creditCardStatementDay} trở đi</em> sẽ có hạn
+                      trả vào{" "}
+                      <strong>
+                        ngày {Number(creditCardStatementDay) - 1 || 19} tháng kế
+                        tiếp
+                      </strong>
+                      .
                     </li>
                     <li>
-                      Nếu tới 1 ngày trước ngày sao kê mà chưa tích <strong>"Đã thanh toán"</strong>, hệ thống sẽ{" "}
-                      <strong>highlight viền đỏ</strong> và hiển thị banner cảnh báo trên Sổ cái.
+                      Nếu tới 1 ngày trước ngày sao kê mà chưa tích{" "}
+                      <strong>"Đã thanh toán"</strong>, hệ thống sẽ{" "}
+                      <strong>highlight viền đỏ</strong> và hiển thị banner cảnh
+                      báo trên Sổ cái.
                     </li>
                   </ul>
                 </div>
@@ -1487,12 +1545,18 @@ export default function UserProfileView({
                     className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-blue-200/50 disabled:opacity-50"
                   >
                     {savingCardConfig ? (
-                      <Icon path={mdiLoading} size={0.6} className="animate-spin" />
+                      <Icon
+                        path={mdiLoading}
+                        size={0.6}
+                        className="animate-spin"
+                      />
                     ) : (
                       <Icon path={mdiContentSave} size={0.6} />
                     )}
                     <span>
-                      {savingCardConfig ? "Đang lưu..." : "Lưu cấu hình Thẻ tín dụng"}
+                      {savingCardConfig
+                        ? "Đang lưu..."
+                        : "Lưu cấu hình Thẻ tín dụng"}
                     </span>
                   </button>
                 </div>
@@ -1526,8 +1590,11 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => toggleSection("system_ai")}
-            className={`flex items-center justify-between pb-3 ${openSection !== "system_ai" ? "" : "border-b border-slate-100 dark:border-slate-800"
-              } cursor-pointer select-none`}
+            className={`flex items-center justify-between pb-3 ${
+              openSection !== "system_ai"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } cursor-pointer select-none`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400">
@@ -1543,7 +1610,9 @@ export default function UserProfileView({
               </div>
             </div>
             <Icon
-              path={openSection === "system_ai" ? mdiChevronDown : mdiChevronRight}
+              path={
+                openSection === "system_ai" ? mdiChevronDown : mdiChevronRight
+              }
               size={0.9}
               className="text-slate-400"
             />
@@ -1561,7 +1630,11 @@ export default function UserProfileView({
                 {/* Chọn mô hình AI */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                    <Icon path={mdiRobot} size={0.6} className="text-violet-500" />
+                    <Icon
+                      path={mdiRobot}
+                      size={0.6}
+                      className="text-violet-500"
+                    />
                     Mô hình AI:
                   </label>
                   <select
@@ -1626,7 +1699,11 @@ export default function UserProfileView({
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                     <span className="flex items-center gap-1">
-                      <Icon path={mdiKey} size={0.6} className="text-amber-500" />
+                      <Icon
+                        path={mdiKey}
+                        size={0.6}
+                        className="text-amber-500"
+                      />
                       API Key:
                       {getApiKeyUrl() && (
                         <a
@@ -1658,14 +1735,20 @@ export default function UserProfileView({
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white font-mono"
                   />
                   <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                    * Lưu ý: API Key được lưu bảo mật trên database riêng của bạn. Để trống nếu bạn muốn sử dụng API key mặc định từ hệ thống.
+                    * Lưu ý: API Key được lưu bảo mật trên database riêng của
+                    bạn. Để trống nếu bạn muốn sử dụng API key mặc định từ hệ
+                    thống.
                   </p>
                 </div>
 
                 {/* Base URL */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                    <Icon path={mdiServer} size={0.6} className="text-blue-500" />
+                    <Icon
+                      path={mdiServer}
+                      size={0.6}
+                      className="text-blue-500"
+                    />
                     Base API URL (Mặc định là OpenRouter):
                   </label>
                   <input
@@ -1776,8 +1859,11 @@ export default function UserProfileView({
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
           <div
             onClick={() => toggleSection("system_version")}
-            className={`flex items-center justify-between pb-3 ${openSection !== "system_version" ? "" : "border-b border-slate-100 dark:border-slate-800"
-              } cursor-pointer select-none`}
+            className={`flex items-center justify-between pb-3 ${
+              openSection !== "system_version"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } cursor-pointer select-none`}
           >
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
@@ -1796,7 +1882,11 @@ export default function UserProfileView({
               </div>
             </div>
             <Icon
-              path={openSection === "system_version" ? mdiChevronDown : mdiChevronRight}
+              path={
+                openSection === "system_version"
+                  ? mdiChevronDown
+                  : mdiChevronRight
+              }
               size={0.9}
               className="text-slate-400"
             />
@@ -1813,9 +1903,16 @@ export default function UserProfileView({
               >
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                    <Icon path={mdiClockOutline} size={0.7} className="text-cyan-500 shrink-0" />
+                    <Icon
+                      path={mdiClockOutline}
+                      size={0.7}
+                      className="text-cyan-500 shrink-0"
+                    />
                     <span>
-                      Phiên bản hiện tại: <b className="text-slate-900 dark:text-white">{__APP_VERSION__}</b>
+                      Phiên bản hiện tại:{" "}
+                      <b className="text-slate-900 dark:text-white">
+                        {__APP_VERSION__}
+                      </b>
                     </span>
                   </div>
 
@@ -1830,7 +1927,6 @@ export default function UserProfileView({
                       size={0.65}
                       className={isUpdating ? "animate-spin" : ""}
                     />
-                    <span>{isUpdating ? "Đang kiểm tra..." : "Cập nhật"}</span>
                   </button>
                 </div>
               </motion.div>
@@ -1848,7 +1944,9 @@ export default function UserProfileView({
             className="w-full py-3 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all disabled:opacity-50"
           >
             <Icon path={mdiContentSave} size={0.9} />
-            <span className="w-full">{isSaving ? "Đang lưu..." : "Lưu toàn bộ hồ sơ"}</span>
+            <span className="w-full">
+              {isSaving ? "Đang lưu..." : "Lưu toàn bộ hồ sơ"}
+            </span>
           </button>
         )}
       </div>

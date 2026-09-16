@@ -5,6 +5,8 @@ const BASE = '/.netlify/functions';
 type Listener = (count: number) => void;
 const listeners: Set<Listener> = new Set();
 
+let isProcessingSync = false;
+
 function notify(count: number) {
   listeners.forEach(fn => fn(count));
 }
@@ -37,6 +39,11 @@ export async function enqueue(
     retryCount: 0,
   });
   notify(await db.syncQueue.count());
+
+  // Tự động kích hoạt đồng bộ nếu đang online
+  if (navigator.onLine) {
+    scheduleSync();
+  }
 }
 
 export async function removeFromQueue(id: number) {
@@ -45,54 +52,72 @@ export async function removeFromQueue(id: number) {
 }
 
 export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
-  if (!navigator.onLine) return { success: 0, failed: 0 };
+  if (!navigator.onLine || isProcessingSync) return { success: 0, failed: 0 };
 
-  const items = await db.syncQueue.orderBy('timestamp').toArray();
+  isProcessingSync = true;
   let success = 0;
   let failed = 0;
 
-  for (const item of items) {
-    try {
-      const res = await fetch(item.endpoint, {
-        method: item.method,
-        headers: { 'Content-Type': 'application/json' },
-        body: item.body ? JSON.stringify(item.body) : undefined,
-      });
+  try {
+    const items = await db.syncQueue.orderBy('timestamp').toArray();
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    for (const item of items) {
+      try {
+        const res = await fetch(item.endpoint, {
+          method: item.method,
+          headers: { 'Content-Type': 'application/json' },
+          body: item.body ? JSON.stringify(item.body) : undefined,
+        });
 
-      const result = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      // Update local cache with server response
-      if (result && item.localId) {
-        try {
-          const table = db[item.table as keyof typeof db] as any;
-          if (table?.put) {
-            // If server returned data with real ID, delete local and put server version
-            if (item.operation === 'create') {
-              await table.where('id').equals(item.localId).delete();
+        const result = await res.json().catch(() => null);
+
+        // Update local cache with server response
+        if (result && item.localId) {
+          try {
+            const table = db[item.table as keyof typeof db] as any;
+            if (table?.put) {
+              // If server returned data with real ID, delete local and put server version
+              if (item.operation === 'create') {
+                await table.where('id').equals(item.localId).delete();
+              }
+              await table.put({ ...result, _syncStatus: 'synced' });
             }
-            await table.put({ ...result, _syncStatus: 'synced' });
-          }
-        } catch { /* cache update best-effort */ }
-      }
+          } catch { /* cache update best-effort */ }
+        }
 
-      await removeFromQueue(item.id!);
-      success++;
-    } catch {
-      await db.syncQueue.update(item.id!, { retryCount: item.retryCount + 1 });
-      failed++;
+        await removeFromQueue(item.id!);
+        success++;
+      } catch {
+        await db.syncQueue.update(item.id!, { retryCount: item.retryCount + 1 });
+        failed++;
+      }
     }
+  } finally {
+    isProcessingSync = false;
+  }
+
+  if (success > 0 && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('app-sync-completed', { detail: { success, failed } }));
   }
 
   return { success, failed };
 }
 
 export async function scheduleSync() {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine || isProcessingSync) return;
   const { success, failed } = await processSyncQueue();
   if (success > 0 || failed > 0) {
     const count = await getQueueCount();
     notify(count);
   }
 }
+
+// Lắng nghe tự động đồng bộ ngay khi thiết bị có lại kết nối Internet
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    scheduleSync();
+  });
+}
+

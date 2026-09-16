@@ -122,11 +122,19 @@ function AppContent() {
     };
     window.addEventListener("accent-theme-change", handleThemeChange);
     window.addEventListener("storage", handleThemeChange);
+
+    const handleSyncDone = () => {
+      refetchTransactions();
+    };
+    window.addEventListener("app-sync-completed", handleSyncDone);
+
     return () => {
       window.removeEventListener("accent-theme-change", handleThemeChange);
       window.removeEventListener("storage", handleThemeChange);
+      window.removeEventListener("app-sync-completed", handleSyncDone);
     };
-  }, []);
+  }, [refetchTransactions]);
+
 
   const handleCopyFinancialMarkdown = useCallback(() => {
     const nowStr = new Date().toLocaleString('vi-VN', {
