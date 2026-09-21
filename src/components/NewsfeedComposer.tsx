@@ -30,6 +30,12 @@ interface NewsfeedComposerProps {
   isModal?: boolean;
 }
 
+interface ImageItem {
+  id: string;
+  url: string;
+  file?: File;
+}
+
 export default function NewsfeedComposer({
   initialEntry,
   authorAvatar,
@@ -51,8 +57,13 @@ export default function NewsfeedComposer({
   const [tagInput, setTagInput] = useState("");
   const [pinned, setPinned] = useState<boolean>(initialEntry?.pinned || false);
 
-  // Images state
-  const [images, setImages] = useState<string[]>(initialEntry?.images || []);
+  // Images state (Chỉ lưu preview local, upload khi bấm Đăng/Lưu)
+  const [imageItems, setImageItems] = useState<ImageItem[]>(() =>
+    (initialEntry?.images || []).map((url, i) => ({
+      id: `init-${i}-${url}`,
+      url,
+    }))
+  );
   const [uploadingImages, setUploadingImages] = useState<boolean>(false);
 
   // UI pickers
@@ -87,6 +98,26 @@ export default function NewsfeedComposer({
     }
   }, [initialEntry]);
 
+  // Sync state if initialEntry changes
+  useEffect(() => {
+    if (initialEntry) {
+      setContent(initialEntry.content || "");
+      setDate(initialEntry.date || getLocalDateString());
+      setMood(initialEntry.mood || "positive");
+      setLocation(initialEntry.location || "");
+      setLat(initialEntry.lat ?? null);
+      setLng(initialEntry.lng ?? null);
+      setTags(initialEntry.tags || []);
+      setPinned(initialEntry.pinned || false);
+      setImageItems(
+        (initialEntry.images || []).map((url, i) => ({
+          id: `init-${i}-${url}`,
+          url,
+        }))
+      );
+    }
+  }, [initialEntry]);
+
   // Focus textarea when modal opens
   useEffect(() => {
     if (isOpenModal) {
@@ -108,39 +139,43 @@ export default function NewsfeedComposer({
     setTags(tags.filter((t) => t !== tagToRemove));
   };
 
-  const handleSelectFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setUploadingImages(true);
-    const toastId = toast.loading("Đang tải ảnh lên...");
-
-    try {
-      const uploadedUrls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.size > 20 * 1024 * 1024) {
-          toast.error(`Ảnh ${file.name} quá 20MB!`);
-          continue;
-        }
-        // Tối ưu và nén ảnh (giữ tỉ lệ chuẩn, max 1920px, loại bỏ dung lượng thừa)
-        const optimizedFile = await compressAndResizeImage(file, 1920, 0.85);
-        const url = await uploadDiaryImage(optimizedFile);
-        uploadedUrls.push(url);
+    const newItems: ImageItem[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`Ảnh ${file.name} quá 20MB!`);
+        continue;
       }
-
-      setImages((prev) => [...prev, ...uploadedUrls]);
-      toast.success(`Đã tải lên ${uploadedUrls.length} ảnh!`, { id: toastId });
-    } catch (err: any) {
-      toast.error(err?.message || "Lỗi khi upload ảnh", { id: toastId });
-    } finally {
-      setUploadingImages(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      const previewUrl = URL.createObjectURL(file);
+      newItems.push({
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        url: previewUrl,
+        file,
+      });
     }
+
+    if (newItems.length > 0) {
+      setImageItems((prev) => [...prev, ...newItems]);
+      toast.success(`Đã chọn ${newItems.length} ảnh xem trước`);
+    }
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
-    setImages(images.filter((_, idx) => idx !== indexToRemove));
+    setImageItems((prev) => {
+      const itemToRemove = prev[indexToRemove];
+      if (itemToRemove && itemToRemove.file && itemToRemove.url.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(itemToRemove.url);
+        } catch (_) {}
+      }
+      return prev.filter((_, idx) => idx !== indexToRemove);
+    });
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -151,7 +186,30 @@ export default function NewsfeedComposer({
     }
 
     setIsSubmitting(true);
+    let toastId: string | undefined;
+
     try {
+      const filesToUpload = imageItems.filter((it) => it.file);
+      if (filesToUpload.length > 0) {
+        setUploadingImages(true);
+        toastId = toast.loading(`Đang tải lên ${filesToUpload.length} ảnh...`);
+      }
+
+      const finalImages: string[] = [];
+      for (const item of imageItems) {
+        if (item.file) {
+          const optimizedFile = await compressAndResizeImage(item.file, 1920, 0.85);
+          const uploadedUrl = await uploadDiaryImage(optimizedFile);
+          finalImages.push(uploadedUrl);
+        } else if (item.url) {
+          finalImages.push(item.url);
+        }
+      }
+
+      if (toastId) {
+        toast.dismiss(toastId);
+      }
+
       await onSave({
         date,
         content: content.trim(),
@@ -160,7 +218,7 @@ export default function NewsfeedComposer({
         lat,
         lng,
         tags,
-        images,
+        images: finalImages,
         pinned,
         replies: initialEntry?.replies || [],
       });
@@ -170,15 +228,17 @@ export default function NewsfeedComposer({
       if (!isModal) {
         setIsOpenModal(false);
         setContent("");
-        setImages([]);
+        setImageItems([]);
         setTags([]);
         setShowMoodPicker(false);
         setShowTagInput(false);
       }
     } catch (err: any) {
+      if (toastId) toast.dismiss(toastId);
       toast.error(err?.message || "Không thể lưu bài viết");
     } finally {
       setIsSubmitting(false);
+      setUploadingImages(false);
     }
   };
 
@@ -480,16 +540,16 @@ export default function NewsfeedComposer({
           </AnimatePresence>
 
           {/* Attached Images Grid */}
-          {images.length > 0 && (
+          {imageItems.length > 0 && (
             <div className="p-2 border border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-900/40">
               <div className="grid grid-cols-3 gap-2">
-                {images.map((imgUrl, idx) => (
+                {imageItems.map((item, idx) => (
                   <div
-                    key={idx}
+                    key={item.id || idx}
                     className="relative group aspect-square rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                   >
                     <img
-                      src={imgUrl}
+                      src={item.url}
                       alt={`Upload ${idx + 1}`}
                       className="w-full h-full object-cover"
                     />

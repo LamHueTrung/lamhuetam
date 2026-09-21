@@ -205,14 +205,32 @@ export default function EntryCard({
                 {entry.location && (
                   <>
                     <span>·</span>
-                    <span className="flex items-center gap-0.5 text-slate-500 dark:text-slate-400 font-medium truncate max-w-[140px]">
-                      <Icon
-                        path={mdiMapMarker}
-                        size={0.5}
-                        className="text-rose-500 shrink-0"
-                      />
-                      <span className="truncate">{entry.location}</span>
-                    </span>
+                    {entry.lat && entry.lng ? (
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${entry.lat},${entry.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Mở Google Maps chỉ đường"
+                        className="flex items-center gap-0.5 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:underline font-medium truncate max-w-[140px] cursor-pointer"
+                      >
+                        <Icon
+                          path={mdiMapMarker}
+                          size={0.5}
+                          className="text-rose-500 shrink-0"
+                        />
+                        <span className="truncate">{entry.location}</span>
+                      </a>
+                    ) : (
+                      <span className="flex items-center gap-0.5 text-slate-500 dark:text-slate-400 font-medium truncate max-w-[140px]">
+                        <Icon
+                          path={mdiMapMarker}
+                          size={0.5}
+                          className="text-rose-500 shrink-0"
+                        />
+                        <span className="truncate">{entry.location}</span>
+                      </span>
+                    )}
                   </>
                 )}
 

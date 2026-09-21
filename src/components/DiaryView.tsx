@@ -22,6 +22,7 @@ import {
   mdiShareVariant,
   mdiPin,
   mdiPinOff,
+  mdiNavigation,
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import toast from "react-hot-toast";
@@ -160,17 +161,40 @@ function LeafletMap({
           <span style="font-size:11px;font-weight:800;color:#1e293b;">${entry.date}</span>
         </div>
         <p style="font-size:11px;color:#475569;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${entry.content}</p>
-        <button id="view-btn-${entry.id}" style="
-          width: 100%;
-          background: #06b6d4;
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          padding: 4px 8px;
-          font-size: 10px;
-          font-weight: 800;
-          cursor: pointer;
-        ">Xem chi tiết bài viết</button>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button id="view-btn-${entry.id}" style="
+            flex: 1;
+            background: #06b6d4;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+          ">Chi tiết</button>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${entry.lat},${entry.lng}" target="_blank" rel="noopener noreferrer" style="
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            text-align: center;
+          ">
+            <svg viewBox="0 0 24 24" width="12" height="12" style="fill:currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+            Chỉ đường
+          </a>
+        </div>
       `;
 
       m.bindPopup(popupContent);
@@ -320,8 +344,8 @@ function LeafletMap({
 
   return (
     <div
-      className={`relative w-full rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm ${
-        isFullScreen ? "h-[calc(100vh-140px)]" : "h-[450px]"
+      className={`relative w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all ${
+        isFullScreen ? "h-[calc(100vh-135px)] min-h-[520px]" : "h-[450px]"
       }`}
     >
       <div ref={mapRef} className="w-full h-full" />
@@ -700,10 +724,13 @@ export default function DiaryView() {
 
       {/* VIEW: MAP (BẢN ĐỒ) */}
       {viewMode === "map" && (
-        <LeafletMap
-          entries={filteredEntries}
-          onSelectEntryDetail={(entry) => setDetailEntry(entry)}
-        />
+        <div className="w-full">
+          <LeafletMap
+            entries={filteredEntries}
+            onSelectEntryDetail={(entry) => setDetailEntry(entry)}
+            isFullScreen={true}
+          />
+        </div>
       )}
 
       {/* VIEW: CALENDAR & EVENTS (LỊCH VÀ SỰ KIỆN) */}
@@ -787,6 +814,18 @@ export default function DiaryView() {
                       <Icon path={mdiMapMarker} size={0.65} />
                       {detailEntry.location}
                     </span>
+                  )}
+
+                  {detailEntry.lat && detailEntry.lng && (
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${detailEntry.lat},${detailEntry.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 dark:text-blue-300 text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                    >
+                      <Icon path={mdiNavigation} size={0.55} />
+                      <span>Chỉ đường</span>
+                    </a>
                   )}
                 </div>
 
