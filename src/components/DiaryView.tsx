@@ -23,6 +23,9 @@ import {
   mdiPin,
   mdiPinOff,
   mdiNavigation,
+  mdiMagnify,
+  mdiAccountMultiple,
+  mdiCrosshairsGps,
 } from "@mdi/js";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
 import toast from "react-hot-toast";
@@ -42,6 +45,7 @@ import MoodAnalyticsCard from "./MoodAnalyticsCard";
 import EntryCard from "./EntryCard";
 import CalendarView from "./CalendarView";
 import NewsfeedComposer from "./NewsfeedComposer";
+import LocationPickerModal from "./LocationPickerModal";
 import {
   DiarySkeletonTimeline,
   DiarySkeletonCalendar,
@@ -67,23 +71,36 @@ const VN_BOUNDS: [[number, number], [number, number]] = [
 function LeafletMap({
   entries,
   onSelectEntryDetail,
-  isFullScreen = false,
-  onBack,
+  onOpenComposer,
+  onSwitchViewMode,
 }: {
   entries: DiaryEntry[];
   onSelectEntryDetail: (entry: DiaryEntry) => void;
-  isFullScreen?: boolean;
-  onBack?: () => void;
+  onOpenComposer?: () => void;
+  onSwitchViewMode?: (mode: DiaryViewMode) => void;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const entriesRef = useRef(entries);
+  const layersRef = useRef<{ adminLayer: any; satLayer: any } | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMood, setSelectedMood] = useState<DiaryMood | "all">("all");
+  const [currentMapType, setCurrentMapType] = useState<"admin" | "sat">(
+    "admin",
+  );
+  const [isLocationPickerOpen, setIsLocationPickerOpen] =
+    useState<boolean>(false);
+  const [myCoords, setMyCoords] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     entriesRef.current = entries;
   }, [entries]);
 
+  // Các bài viết hợp lệ có tọa độ
   const validEntries = useMemo(() => {
     return entries
       .filter(
@@ -103,16 +120,38 @@ function LeafletMap({
       })) as (DiaryEntry & { lat: number; lng: number })[];
   }, [entries]);
 
+  // Lọc bài viết theo ô tìm kiếm & mood chip
+  const displayedEntries = useMemo(() => {
+    return validEntries.filter((e) => {
+      // 1. Lọc theo Mood
+      if (selectedMood !== "all" && e.mood !== selectedMood) return false;
+
+      // 2. Lọc theo từ khóa tìm kiếm
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchContent = (e.content || "").toLowerCase().includes(q);
+        const matchLoc = (e.location || "").toLowerCase().includes(q);
+        const matchTag = (e.tags || []).some((t) =>
+          t.toLowerCase().includes(q),
+        );
+        if (!matchContent && !matchLoc && !matchTag) return false;
+      }
+
+      return true;
+    });
+  }, [validEntries, searchQuery, selectedMood]);
+
   const handleFitAllBounds = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (!map || validEntries.length === 0) return;
-    const latLngs = validEntries.map((e) => [e.lat, e.lng]);
+    if (!map || displayedEntries.length === 0) return;
+    const latLngs = displayedEntries.map((e) => [e.lat, e.lng]);
+
     if (latLngs.length === 1) {
       map.setView(latLngs[0], 14);
-    } else {
-      map.fitBounds(latLngs as any, { padding: [50, 50], maxZoom: 16 });
+    } else if (latLngs.length > 1) {
+      map.fitBounds(latLngs as any, { padding: [80, 80], maxZoom: 16 });
     }
-  }, [validEntries]);
+  }, [displayedEntries]);
 
   // Cập nhật marker theo danh sách bài viết đã lọc
   const updateMarkers = useCallback(() => {
@@ -120,51 +159,77 @@ function LeafletMap({
     const L = (window as any).L;
     if (!map || !L) return;
 
-    // 1. Xóa các marker cũ
+    // 1. Xóa marker cũ
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // 2. Tạo marker mới
-    validEntries.forEach((entry) => {
-      const cfg = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.neutral;
+    // 2. Marker vị trí người dùng (nếu đã định vị GPS)
+    if (myCoords) {
+      const myIcon = L.divIcon({
+        className: "custom-my-location-marker",
+        html: `
+          <div style="position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;inset:0;background:#0ea5e9;opacity:0.4;border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+            <div style="width:14px;height:14px;background:#0284c7;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+      const myMarker = L.marker([myCoords.lat, myCoords.lng], {
+        icon: myIcon,
+      }).addTo(map);
+      myMarker.bindPopup(
+        `<div style="font-size:12px;font-weight:bold;color:#0284c7;padding:2px;">📍 Vị trí hiện tại của bạn</div>`,
+      );
+      markersRef.current.push(myMarker);
+    }
+
+    // 3. Marker bài viết nhật ký
+    displayedEntries.forEach((entry) => {
+      const cfg = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.positive;
       const icon = L.divIcon({
         className: "custom-diary-marker",
         html: `
           <div style="
             background: ${cfg.hex};
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             display: flex;
             align-items: center;
             justify-content: center;
             border: 2px solid #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
             cursor: pointer;
+            transition: transform 0.2s;
           ">
-            <span style="transform: rotate(45deg); font-size: 14px; line-height: 1;">${cfg.emoji}</span>
+            <span style="transform: rotate(45deg); font-size: 15px; line-height: 1;">${cfg.emoji}</span>
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
       });
 
       const m = L.marker([entry.lat, entry.lng], { icon }).addTo(map);
 
       const popupContent = document.createElement("div");
       popupContent.style.cssText =
-        "min-width: 180px; max-width: 220px; font-family: sans-serif;";
+        "min-width: 200px; max-width: 240px; font-family: sans-serif;";
       popupContent.innerHTML = `
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
           <span style="font-size:16px;">${cfg.emoji}</span>
-          <span style="font-size:11px;font-weight:800;color:#1e293b;">${entry.date}</span>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:11px;font-weight:800;color:#1e293b;">${entry.date}</div>
+            ${entry.location ? `<div style="font-size:10px;color:#e11d48;font-weight:600;truncate;">📍 ${entry.location}</div>` : ""}
+          </div>
         </div>
         <p style="font-size:11px;color:#475569;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${entry.content}</p>
         <div style="display:flex;gap:6px;margin-top:6px;">
           <button id="view-btn-${entry.id}" style="
             flex: 1;
-            background: #06b6d4;
+            background: #0284c7;
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -180,7 +245,7 @@ function LeafletMap({
             align-items: center;
             justify-content: center;
             gap: 4px;
-            background: #2563eb;
+            background: #f97316;
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -205,9 +270,7 @@ function LeafletMap({
             if (mapInstanceRef.current) {
               mapInstanceRef.current.closePopup();
             }
-            const currentE = entriesRef.current.find(
-              (e) => e.id === entry.id,
-            );
+            const currentE = entriesRef.current.find((e) => e.id === entry.id);
             if (currentE) onSelectEntryDetail(currentE);
           };
         }
@@ -216,10 +279,51 @@ function LeafletMap({
       markersRef.current.push(m);
     });
 
-    if (validEntries.length > 0) {
+    if (displayedEntries.length > 0) {
       handleFitAllBounds();
     }
-  }, [validEntries, handleFitAllBounds, onSelectEntryDetail]);
+  }, [displayedEntries, myCoords, handleFitAllBounds, onSelectEntryDetail]);
+
+  const handleLocateMe = () => {
+    if (!("geolocation" in navigator)) {
+      toast.error("Trình duyệt không hỗ trợ GPS");
+      return;
+    }
+    const toastId = toast.loading("Đang xác định vị trí hiện tại...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        toast.dismiss(toastId);
+        const lat = Number(pos.coords.latitude.toFixed(5));
+        const lng = Number(pos.coords.longitude.toFixed(5));
+        setMyCoords({ lat, lng });
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1.2 });
+        }
+        toast.success("Đã xác định vị trí của bạn!");
+      },
+      (err) => {
+        toast.dismiss(toastId);
+        toast.error("Không thể lấy vị trí: " + err.message);
+      },
+      { timeout: 8000, enableHighAccuracy: true },
+    );
+  };
+
+  const handleToggleMapLayer = (type: "admin" | "sat") => {
+    const map = mapInstanceRef.current;
+    if (!map || !layersRef.current) return;
+    const { adminLayer, satLayer } = layersRef.current;
+
+    if (type === "admin") {
+      map.removeLayer(satLayer);
+      map.addLayer(adminLayer);
+      setCurrentMapType("admin");
+    } else {
+      map.removeLayer(adminLayer);
+      map.addLayer(satLayer);
+      setCurrentMapType("sat");
+    }
+  };
 
   // Khởi tạo bản đồ
   useEffect(() => {
@@ -244,72 +348,35 @@ function LeafletMap({
       const center: [number, number] =
         validEntries.length > 0
           ? [validEntries[0].lat, validEntries[0].lng]
-          : [16.047, 108.206];
+          : [9.9482, 106.3356];
+
       const map = L.map(mapRef.current, {
-        zoomControl: true,
+        zoomControl: false,
         attributionControl: false,
         maxBounds: VN_BOUNDS,
         maxBoundsViscosity: 1.0,
         minZoom: 5,
         tap: false,
-      }).setView(center, 12);
+      }).setView(center, 13);
+
       const mapTilerKey = "odL8F5mMYH7APbT24t4Q";
       const adminLayer = L.tileLayer(
         `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${mapTilerKey}`,
         {
           maxZoom: 19,
-          attribution:
-            '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          attribution: "&copy; MapTiler &copy; OpenStreetMap",
         },
       ).addTo(map);
+
       const satLayer = L.tileLayer(
         `https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${mapTilerKey}`,
         {
           maxZoom: 19,
-          attribution:
-            '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          attribution: "&copy; MapTiler &copy; OpenStreetMap",
         },
       );
-      const MapStyleControl = L.Control.extend({
-        onAdd() {
-          const div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
-          div.style.cssText =
-            "display:flex;gap:2px;background:#fff;border-radius:10px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-family:sans-serif";
-          div.innerHTML = `
-            <button data-layer="admin" style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:#06b6d4;color:#fff;transition:all 0.2s">
-              <svg viewBox="0 0 24 24" width="13" height="13" style="fill:currentColor"><path d="${mdiMap}"/></svg>
-              Hành chính
-            </button>
-            <button data-layer="sat" style="display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:transparent;color:#64748b;transition:all 0.2s">
-              <svg viewBox="0 0 24 24" width="13" height="13" style="fill:currentColor"><path d="${mdiSatelliteVariant}"/></svg>
-              Vệ tinh
-            </button>
-          `;
-          const btns = div.querySelectorAll("button");
-          const activeStyle =
-            "display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:#06b6d4;color:#fff";
-          const inactiveStyle =
-            "display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border:none;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer;background:transparent;color:#64748b";
-          btns.forEach((btn) => {
-            btn.onclick = () => {
-              if (btn.dataset.layer === "admin") {
-                map.removeLayer(satLayer);
-                map.addLayer(adminLayer);
-                btns[0].style.cssText = activeStyle;
-                btns[1].style.cssText = inactiveStyle;
-              } else {
-                map.removeLayer(adminLayer);
-                map.addLayer(satLayer);
-                btns[1].style.cssText = activeStyle;
-                btns[0].style.cssText = inactiveStyle;
-              }
-            };
-          });
-          return div;
-        },
-      });
-      new MapStyleControl({ position: "topright" }).addTo(map);
 
+      layersRef.current = { adminLayer, satLayer };
       mapInstanceRef.current = map;
       updateMarkers();
     };
@@ -342,40 +409,268 @@ function LeafletMap({
     }
   }, [updateMarkers]);
 
+  const [isCarouselOpen, setIsCarouselOpen] = useState(true);
+
   return (
-    <div
-      className={`relative w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all ${
-        isFullScreen ? "h-[calc(100vh-135px)] min-h-[520px]" : "h-[450px]"
-      }`}
-    >
+    <div className="fixed inset-0 z-30 w-full h-full bg-slate-100 dark:bg-slate-900 overflow-hidden select-none">
+      {/* 1. Leaflet Map Full Viewport */}
       <div ref={mapRef} className="w-full h-full" />
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="absolute top-3 left-3 z-[1000] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-        >
-          <Icon path={mdiArrowLeft} size={0.65} />
-          <span>Quay lại</span>
-        </button>
-      )}
 
-      {validEntries.length === 0 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 dark:bg-slate-800/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 pointer-events-none">
-          📍 Không có bài viết nào có tọa độ khớp với bộ lọc
+      {/* 2. Top Floating Search Box & Action Controls */}
+      <div className="fixed top-3 pt-safe left-0 right-0 z-[1000] px-3.5 flex flex-col gap-2 max-w-md mx-auto pointer-events-none">
+        {/* Row 1: Search + Add Location Button */}
+        <div className="flex items-center gap-2 w-full">
+          <div className="pointer-events-auto flex-1 flex items-center gap-2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-full px-3.5 py-2.5 shadow-lg border border-slate-200/80 dark:border-slate-700/80">
+            <Icon
+              path={mdiMagnify}
+              size={0.75}
+              className="text-slate-400 shrink-0"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm địa điểm, nội dung nhật ký..."
+              className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none placeholder-slate-400 font-medium"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <Icon path={mdiClose} size={0.6} />
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpenComposer}
+            className="pointer-events-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-full shadow-lg flex items-center gap-1 shrink-0 transition-all active:scale-95 cursor-pointer"
+          >
+            <Icon path={mdiPlus} size={0.65} />
+            <span>Viết bài</span>
+          </button>
         </div>
-      )}
 
-      <button
-        onClick={handleFitAllBounds}
-        disabled={validEntries.length === 0}
-        className={`absolute bottom-4 left-4 z-[1000] px-3.5 py-2 rounded-xl shadow-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-          validEntries.length > 0
-            ? "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50"
-            : "bg-slate-200/80 dark:bg-slate-800/80 text-slate-400 cursor-not-allowed border border-transparent"
+        {/* Row 2: Mood & Categories Chips */}
+        <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMood("all")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all shrink-0 cursor-pointer ${
+              selectedMood === "all"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md"
+                : "bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-100"
+            }`}
+          >
+            Tất cả ({validEntries.length})
+          </button>
+
+          {(Object.keys(MOOD_CONFIG) as DiaryMood[]).map((mKey) => {
+            const cfg = MOOD_CONFIG[mKey];
+            const isSelected = selectedMood === mKey;
+            const count = validEntries.filter((e) => e.mood === mKey).length;
+            if (count === 0 && !isSelected) return null;
+
+            return (
+              <button
+                key={mKey}
+                type="button"
+                onClick={() => setSelectedMood(isSelected ? "all" : mKey)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                  isSelected
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md"
+                    : "bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-100"
+                }`}
+              >
+                <span>{cfg.emoji}</span>
+                <span>
+                  {cfg.label} ({count})
+                </span>
+              </button>
+            );
+          })}
+
+          {onSwitchViewMode && (
+            <button
+              type="button"
+              onClick={() => onSwitchViewMode("feed")}
+              className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+            >
+              <Icon path={mdiBookOpenVariant} size={0.6} />
+              <span>Bản tin</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 3. Floating Action Controls on Right */}
+      <div
+        className={`fixed right-3 z-[1000] flex flex-col items-end gap-2 pointer-events-auto transition-all duration-300 ${
+          isCarouselOpen ? "bottom-[225px]" : "bottom-[100px]"
         }`}
       >
-        <span>🔍 Thu phóng toàn bộ ({validEntries.length} địa điểm)</span>
-      </button>
+        {/* Layer Switcher */}
+        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 p-1 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => handleToggleMapLayer("admin")}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all cursor-pointer ${
+              currentMapType === "admin"
+                ? "bg-blue-600 text-white"
+                : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
+            }`}
+          >
+            Hành chính
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleMapLayer("sat")}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all cursor-pointer ${
+              currentMapType === "sat"
+                ? "bg-blue-600 text-white"
+                : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
+            }`}
+          >
+            Vệ tinh
+          </button>
+        </div>
+
+        {/* Hiệu chỉnh vị trí */}
+        <button
+          type="button"
+          onClick={() => setIsLocationPickerOpen(true)}
+          className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-2 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 flex items-center gap-1.5 hover:bg-white dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+        >
+          <Icon path={mdiMapMarker} size={0.65} className="text-rose-500" />
+          <span>Chọn tọa độ</span>
+        </button>
+
+        {/* Định vị tôi */}
+        <button
+          type="button"
+          onClick={handleLocateMe}
+          className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-2 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 flex items-center gap-1.5 hover:bg-white dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+        >
+          <Icon path={mdiCrosshairsGps} size={0.65} className="text-blue-500" />
+          <span>Định vị tôi</span>
+        </button>
+
+        {/* Thu phóng toàn bộ */}
+        {displayedEntries.length > 0 && (
+          <button
+            type="button"
+            onClick={handleFitAllBounds}
+            className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-2 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 flex items-center gap-1.5 hover:bg-white dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+          >
+            <Icon path={mdiEyeOutline} size={0.65} className="text-amber-500" />
+            <span>Toàn cảnh ({displayedEntries.length})</span>
+          </button>
+        )}
+      </div>
+
+      {/* 4. Bottom Floating Card Carousel (Real Diary Entries) - Positioned above bottom Navbar */}
+      <div
+        className={`fixed bottom-[100px] z-[1000] pointer-events-auto transition-all duration-300 ${
+          isCarouselOpen
+            ? "left-3.5 right-3.5 max-w-md mx-auto"
+            : "left-3.5 max-w-fit"
+        }`}
+      >
+        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45)] border border-slate-200/80 dark:border-slate-700/80 p-2.5 space-y-1.5">
+          {/* Header with Toggle */}
+          <div
+            className="flex items-center justify-between gap-3 px-1 cursor-pointer select-none"
+            onClick={() => setIsCarouselOpen((prev) => !prev)}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                Địa điểm ({displayedEntries.length} bài)
+              </span>
+            </div>
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline whitespace-nowrap">
+              {isCarouselOpen ? "Thu gọn ▲" : "Mở rộng ▼"}
+            </span>
+          </div>
+
+          {/* Horizontal Posts List */}
+          {isCarouselOpen &&
+            (displayedEntries.length === 0 ? (
+              <div className="py-2.5 px-2 text-center text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                Không có bài viết nào khớp bộ lọc
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                {displayedEntries.map((entry) => {
+                  const cfg = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.positive;
+                  return (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => {
+                        if (mapInstanceRef.current) {
+                          mapInstanceRef.current.flyTo(
+                            [entry.lat, entry.lng],
+                            16,
+                            { duration: 1 },
+                          );
+                        }
+                      }}
+                      className="flex-1 min-w-[170px] max-w-[210px] bg-slate-100/90 dark:bg-slate-700/60 hover:bg-slate-200/80 dark:hover:bg-slate-700 p-2 rounded-xl flex flex-col gap-1 border border-slate-200/60 dark:border-slate-600/60 transition-all active:scale-95 cursor-pointer text-left"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-sm leading-none">
+                          {cfg.emoji}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {entry.date}
+                        </span>
+                      </div>
+                      {entry.location && (
+                        <div className="flex items-center gap-0.5 text-[10px] font-bold text-rose-500 truncate">
+                          <Icon
+                            path={mdiMapMarker}
+                            size={0.45}
+                            className="shrink-0"
+                          />
+                          <span className="truncate">{entry.location}</span>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-slate-600 dark:text-slate-300 line-clamp-1 leading-tight">
+                        {entry.content}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* 5. Location Calibration Modal */}
+      <LocationPickerModal
+        isOpen={isLocationPickerOpen}
+        initialLat={myCoords?.lat || (validEntries[0]?.lat ?? 9.9482)}
+        initialLng={myCoords?.lng || (validEntries[0]?.lng ?? 106.3356)}
+        onClose={() => setIsLocationPickerOpen(false)}
+        onSelectLocation={(selectedLat, selectedLng) => {
+          setMyCoords({ lat: selectedLat, lng: selectedLng });
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([selectedLat, selectedLng], 16, {
+              duration: 1,
+            });
+          }
+          toast.success(
+            `Đã chọn tọa độ: [${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}]`,
+          );
+        }}
+      />
     </div>
   );
 }
@@ -400,6 +695,7 @@ export default function DiaryView() {
   const [viewMode, setViewMode] = useState<DiaryViewMode>("feed");
   const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
   const [detailEntry, setDetailEntry] = useState<DiaryEntry | null>(null);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   // Search & filter state
   const [search, setSearch] = useState("");
@@ -590,8 +886,216 @@ export default function DiaryView() {
     );
   };
 
+  // ── MAP VIEW: FULL-SCREEN IMMERSIVE OVERLAY (Ẩn header, nền full màn hình) ──
+  if (viewMode === "map") {
+    return (
+      <>
+        <LeafletMap
+          entries={entries}
+          onSelectEntryDetail={(entry) => setDetailEntry(entry)}
+          onOpenComposer={() => setIsComposerOpen(true)}
+          onSwitchViewMode={(mode) => setViewMode(mode)}
+        />
+
+        {/* Modal Composer for creating new post / location */}
+        {isComposerOpen && (
+          <NewsfeedComposer
+            isModal={true}
+            authorAvatar={authorAvatar}
+            authorName={authorName}
+            onSave={handleSaveComposer}
+            onClose={() => setIsComposerOpen(false)}
+          />
+        )}
+
+        {/* Edit Entry Modal */}
+        {editingEntry && (
+          <NewsfeedComposer
+            isModal={true}
+            initialEntry={editingEntry}
+            authorAvatar={authorAvatar}
+            authorName={authorName}
+            onSave={handleSaveComposer}
+            onClose={() => setEditingEntry(null)}
+          />
+        )}
+
+        {/* Post Detail & Comments Modal */}
+        {detailEntry &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-fadeIn"
+              onClick={() => setDetailEntry(null)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-xl bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-700/80 my-auto"
+              >
+                {/* Header */}
+                <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={authorAvatar}
+                      onError={(e) => {
+                        e.currentTarget.src = "/avatar.jpg";
+                      }}
+                      alt={authorName}
+                      className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100"
+                    />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+                        {authorName}
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        {formatDate(detailEntry.date)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setDetailEntry(null)}
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 cursor-pointer"
+                  >
+                    <Icon path={mdiClose} size={0.8} />
+                  </button>
+                </div>
+
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Mood & Location */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                        MOOD_CONFIG[detailEntry.mood]?.color
+                      }`}
+                      style={{
+                        backgroundColor: `${MOOD_CONFIG[detailEntry.mood]?.hex}18`,
+                      }}
+                    >
+                      <span>{MOOD_CONFIG[detailEntry.mood]?.emoji}</span>
+                      <span>{MOOD_CONFIG[detailEntry.mood]?.label}</span>
+                    </span>
+
+                    {detailEntry.location && (
+                      <span className="inline-flex items-center gap-1 text-xs text-rose-500 font-medium">
+                        <Icon path={mdiMapMarker} size={0.65} />
+                        {detailEntry.location}
+                      </span>
+                    )}
+
+                    {detailEntry.lat && detailEntry.lng && (
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${detailEntry.lat},${detailEntry.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 dark:text-blue-300 text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                      >
+                        <Icon path={mdiNavigation} size={0.55} />
+                        <span>Chỉ đường</span>
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Body Text */}
+                  <p className="text-sm text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-wrap break-words">
+                    {detailEntry.content}
+                  </p>
+
+                  {/* Images Lightbox / Gallery */}
+                  {(() => {
+                    const detailImgs = Array.isArray(detailEntry.images)
+                      ? detailEntry.images.filter(
+                          (img) =>
+                            typeof img === "string" && img.trim().length > 0,
+                        )
+                      : typeof detailEntry.images === "string" &&
+                          (detailEntry.images as string).trim().length > 0
+                        ? [detailEntry.images]
+                        : [];
+                    if (detailImgs.length === 0) return null;
+
+                    return (
+                      <div className="space-y-2">
+                        <span className="text-xs font-semibold text-slate-400 block">
+                          Hình ảnh ({detailImgs.length})
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {detailImgs.map((imgUrl, i) => (
+                            <div
+                              key={i}
+                              onClick={() => setDetailLightboxIndex(i)}
+                              className="aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-700 cursor-pointer border border-slate-200 dark:border-slate-700 hover:opacity-90 transition-opacity"
+                            >
+                              <img
+                                src={getThumbnailUrl(imgUrl, 160)}
+                                alt={`Ảnh ${i + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Reply section */}
+                <div className="p-3 border-t border-slate-100 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-900/30">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSaveReply();
+                        }
+                      }}
+                      placeholder="Viết bình luận..."
+                      className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-4 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-blue-500"
+                    />
+                    <button
+                      onClick={handleSaveReply}
+                      disabled={isSavingReply || !replyText.trim()}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      {isSavingReply ? (
+                        <Icon
+                          path={mdiLoading}
+                          size={0.6}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        "Gửi"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+
+        {/* Lightbox Modal */}
+        {detailLightboxIndex !== null && detailEntry && (
+          <PhotoLightboxModal
+            isOpen={detailLightboxIndex !== null}
+            images={
+              Array.isArray(detailEntry.images)
+                ? detailEntry.images
+                : [detailEntry.images || ""]
+            }
+            initialIndex={detailLightboxIndex}
+            onClose={() => setDetailLightboxIndex(null)}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4 pb-32 space-y-4">
+    <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4 pb-6 space-y-4">
       {/* Header */}
       <DiaryHeader streakData={streakData} totalEntries={entries.length} />
 
@@ -614,7 +1118,7 @@ export default function DiaryView() {
           type="button"
           onClick={() => setViewMode("map")}
           className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            viewMode === "map"
+            (viewMode as string) === "map"
               ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
               : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
           }`}
@@ -643,9 +1147,7 @@ export default function DiaryView() {
       )}
 
       {/* Search & Filters */}
-      {(viewMode === "feed" ||
-        viewMode === "timeline" ||
-        viewMode === "map") && (
+      {(viewMode === "feed" || viewMode === "timeline") && (
         <SearchFilterBar
           search={search}
           onSearchChange={setSearch}
@@ -722,23 +1224,9 @@ export default function DiaryView() {
         </div>
       )}
 
-      {/* VIEW: MAP (BẢN ĐỒ) */}
-      {viewMode === "map" && (
-        <div className="w-full">
-          <LeafletMap
-            entries={filteredEntries}
-            onSelectEntryDetail={(entry) => setDetailEntry(entry)}
-            isFullScreen={true}
-          />
-        </div>
-      )}
-
       {/* VIEW: CALENDAR & EVENTS (LỊCH VÀ SỰ KIỆN) */}
       {viewMode === "calendar" && (
-        <CalendarView
-          month={calendarMonth}
-          onMonthChange={setCalendarMonth}
-        />
+        <CalendarView month={calendarMonth} onMonthChange={setCalendarMonth} />
       )}
 
       {/* Edit Entry Modal (using NewsfeedComposer) */}

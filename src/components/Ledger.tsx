@@ -34,7 +34,10 @@ import { api } from "../api/client";
 import { iconMap } from "../lib/iconMap";
 import EditTransactionModal from "./EditTransactionModal";
 import { getLocalDateString } from "../utils/date";
-import { checkCreditCardDueStatus, calcCreditCardDueDate } from "../lib/debtUtils";
+import {
+  checkCreditCardDueStatus,
+  calcCreditCardDueDate,
+} from "../lib/debtUtils";
 import toast from "react-hot-toast";
 
 interface LedgerProps {
@@ -123,7 +126,7 @@ export default function Ledger({
         toast("Đã chuyển về trạng thái chưa thanh toán");
       }
     },
-    [onUpdateTransaction]
+    [onUpdateTransaction],
   );
 
   // Batch selection toggle
@@ -150,7 +153,7 @@ export default function Ledger({
       });
     });
     toast.success(
-      `Đã đánh dấu hoàn trả thành công ${selectedTxIds.size} khoản chi thẻ!`
+      `Đã đánh dấu hoàn trả thành công ${selectedTxIds.size} khoản chi thẻ!`,
     );
     setSelectedTxIds(new Set());
     setIsBatchMode(false);
@@ -178,12 +181,15 @@ export default function Ledger({
     }
   }, []);
 
-  const handleOpenDetail = useCallback((tx: Transaction) => {
-    if (anomalyMap.has(tx.id)) {
-      markAnomalySeen(tx.id);
-    }
-    setDetailTransaction(tx);
-  }, [anomalyMap, markAnomalySeen]);
+  const handleOpenDetail = useCallback(
+    (tx: Transaction) => {
+      if (anomalyMap.has(tx.id)) {
+        markAnomalySeen(tx.id);
+      }
+      setDetailTransaction(tx);
+    },
+    [anomalyMap, markAnomalySeen],
+  );
 
   const fetchAnomalies = useCallback(async () => {
     if (!transactions || transactions.length === 0) return;
@@ -206,7 +212,9 @@ export default function Ledger({
         try {
           const stored = localStorage.getItem("seen_anomaly_tx_ids");
           const seenIds: string[] = stored ? JSON.parse(stored) : [];
-          const unseen = resp.anomalies.filter((a: MLAnomalyItem) => !seenIds.includes(a.id));
+          const unseen = resp.anomalies.filter(
+            (a: MLAnomalyItem) => !seenIds.includes(a.id),
+          );
 
           if (unseen.length > 0) {
             const topAnomaly = unseen[0];
@@ -219,7 +227,10 @@ export default function Ledger({
                   dragConstraints={{ left: 0, right: 0 }}
                   dragElastic={0.7}
                   onDragEnd={(_, info) => {
-                    if (Math.abs(info.offset.x) > 40 || Math.abs(info.velocity.x) > 200) {
+                    if (
+                      Math.abs(info.offset.x) > 40 ||
+                      Math.abs(info.velocity.x) > 200
+                    ) {
                       toast.dismiss(t.id);
                     }
                   }}
@@ -235,8 +246,16 @@ export default function Ledger({
                   onClick={() => {
                     toast.dismiss(t.id);
                     // Đánh dấu tất cả các anomaly hiện tại là đã xem
-                    const updated = Array.from(new Set([...seenIds, ...unseen.map((a: MLAnomalyItem) => a.id)]));
-                    localStorage.setItem("seen_anomaly_tx_ids", JSON.stringify(updated));
+                    const updated = Array.from(
+                      new Set([
+                        ...seenIds,
+                        ...unseen.map((a: MLAnomalyItem) => a.id),
+                      ]),
+                    );
+                    localStorage.setItem(
+                      "seen_anomaly_tx_ids",
+                      JSON.stringify(updated),
+                    );
                     if (topTx) {
                       if (topTx.date) setSelectedDate(topTx.date);
                       setDetailTransaction(topTx);
@@ -252,7 +271,9 @@ export default function Ledger({
                       Phát hiện {unseen.length} chi tiêu bất thường
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {topTx ? `${topTx.description} (${formatCurrency(topTx.amount)})` : "Nhấn để kiểm tra chi tiết"}
+                      {topTx
+                        ? `${topTx.description} (${formatCurrency(topTx.amount)})`
+                        : "Nhấn để kiểm tra chi tiết"}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-lg shrink-0">
@@ -272,7 +293,7 @@ export default function Ledger({
                   </button>
                 </motion.div>
               ),
-              { duration: 6000, id: "anomaly-toast" }
+              { duration: 6000, id: "anomaly-toast" },
             );
           }
         } catch (err) {
@@ -287,7 +308,6 @@ export default function Ledger({
   useEffect(() => {
     fetchAnomalies();
   }, [fetchAnomalies]);
-
 
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
   const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
@@ -379,7 +399,7 @@ export default function Ledger({
   // Credit Card Due Warnings & Stats
   const creditCardTxs = useMemo(() => {
     return transactions.filter(
-      (t) => t.wallet === "Thẻ tín dụng" && t.type === "expense"
+      (t) => t.wallet === "Thẻ tín dụng" && t.type === "expense",
     );
   }, [transactions]);
 
@@ -415,7 +435,7 @@ export default function Ledger({
   });
 
   return (
-    <div className="space-y-4 pb-40 min-w-0 max-w-full">
+    <div className="space-y-4 pb-6 min-w-0 max-w-full">
       <div>
         <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 tracking-wider uppercase">
           LỊCH SỬ GIAO DỊCH
@@ -429,7 +449,9 @@ export default function Ledger({
         >
           <Icon path={mdiChevronLeft} size={1.25} />
         </button>
-        <span className="text-sm font-bold text-slate-800 dark:text-white">{monthName}</span>
+        <span className="text-sm font-bold text-slate-800 dark:text-white">
+          {monthName}
+        </span>
         <button
           onClick={nextMonth}
           className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all"
@@ -460,7 +482,7 @@ export default function Ledger({
             const isToday = dateStr === todayStr;
             const isSelected = dateStr === selectedDate;
             const hasAnomaly = transactions.some(
-              (t) => t.date === dateStr && anomalyMap.has(t.id)
+              (t) => t.date === dateStr && anomalyMap.has(t.id),
             );
 
             return (
@@ -648,8 +670,14 @@ export default function Ledger({
           <div className="p-3 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200/50 dark:border-blue-800/40 rounded-2xl space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1">
-                <Icon path={mdiCreditCardOutline} size={0.65} className="text-blue-600 dark:text-blue-400" />
-                <span>Quản lý nợ thẻ: Hạn ngày {Number(statementDay) - 1 || 19}</span>
+                <Icon
+                  path={mdiCreditCardOutline}
+                  size={0.65}
+                  className="text-blue-600 dark:text-blue-400"
+                />
+                <span>
+                  Quản lý nợ thẻ: Hạn ngày {Number(statementDay) - 1 || 19}
+                </span>
               </span>
               <button
                 onClick={() => {
@@ -689,7 +717,9 @@ export default function Ledger({
               >
                 <span>Chưa thanh toán ({creditCardUnpaidTxs.length})</span>
                 {creditCardUnpaidTotal > 0 && (
-                  <span className="opacity-90 font-extrabold">• {formatVND(creditCardUnpaidTotal)}</span>
+                  <span className="opacity-90 font-extrabold">
+                    • {formatVND(creditCardUnpaidTotal)}
+                  </span>
                 )}
               </button>
 
@@ -708,7 +738,10 @@ export default function Ledger({
                 <button
                   onClick={() => {
                     const unpaidIds = selectedTxs
-                      .filter((t) => t.wallet === "Thẻ tín dụng" && !t.isCreditCardPaid)
+                      .filter(
+                        (t) =>
+                          t.wallet === "Thẻ tín dụng" && !t.isCreditCardPaid,
+                      )
                       .map((t) => t.id);
                     setSelectedTxIds(new Set(unpaidIds));
                   }}
@@ -735,10 +768,13 @@ export default function Ledger({
             </div>
             <div className="min-w-0">
               <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200 truncate">
-                ⚠️ Có {creditCardDueSoonTxs.length} khoản nợ thẻ cần thanh toán trước ngày sao kê ({statementDay})
+                ⚠️ Có {creditCardDueSoonTxs.length} khoản nợ thẻ cần thanh toán
+                trước ngày sao kê ({statementDay})
               </h4>
               <p className="text-[10px] text-rose-700/80 dark:text-rose-400 font-semibold">
-                Tổng tiền cần trả: <strong>{formatVND(creditCardDueSoonAmount)}</strong> (Hạn ngày {Number(statementDay) - 1 || 19})
+                Tổng tiền cần trả:{" "}
+                <strong>{formatVND(creditCardDueSoonAmount)}</strong> (Hạn ngày{" "}
+                {Number(statementDay) - 1 || 19})
               </p>
             </div>
           </div>
@@ -759,7 +795,9 @@ export default function Ledger({
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
-              {selectedDate ? getDateLabel(selectedDate) : `Tất cả giao dịch ${monthName}`}
+              {selectedDate
+                ? getDateLabel(selectedDate)
+                : `Tất cả giao dịch ${monthName}`}
             </h3>
             {selectedDate ? (
               <button
@@ -808,15 +846,21 @@ export default function Ledger({
                   const cat = categories.find((c) => c.name === catName);
                   const colorMap: Record<string, string> = {
                     red: "bg-red-100/80 dark:bg-red-950/50 text-red-700 dark:text-red-400",
-                    amber: "bg-amber-100/80 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
+                    amber:
+                      "bg-amber-100/80 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
                     blue: "bg-blue-100/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400",
                     teal: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400",
-                    emerald: "bg-emerald-100/80 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
-                    slate: "bg-slate-100/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
-                    indigo: "bg-indigo-100/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400",
+                    emerald:
+                      "bg-emerald-100/80 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
+                    slate:
+                      "bg-slate-100/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
+                    indigo:
+                      "bg-indigo-100/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400",
                     rose: "bg-rose-100/80 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400",
-                    purple: "bg-purple-100/80 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400",
-                    orange: "bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400",
+                    purple:
+                      "bg-purple-100/80 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400",
+                    orange:
+                      "bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400",
                   };
                   const iconKey = cat?.icon || "Tag";
                   const color = cat?.color || "slate";
@@ -835,7 +879,10 @@ export default function Ledger({
                 } = getCategoryMeta(transaction.category);
                 const isIncome = transaction.type === "income";
 
-                const ccStatus = checkCreditCardDueStatus(transaction, statementDay);
+                const ccStatus = checkCreditCardDueStatus(
+                  transaction,
+                  statementDay,
+                );
                 const isCreditCard = ccStatus.isCreditCard;
                 const isSelected = selectedTxIds.has(transaction.id);
 
@@ -853,15 +900,19 @@ export default function Ledger({
                         }
                       }}
                       className={`p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 dark:active:bg-slate-700/60 transition-all relative z-10 ${
-                        idx > 0 ? "border-t border-slate-50 dark:border-slate-700/50" : ""
+                        idx > 0
+                          ? "border-t border-slate-50 dark:border-slate-700/50"
+                          : ""
                       } ${
                         isSelected
                           ? "bg-indigo-50/90 dark:bg-indigo-950/50 border-l-4 border-l-indigo-600"
-                          : isCreditCard && !ccStatus.isPaid && (ccStatus.isOverdue || ccStatus.isDueSoon)
-                          ? "bg-rose-50/80 dark:bg-rose-950/40 border-l-4 border-l-rose-500"
-                          : isCreditCard && !ccStatus.isPaid
-                          ? "bg-blue-50/30 dark:bg-blue-950/20 border-l-4 border-l-blue-400"
-                          : "bg-white dark:bg-slate-800"
+                          : isCreditCard &&
+                              !ccStatus.isPaid &&
+                              (ccStatus.isOverdue || ccStatus.isDueSoon)
+                            ? "bg-rose-50/80 dark:bg-rose-950/40 border-l-4 border-l-rose-500"
+                            : isCreditCard && !ccStatus.isPaid
+                              ? "bg-blue-50/30 dark:bg-blue-950/20 border-l-4 border-l-blue-400"
+                              : "bg-white dark:bg-slate-800"
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -876,7 +927,11 @@ export default function Ledger({
                             className="p-1 text-indigo-600 dark:text-indigo-400 cursor-pointer shrink-0"
                           >
                             <Icon
-                              path={isSelected ? mdiCheckboxMarked : mdiCheckboxBlankOutline}
+                              path={
+                                isSelected
+                                  ? mdiCheckboxMarked
+                                  : mdiCheckboxBlankOutline
+                              }
                               size={0.9}
                             />
                           </button>
@@ -888,7 +943,9 @@ export default function Ledger({
                                 ? "Đã thanh toán (Bấm để hủy)"
                                 : "Bấm để đánh dấu đã thanh toán thẻ"
                             }
-                            onClick={(e) => handleToggleCreditCardPaid(e, transaction)}
+                            onClick={(e) =>
+                              handleToggleCreditCardPaid(e, transaction)
+                            }
                             className="p-1 hover:scale-110 transition-transform cursor-pointer shrink-0"
                           >
                             <Icon
@@ -902,8 +959,8 @@ export default function Ledger({
                                 ccStatus.isPaid
                                   ? "text-emerald-500 dark:text-emerald-400"
                                   : ccStatus.isOverdue || ccStatus.isDueSoon
-                                  ? "text-rose-500 dark:text-rose-400 animate-pulse"
-                                  : "text-slate-400 hover:text-blue-500"
+                                    ? "text-rose-500 dark:text-rose-400 animate-pulse"
+                                    : "text-slate-400 hover:text-blue-500"
                               }
                             />
                           </button>
@@ -922,12 +979,14 @@ export default function Ledger({
                             {anomalyMap.get(transaction.id) && (
                               <span
                                 className={`shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                  anomalyMap.get(transaction.id)?.severity === "critical"
+                                  anomalyMap.get(transaction.id)?.severity ===
+                                  "critical"
                                     ? "bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
                                     : "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
                                 }`}
                               >
-                                {anomalyMap.get(transaction.id)?.severity === "critical"
+                                {anomalyMap.get(transaction.id)?.severity ===
+                                "critical"
                                   ? "Đột biến"
                                   : "Bất thường"}
                               </span>
@@ -937,15 +996,27 @@ export default function Ledger({
                           <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                             <span className="flex items-center gap-0.5">
                               <Icon
-                                path={isCreditCard ? mdiCreditCardOutline : mdiWallet}
+                                path={
+                                  isCreditCard
+                                    ? mdiCreditCardOutline
+                                    : mdiWallet
+                                }
                                 size={0.75}
-                                className={isCreditCard ? "text-indigo-500" : ""}
+                                className={
+                                  isCreditCard ? "text-indigo-500" : ""
+                                }
                               />
                               {transaction.wallet}
                             </span>
 
                             {!selectedDate && (
-                              <span>• {transaction.date.split("-").reverse().join("/")}</span>
+                              <span>
+                                •{" "}
+                                {transaction.date
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")}
+                              </span>
                             )}
 
                             {/* Credit Card Specific Status Badges */}
@@ -957,15 +1028,29 @@ export default function Ledger({
                                   </span>
                                 ) : ccStatus.isOverdue ? (
                                   <span className="bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-[8px] font-black px-1.5 py-0.2 rounded-md">
-                                    ⚠️ Quá hạn trả thẻ ({ccStatus.dueDate.split("-").reverse().join("/")})
+                                    ⚠️ Quá hạn trả thẻ (
+                                    {ccStatus.dueDate
+                                      .split("-")
+                                      .reverse()
+                                      .join("/")}
+                                    )
                                   </span>
                                 ) : ccStatus.isDueSoon ? (
                                   <span className="bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-[8px] font-black px-1.5 py-0.2 rounded-md">
-                                    ⚠️ Cần trả thẻ ({ccStatus.dueDate.split("-").reverse().join("/")})
+                                    ⚠️ Cần trả thẻ (
+                                    {ccStatus.dueDate
+                                      .split("-")
+                                      .reverse()
+                                      .join("/")}
+                                    )
                                   </span>
                                 ) : (
                                   <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[8px] font-bold px-1.5 py-0.2 rounded-md">
-                                    Hạn: {ccStatus.dueDate.split("-").reverse().join("/")}
+                                    Hạn:{" "}
+                                    {ccStatus.dueDate
+                                      .split("-")
+                                      .reverse()
+                                      .join("/")}
                                   </span>
                                 )}
                               </>
@@ -1007,7 +1092,7 @@ export default function Ledger({
       </div>
 
       <div className="text-center text-[10px] text-slate-400 dark:text-slate-500 font-semibold italic">
-        Chọn ngày trên lịch để xem chi tiết ngày đó, hoặc chọn "Xem cả tháng" để xem tất cả.
+        Chọn ngày trên lịch để xem chi tiết ngày đó.
       </div>
 
       {/* ACTION SHEET - Edit / Delete */}
@@ -1054,44 +1139,45 @@ export default function Ledger({
                   <h3 className="text-sm font-bold text-slate-800">Tùy chọn</h3>
                 </div>
                 <div className="space-y-2">
-                  {moreActionTx.wallet === "Thẻ tín dụng" && moreActionTx.type === "expense" && (
-                    <button
-                      onClick={(e) => {
-                        handleToggleCreditCardPaid(e, moreActionTx);
-                        setMoreActionTx(null);
-                      }}
-                      className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                    >
-                      <div
-                        className={`p-2 rounded-xl ${
-                          moreActionTx.isCreditCardPaid
-                            ? "bg-amber-50 text-amber-600 dark:bg-amber-950/60"
-                            : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60"
-                        }`}
+                  {moreActionTx.wallet === "Thẻ tín dụng" &&
+                    moreActionTx.type === "expense" && (
+                      <button
+                        onClick={(e) => {
+                          handleToggleCreditCardPaid(e, moreActionTx);
+                          setMoreActionTx(null);
+                        }}
+                        className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
-                        <Icon
-                          path={
+                        <div
+                          className={`p-2 rounded-xl ${
                             moreActionTx.isCreditCardPaid
-                              ? mdiAlertCircleOutline
-                              : mdiCheckCircle
-                          }
-                          size={1}
-                        />
-                      </div>
-                      <div className="text-left">
-                        <span className="text-sm font-bold text-slate-800 dark:text-white block">
-                          {moreActionTx.isCreditCardPaid
-                            ? "Đánh dấu chưa thanh toán"
-                            : "Đánh dấu đã thanh toán thẻ"}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {moreActionTx.isCreditCardPaid
-                            ? "Chuyển trạng thái nợ cần hoàn trả"
-                            : "Xác nhận đã hoàn trả khoản chi thẻ tín dụng này"}
-                        </span>
-                      </div>
-                    </button>
-                  )}
+                              ? "bg-amber-50 text-amber-600 dark:bg-amber-950/60"
+                              : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60"
+                          }`}
+                        >
+                          <Icon
+                            path={
+                              moreActionTx.isCreditCardPaid
+                                ? mdiAlertCircleOutline
+                                : mdiCheckCircle
+                            }
+                            size={1}
+                          />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-sm font-bold text-slate-800 dark:text-white block">
+                            {moreActionTx.isCreditCardPaid
+                              ? "Đánh dấu chưa thanh toán"
+                              : "Đánh dấu đã thanh toán thẻ"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {moreActionTx.isCreditCardPaid
+                              ? "Chuyển trạng thái nợ cần hoàn trả"
+                              : "Xác nhận đã hoàn trả khoản chi thẻ tín dụng này"}
+                          </span>
+                        </div>
+                      </button>
+                    )}
 
                   <button
                     onClick={() => {
@@ -1230,7 +1316,8 @@ export default function Ledger({
                                 : "Phát hiện: Giao dịch có dấu hiệu bất thường"}
                             </span>
                             <span className="text-[11px] opacity-80 mt-0.5 block">
-                              Mô hình Isolation Forest phát hiện khoản chi này lệch chuẩn so với thói quen sinh hoạt thường ngày.
+                              Mô hình Isolation Forest phát hiện khoản chi này
+                              lệch chuẩn so với thói quen sinh hoạt thường ngày.
                             </span>
                           </div>
                         </div>
@@ -1243,13 +1330,17 @@ export default function Ledger({
                             ccStatus.isPaid
                               ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50"
                               : ccStatus.isOverdue || ccStatus.isDueSoon
-                              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50"
-                              : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50"
+                                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50"
+                                : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50"
                           }`}
                         >
                           <div className="flex items-center justify-between text-xs font-bold">
                             <span className="flex items-center gap-1.5 text-slate-800 dark:text-white">
-                              <Icon path={mdiCreditCardOutline} size={0.8} className="text-indigo-500" />
+                              <Icon
+                                path={mdiCreditCardOutline}
+                                size={0.8}
+                                className="text-indigo-500"
+                              />
                               Thanh toán Thẻ tín dụng
                             </span>
                             <span
@@ -1259,19 +1350,30 @@ export default function Ledger({
                                   : "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300"
                               }`}
                             >
-                              {ccStatus.isPaid ? "✓ Đã thanh toán" : "⚠️ Chưa hoàn trả"}
+                              {ccStatus.isPaid
+                                ? "✓ Đã thanh toán"
+                                : "⚠️ Chưa hoàn trả"}
                             </span>
                           </div>
 
                           <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
                             <p>
                               Hạn thanh toán:{" "}
-                              <strong>{ccStatus.dueDate.split("-").reverse().join("/")}</strong>{" "}
+                              <strong>
+                                {ccStatus.dueDate
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")}
+                              </strong>{" "}
                               (Trước ngày sao kê {statementDay} hàng tháng).
                             </p>
                             {tx.creditCardPaidDate && (
                               <p className="text-emerald-700 dark:text-emerald-400">
-                                Đã thanh toán vào: {tx.creditCardPaidDate.split("-").reverse().join("/")}
+                                Đã thanh toán vào:{" "}
+                                {tx.creditCardPaidDate
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")}
                               </p>
                             )}
                           </div>
@@ -1282,7 +1384,9 @@ export default function Ledger({
                               setDetailTransaction({
                                 ...tx,
                                 isCreditCardPaid: !tx.isCreditCardPaid,
-                                creditCardPaidDate: !tx.isCreditCardPaid ? getLocalDateString() : undefined,
+                                creditCardPaidDate: !tx.isCreditCardPaid
+                                  ? getLocalDateString()
+                                  : undefined,
                               });
                             }}
                             className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs ${
@@ -1291,8 +1395,15 @@ export default function Ledger({
                                 : "bg-emerald-600 hover:bg-emerald-700 text-white"
                             }`}
                           >
-                            <Icon path={ccStatus.isPaid ? mdiClose : mdiCheckCircle} size={0.7} />
-                            <span>{ccStatus.isPaid ? "Hủy trạng thái đã thanh toán" : "Xác nhận Đã thanh toán khoản này"}</span>
+                            <Icon
+                              path={ccStatus.isPaid ? mdiClose : mdiCheckCircle}
+                              size={0.7}
+                            />
+                            <span>
+                              {ccStatus.isPaid
+                                ? "Hủy trạng thái đã thanh toán"
+                                : "Xác nhận Đã thanh toán khoản này"}
+                            </span>
                           </button>
                         </div>
                       )}

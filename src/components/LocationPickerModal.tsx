@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@mdi/react";
-import { mdiClose, mdiCrosshairsGps, mdiCheck, mdiMapMarker, mdiMap } from "@mdi/js";
+import {
+  mdiClose,
+  mdiCrosshairsGps,
+  mdiCheck,
+  mdiMapMarker,
+  mdiMap,
+} from "@mdi/js";
 
 interface LocationPickerModalProps {
   isOpen: boolean;
@@ -170,7 +176,7 @@ export default function LocationPickerModal({
         setIsLocating(false);
         console.warn("Lỗi lấy vị trí GPS:", err.message);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 8000 },
     );
   };
 
@@ -186,7 +192,9 @@ export default function LocationPickerModal({
               <Icon path={mdiMapMarker} size={0.9} />
             </div>
             <div>
-              <h3 className="text-base font-bold leading-tight">Chọn tọa độ vị trí</h3>
+              <h3 className="text-base font-bold leading-tight">
+                Chọn tọa độ vị trí
+              </h3>
               <p className="text-[11px] text-slate-500 font-normal">
                 Chạm trên bản đồ hoặc nhập tọa độ Long/Lat
               </p>
@@ -212,7 +220,9 @@ export default function LocationPickerModal({
                 type="number"
                 step="any"
                 value={lat}
-                onChange={(e) => handleLatChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleLatChange(parseFloat(e.target.value) || 0)
+                }
                 placeholder="Ví dụ: 10.762622"
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
               />
@@ -225,7 +235,9 @@ export default function LocationPickerModal({
                 type="number"
                 step="any"
                 value={lng}
-                onChange={(e) => handleLngChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleLngChange(parseFloat(e.target.value) || 0)
+                }
                 placeholder="Ví dụ: 106.660172"
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
               />
@@ -244,15 +256,21 @@ export default function LocationPickerModal({
                 size={0.75}
                 className={isLocating ? "animate-spin" : ""}
               />
-              <span>{isLocating ? "Đang định vị GPS..." : "Lấy vị trí GPS hiện tại của tôi"}</span>
+              <span>
+                {isLocating
+                  ? "Đang định vị GPS..."
+                  : "Lấy vị trí GPS hiện tại của tôi"}
+              </span>
             </button>
-            <span className="text-[10px] text-slate-400">Kéo marker hoặc chạm để dời điểm</span>
           </div>
         </div>
 
         {/* Map Viewport */}
         <div className="relative w-full flex-1 min-h-[280px] md:min-h-[340px] bg-slate-200 dark:bg-slate-900">
-          <div ref={mapContainerRef} className="w-full h-full absolute inset-0 z-0" />
+          <div
+            ref={mapContainerRef}
+            className="w-full h-full absolute inset-0 z-0"
+          />
         </div>
 
         {/* Footer Actions */}

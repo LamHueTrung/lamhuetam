@@ -164,9 +164,9 @@ input, select, textarea, [contenteditable] {
 }
 
 /* iOS safe area for fixed bottom elements */
-.safe-area-bottom {
+/* .safe-area-bottom {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
-}
+} */
 
 /* Shimmer skeleton animation */
 .shimmer-slide {

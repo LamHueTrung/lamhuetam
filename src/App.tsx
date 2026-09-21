@@ -40,12 +40,9 @@ import { useUserProfile } from "./hooks/useUserProfile";
 import { Transaction, DebtAccount, Category } from "./types";
 type Debt = DebtAccount;
 
-
 function AppContent() {
   const { isAuthenticated, loading: authLoading, username, logout } = useAuth();
   const { needRefresh, updateServiceWorker } = useRegisterSW();
-
-
 
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
@@ -79,10 +76,13 @@ function AppContent() {
   const isOnline = useOnlineStatus();
 
   const currentMonth = getLocalMonthString();
-  const { categories: fixedCats, tasks: fixedTasks, totalFixed } = useFixedExpenses(currentMonth);
+  const {
+    categories: fixedCats,
+    tasks: fixedTasks,
+    totalFixed,
+  } = useFixedExpenses(currentMonth);
   const { salaryConfig } = useSalary();
   const { profile: userProfile, updateProfile } = useUserProfile();
-
 
   const isInitialLoading =
     txLoading || budgetLoading || debtLoading || saveLoading;
@@ -96,7 +96,8 @@ function AppContent() {
   type AccentTheme = "blue" | "green" | "red" | "purple";
   const [accentTheme, setAccentTheme] = useState<AccentTheme>(() => {
     const saved = localStorage.getItem("app_accent_theme");
-    if (saved === "green" || saved === "red" || saved === "purple") return saved;
+    if (saved === "green" || saved === "red" || saved === "purple")
+      return saved;
     return "blue";
   });
 
@@ -108,14 +109,21 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem("app_accent_theme", accentTheme);
     const root = document.documentElement;
-    root.classList.remove("theme-blue", "theme-green", "theme-red", "theme-purple");
+    root.classList.remove(
+      "theme-blue",
+      "theme-green",
+      "theme-red",
+      "theme-purple",
+    );
     root.classList.add(`theme-${accentTheme}`);
   }, [accentTheme]);
 
   useEffect(() => {
     const handleThemeChange = (e: Event) => {
       const customEv = e as CustomEvent<AccentTheme>;
-      const newTheme = customEv.detail || (localStorage.getItem("app_accent_theme") as AccentTheme);
+      const newTheme =
+        customEv.detail ||
+        (localStorage.getItem("app_accent_theme") as AccentTheme);
       if (["blue", "green", "red", "purple"].includes(newTheme)) {
         setAccentTheme(newTheme);
       }
@@ -135,14 +143,18 @@ function AppContent() {
     };
   }, [refetchTransactions]);
 
-
   const handleCopyFinancialMarkdown = useCallback(() => {
-    const nowStr = new Date().toLocaleString('vi-VN', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      day: '2-digit', month: '2-digit', year: 'numeric'
+    const nowStr = new Date().toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
 
-    const numFmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' VNĐ';
+    const numFmt = (n: number) =>
+      new Intl.NumberFormat("vi-VN").format(n) + " VNĐ";
 
     let md = `# 📊 BÁO CÁO TÀI CHÍNH TỔNG QUAN\n`;
     md += `*Xuất dữ liệu lúc: ${nowStr}*\n\n`;
@@ -150,21 +162,27 @@ function AppContent() {
 
     // 1. Dòng tiền & Lương
     const totalIncomeAllTime = transactions
-      .filter((t) => t.type === 'income')
+      .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
     const totalExpenseAllTime = transactions
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
     const accumulatedBalance = totalIncomeAllTime - totalExpenseAllTime;
 
     md += `## 1. 💵 DÒNG TIỀN & LƯƠNG\n`;
     md += `- **Số dư khả dụng (Số dư tích lũy):** ${numFmt(accumulatedBalance)}\n`;
-    if (salaryConfig && (salaryConfig.netSalary > 0 || salaryConfig.grossSalary > 0)) {
+    if (
+      salaryConfig &&
+      (salaryConfig.netSalary > 0 || salaryConfig.grossSalary > 0)
+    ) {
       md += `- **Lương thực nhận (Net):** ${numFmt(salaryConfig.netSalary || 0)}\n`;
       md += `- **Lương Gross:** ${numFmt(salaryConfig.grossSalary || 0)}\n`;
-      md += `- **Ngày nhận lương:** Ngày ${salaryConfig.receiveDay || '—'} hàng tháng\n`;
+      md += `- **Ngày nhận lương:** Ngày ${salaryConfig.receiveDay || "—"} hàng tháng\n`;
       md += `- **Số ngày công:** ${salaryConfig.workDays || 0} ngày\n`;
-      const totalLeaveDays = (salaryConfig.leaveDays || []).reduce((s, l) => s + l.count, 0);
+      const totalLeaveDays = (salaryConfig.leaveDays || []).reduce(
+        (s, l) => s + l.count,
+        0,
+      );
       md += `- **Tổng số ngày nghỉ:** ${totalLeaveDays} ngày\n`;
       if (salaryConfig.notes) md += `- **Ghi chú:** ${salaryConfig.notes}\n`;
     } else {
@@ -176,15 +194,15 @@ function AppContent() {
     md += `## 2. 📌 CHI TIÊU CỐ ĐỊNH (Tháng ${currentMonth})\n`;
     md += `**Tổng Chi Cố Định:** ${numFmt(totalFixed || 0)}\n\n`;
     if (fixedCats.length > 0) {
-      fixedCats.forEach(cat => {
-        const catTasks = fixedTasks.filter(t => t.categoryId === cat.id);
+      fixedCats.forEach((cat) => {
+        const catTasks = fixedTasks.filter((t) => t.categoryId === cat.id);
         const catTotal = catTasks.reduce((s, t) => s + t.amount, 0);
         md += `### 📁 ${cat.name} (Tổng: ${numFmt(catTotal)})\n`;
         if (catTasks.length === 0) {
           md += `- *(Chưa có khoản chi)*\n`;
         } else {
-          catTasks.forEach(t => {
-            md += `- **${t.name}**: ${numFmt(t.amount)}${t.note ? ` *(Ghi chú: ${t.note})*` : ''}\n`;
+          catTasks.forEach((t) => {
+            md += `- **${t.name}**: ${numFmt(t.amount)}${t.note ? ` *(Ghi chú: ${t.note})*` : ""}\n`;
           });
         }
         md += `\n`;
@@ -195,19 +213,27 @@ function AppContent() {
     md += `---\n\n`;
 
     // 3. Danh sách nợ & Trả góp
-    const totalDebtsRemaining = debts.reduce((s, d) => s + (d.currentBalance || 0), 0);
+    const totalDebtsRemaining = debts.reduce(
+      (s, d) => s + (d.currentBalance || 0),
+      0,
+    );
     md += `## 3. 💳 DỰ NỢ & TRẢ GÓP\n`;
     md += `**Tổng Dư Nợ Còn Lại:** ${numFmt(totalDebtsRemaining)}\n\n`;
     if (debts.length > 0) {
       debts.forEach((d, i) => {
-        const typeLabel = d.type === 'credit_card' ? 'Thẻ tín dụng' : d.type === 'installment' ? 'Trả góp' : 'Vay nợ';
+        const typeLabel =
+          d.type === "credit_card"
+            ? "Thẻ tín dụng"
+            : d.type === "installment"
+              ? "Trả góp"
+              : "Vay nợ";
         md += `### ${i + 1}. ${d.name} (${typeLabel})\n`;
         md += `- **Dư nợ còn lại:** ${numFmt(d.currentBalance || 0)} / Ban đầu: ${numFmt(d.originalAmount || 0)}\n`;
-        if (d.type === 'installment') {
+        if (d.type === "installment") {
           md += `- **Tiến độ trả góp:** Đã trả ${d.paidInstallments || 0}/${d.totalInstallments || 0} kỳ\n`;
-          md += `- **Số tiền trả hàng tháng:** ${numFmt(d.monthlyPayment || 0)} (Hạn trả: Ngày ${d.paymentDay || '—'})\n`;
-        } else if (d.type === 'credit_card') {
-          md += `- **Hạn mức:** ${numFmt(d.currentBalance || 0)} (Hạn thanh toán: Ngày ${d.paymentDay || '—'})\n`;
+          md += `- **Số tiền trả hàng tháng:** ${numFmt(d.monthlyPayment || 0)} (Hạn trả: Ngày ${d.paymentDay || "—"})\n`;
+        } else if (d.type === "credit_card") {
+          md += `- **Hạn mức:** ${numFmt(d.currentBalance || 0)} (Hạn thanh toán: Ngày ${d.paymentDay || "—"})\n`;
         }
         if (d.notes) md += `- **Ghi chú:** ${d.notes}\n`;
         md += `\n`;
@@ -221,32 +247,43 @@ function AppContent() {
     md += `## 4. 📈 LỊCH SỬ GIAO DỊCH THU CHI (Gần đây)\n`;
     if (transactions.length > 0) {
       const recentTx = transactions.slice(0, 30);
-      recentTx.forEach(t => {
-        const typeSign = t.type === 'income' ? '+' : '-';
-        md += `- [${t.date}] **${t.type === 'income' ? 'Thu' : 'Chi'}**: ${typeSign}${numFmt(t.amount)} | Danh mục: ${t.category} | Ví: ${t.wallet || 'Mặc định'}${t.description ? ` | Ghi chú: ${t.description}` : ''}\n`;
+      recentTx.forEach((t) => {
+        const typeSign = t.type === "income" ? "+" : "-";
+        md += `- [${t.date}] **${t.type === "income" ? "Thu" : "Chi"}**: ${typeSign}${numFmt(t.amount)} | Danh mục: ${t.category} | Ví: ${t.wallet || "Mặc định"}${t.description ? ` | Ghi chú: ${t.description}` : ""}\n`;
       });
     } else {
       md += `*Chưa có lịch sử giao dịch*\n`;
     }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(md)
-        .then(() => toast.success('Đã sao chép toàn bộ dữ liệu tài chính (Markdown)!'))
-        .catch(() => toast.error('Lỗi khi sao chép'));
+      navigator.clipboard
+        .writeText(md)
+        .then(() =>
+          toast.success("Đã sao chép toàn bộ dữ liệu tài chính (Markdown)!"),
+        )
+        .catch(() => toast.error("Lỗi khi sao chép"));
     } else {
-      const textArea = document.createElement('textarea');
+      const textArea = document.createElement("textarea");
       textArea.value = md;
       document.body.appendChild(textArea);
       textArea.select();
       try {
-        document.execCommand('copy');
-        toast.success('Đã sao chép toàn bộ dữ liệu tài chính (Markdown)!');
+        document.execCommand("copy");
+        toast.success("Đã sao chép toàn bộ dữ liệu tài chính (Markdown)!");
       } catch {
-        toast.error('Lỗi khi sao chép');
+        toast.error("Lỗi khi sao chép");
       }
       document.body.removeChild(textArea);
     }
-  }, [salaryConfig, fixedCats, fixedTasks, totalFixed, currentMonth, debts, transactions]);
+  }, [
+    salaryConfig,
+    fixedCats,
+    fixedTasks,
+    totalFixed,
+    currentMonth,
+    debts,
+    transactions,
+  ]);
 
   useEffect(() => {
     if (isOnline) scheduleSync();
@@ -424,7 +461,7 @@ function AppContent() {
       <main
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 min-h-0 overflow-hidden relative pb-[127px]"
+        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 min-h-0 overflow-hidden relative pb-[75px]"
       >
         {isInitialLoading ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
@@ -467,7 +504,9 @@ function AppContent() {
                   onUpdateTransaction={handleUpdateTransaction}
                   categories={categories}
                   onOpenCategoryManager={() => setIsCategoryManagerOpen(true)}
-                  statementDay={userProfile?.creditCardConfig?.statementDay || 20}
+                  statementDay={
+                    userProfile?.creditCardConfig?.statementDay || 20
+                  }
                 />
               )}
               {currentTab === 4 && (
@@ -482,9 +521,7 @@ function AppContent() {
                   onBack={() => setCurrentTab(7)}
                 />
               )}
-              {currentTab === 6 && (
-                <DiaryView />
-              )}
+              {currentTab === 6 && <DiaryView />}
               {currentTab === 7 && (
                 <UserProfileView
                   profile={userProfile}
@@ -494,7 +531,6 @@ function AppContent() {
                   updateServiceWorker={updateServiceWorker}
                 />
               )}
-
             </motion.div>
           </AnimatePresence>
         )}
