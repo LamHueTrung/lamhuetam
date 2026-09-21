@@ -678,61 +678,7 @@ export default function UserProfileView({
             </div>
           </motion.div>
 
-          {/* Tiện ích 2: Thẻ tín dụng & Sao kê */}
-          <motion.div
-            whileHover={{ scale: 1.015, y: -2 }}
-            whileTap={{ scale: 0.985 }}
-            onClick={() => toggleSection("finance_card")}
-            className="p-4 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent dark:from-purple-950/40 dark:via-pink-950/20 dark:to-slate-900 border border-purple-200/80 dark:border-purple-900/50 rounded-3xl cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0 group-hover:scale-105 transition-transform">
-                <Icon path={mdiCreditCardOutline} size={1.2} />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
-                    Thẻ Tín Dụng & Sao Kê
-                  </h3>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                  Ngày {creditCardStatementDay || 20} hàng tháng · Cảnh báo hạn
-                </p>
-              </div>
-            </div>
-            <div className="p-2 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2 shadow-2xs">
-              <Icon path={mdiChevronRight} size={0.8} />
-            </div>
-          </motion.div>
-
-          {/* Tiện ích 3: Bản tin & Nhật ký */}
-          <motion.div
-            whileHover={{ scale: 1.015, y: -2 }}
-            whileTap={{ scale: 0.985 }}
-            onClick={() => onNavigateToTab && onNavigateToTab(6)}
-            className="p-4 bg-gradient-to-br from-violet-500/10 via-fuchsia-500/5 to-transparent dark:from-violet-950/40 dark:via-fuchsia-950/20 dark:to-slate-900 border border-violet-200/80 dark:border-violet-900/50 rounded-3xl cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white flex items-center justify-center shadow-md shadow-violet-500/20 shrink-0 group-hover:scale-105 transition-transform">
-                <Icon path={mdiBookOpenVariant} size={1.2} />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
-                    Bản Tin & Nhật Ký
-                  </h3>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                  Dòng thời gian, cảm xúc, bản đồ & sự kiện
-                </p>
-              </div>
-            </div>
-            <div className="p-2 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-400 group-hover:text-violet-600 dark:group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2 shadow-2xs">
-              <Icon path={mdiChevronRight} size={0.8} />
-            </div>
-          </motion.div>
-
-          {/* Tiện ích 4: Mở rộng / Phân tích nâng cao */}
+          {/* Tiện ích : Mở rộng / Phân tích nâng cao */}
           <div className="p-4 bg-slate-50/70 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex items-center justify-between opacity-80 select-none">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
