@@ -63,6 +63,7 @@ export default function QuickAddModal({
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const receiptFileRef = useRef<HTMLInputElement>(null);
+  const dragControls = useDragControls();
 
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
