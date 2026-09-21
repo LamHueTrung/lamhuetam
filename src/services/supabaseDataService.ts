@@ -237,6 +237,192 @@ export async function uploadReceiptImage(file: File): Promise<string> {
   return data.publicUrl;
 }
 
+// ── SYNC: ĐỒNG BỘ TOÀN BỘ TỪ CLIENT (INDEXEDDB / LOCALSTORAGE) LÊN SUPABASE ──
+export async function syncAllLocalDataToSupabase(): Promise<{
+  transactionsCount: number;
+  diaryCount: number;
+  debtsCount: number;
+  budgetsCount: number;
+  categoriesCount: number;
+  fixedTasksCount: number;
+  calendarEventsCount: number;
+  profileSynced: boolean;
+}> {
+  const start = performance.now();
+  const db = (await import('../db')).default;
+
+  const results = {
+    transactionsCount: 0,
+    diaryCount: 0,
+    debtsCount: 0,
+    budgetsCount: 0,
+    categoriesCount: 0,
+    fixedTasksCount: 0,
+    calendarEventsCount: 0,
+    profileSynced: false,
+  };
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id || null;
+
+  // 1. Transactions
+  const localTxs = await db.transactions.toArray();
+  if (localTxs.length > 0) {
+    const txPayloads = localTxs.map((t) => ({
+      id: t.id,
+      user_id: currentUserId,
+      type: t.type,
+      amount: t.amount,
+      category: t.category,
+      date: t.date,
+      description: t.description || '',
+      wallet: t.wallet || 'Tiền mặt',
+      receipt_url: (t as any).receiptUrl || null,
+      is_recurring: t.isRecurring || false,
+      frequency: t.frequency || 'none',
+      is_credit_card_paid: t.isCreditCardPaid || false,
+      credit_card_paid_date: t.creditCardPaidDate || null,
+      credit_card_due_date: t.creditCardDueDate || null,
+    }));
+    const { error } = await supabase.from('transactions').upsert(txPayloads, { onConflict: 'id' });
+    if (error) console.error('[Sync] Lỗi đồng bộ transactions:', error);
+    else results.transactionsCount = txPayloads.length;
+  }
+
+  // 2. Diary Entries
+  const localDiary = await db.diary.toArray();
+  if (localDiary.length > 0) {
+    const diaryPayloads = localDiary.map((d: any) => ({
+      id: d.id || d._id,
+      user_id: currentUserId,
+      date: d.date,
+      content: d.content,
+      mood: d.mood,
+      location: d.location || '',
+      lat: d.lat || null,
+      lng: d.lng || null,
+      tags: d.tags || [],
+      images: d.images || [],
+      replies: d.replies || [],
+      pinned: d.pinned || false,
+    }));
+    const { error } = await supabase.from('diary_entries').upsert(diaryPayloads, { onConflict: 'id' });
+    if (error) console.error('[Sync] Lỗi đồng bộ diary:', error);
+    else results.diaryCount = diaryPayloads.length;
+  }
+
+  // 3. Debts
+  const localDebts = await db.debts.toArray();
+  if (localDebts.length > 0) {
+    const debtPayloads = localDebts.map((d: any) => ({
+      id: d.id,
+      user_id: currentUserId,
+      type: d.type || 'installment',
+      name: d.name,
+      original_amount: Number(d.originalAmount || d.amount || 0),
+      current_balance: Number(d.currentBalance !== undefined ? d.currentBalance : d.originalAmount || d.amount || 0),
+      monthly_payment: Number(d.monthlyPayment || 0),
+      interest_rate: Number(d.interestRate || 0),
+      payment_day: Number(d.paymentDay || 1),
+      start_date: d.startDate || '',
+      maturity_date: d.maturityDate || d.dueDate || '',
+      total_installments: Number(d.totalInstallments || d.installmentsCount || 0),
+      paid_installments: Number(d.paidInstallments || 0),
+      status: d.status || 'active',
+      installments: d.installments || [],
+      notes: d.notes || d.description || '',
+    }));
+    const { error } = await supabase.from('debts').upsert(debtPayloads, { onConflict: 'id' });
+    if (error) console.error('[Sync] Lỗi đồng bộ debts:', error);
+    else results.debtsCount = debtPayloads.length;
+  }
+
+  // 4. Budgets
+  const localBudgets = await db.budgets.toArray();
+  if (localBudgets.length > 0) {
+    const budgetPayloads = localBudgets.map((b: any) => ({
+      id: b.id || `budget_${b.category}`,
+      user_id: currentUserId,
+      category: b.category,
+      limit: Number(b.limit || b.amount || 0),
+      spent: Number(b.spent || 0),
+    }));
+    const { error } = await supabase.from('budgets').upsert(budgetPayloads, { onConflict: 'id' });
+    if (error) console.error('[Sync] Lỗi đồng bộ budgets:', error);
+    else results.budgetsCount = budgetPayloads.length;
+  }
+
+  // 5. Categories
+  const localCategories = await db.categories.toArray();
+  if (localCategories.length > 0) {
+    const catPayloads = localCategories.map((c: any) => ({
+      id: c._id || c.id,
+      user_id: currentUserId,
+      name: c.name,
+      type: c.type || 'expense',
+      icon: c.icon || '',
+      color: c.color || '#3B82F6',
+    }));
+    const { error } = await supabase.from('categories').upsert(catPayloads, { onConflict: 'id' });
+    if (error) console.error('[Sync] Lỗi đồng bộ categories:', error);
+    else results.categoriesCount = catPayloads.length;
+  }
+
+  // 6. Fixed Expense Categories & Tasks
+  const localFixedCats = await db.fixedExpenseCategories.toArray();
+  if (localFixedCats.length > 0) {
+    const fixedCatPayloads = localFixedCats.map((c: any) => ({
+      id: c.id || c._id,
+      user_id: currentUserId,
+      name: c.name,
+      icon: c.icon || 'mdi-file-document',
+      color: c.color || '#10B981',
+    }));
+    await supabase.from('fixed_expense_categories').upsert(fixedCatPayloads, { onConflict: 'id' });
+  }
+
+  const localFixedTasks = await db.fixedExpenseTasks.toArray();
+  if (localFixedTasks.length > 0) {
+    const taskPayloads = localFixedTasks.map((t: any) => ({
+      id: t.id,
+      user_id: currentUserId,
+      category_id: t.categoryId,
+      category_name: t.categoryName || '',
+      name: t.name || t.title || '',
+      amount: Number(t.amount || 0),
+      month: t.month || new Date().toISOString().slice(0, 7),
+      note: t.note || t.notes || '',
+    }));
+    const { error } = await supabase.from('fixed_expense_tasks').upsert(taskPayloads, { onConflict: 'id' });
+    if (error) console.error('[Sync] Lỗi đồng bộ fixed_expense_tasks:', error);
+    else results.fixedTasksCount = taskPayloads.length;
+  }
+
+  // 7. Calendar Events
+  const localEvents = await db.calendarEvents.toArray();
+  if (localEvents.length > 0) {
+    const eventPayloads = localEvents.map((e) => ({
+      id: e.id,
+      user_id: currentUserId,
+      title: e.title,
+      description: e.description || '',
+      date: e.date,
+      time: e.time || null,
+      color: e.color || '#3b82f6',
+      tags: e.tags || [],
+      is_completed: e.isCompleted || false,
+    }));
+    const { error } = await supabase.from('calendar_events').upsert(eventPayloads, { onConflict: 'id' });
+    if (error) console.error('[Sync] Lỗi đồng bộ calendar_events:', error);
+    else results.calendarEventsCount = eventPayloads.length;
+  }
+
+  const duration = Math.round(performance.now() - start);
+  await logEvent('system', 'manual_full_sync_to_supabase', results, 'info', duration);
+
+  return results;
+}
+
 // ── SOC-NOC METRICS SERVICE ────────────────────────────────────
 export async function getSOCNOCLogs(limit: number = 50) {
   const { data, error } = await supabase
@@ -248,3 +434,4 @@ export async function getSOCNOCLogs(limit: number = 50) {
   if (error) return [];
   return data || [];
 }
+

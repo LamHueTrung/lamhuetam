@@ -45,6 +45,7 @@ import {
   mdiCreation,
   mdiDatabaseSync,
   mdiShieldCheck,
+  mdiCloudUploadOutline,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
@@ -52,6 +53,7 @@ import { UserProfile, CustomProfileField } from "../types";
 import CacheManagerSection from "./CacheManagerSection";
 import { uploadAvatar } from "../services/storageService";
 import { backupDataToMongoDB } from "../services/mongoBackupService";
+import { syncAllLocalDataToSupabase } from "../services/supabaseDataService";
 import SOCNOCLabModal from "./SOCNOCLabModal";
 
 interface UserProfileViewProps {
@@ -104,6 +106,29 @@ export default function UserProfileView({
       toast.error(err.message || "Lỗi khi sao lưu dữ liệu", { id: toastId });
     } finally {
       setIsBackingUpMongo(false);
+    }
+  };
+
+  const [isSyncingSupabase, setIsSyncingSupabase] = useState(false);
+
+  const handleSyncToSupabase = async () => {
+    setIsSyncingSupabase(true);
+    const toastId = toast.loading(
+      "Đang đọc dữ liệu offline từ IndexedDB/LocalStorage và đẩy lên PostgreSQL Supabase...",
+    );
+    try {
+      const res = await syncAllLocalDataToSupabase();
+      toast.success(
+        `Đồng bộ thành công! Đã đẩy: ${res.transactionsCount} giao dịch, ${res.diaryCount} nhật ký, ${res.debtsCount} sổ nợ, ${res.categoriesCount} danh mục lên Supabase.`,
+        { id: toastId, duration: 5000 },
+      );
+    } catch (err: any) {
+      console.error("[Supabase Sync Error]", err);
+      toast.error(err.message || "Lỗi khi đồng bộ lên Supabase", {
+        id: toastId,
+      });
+    } finally {
+      setIsSyncingSupabase(false);
     }
   };
 
@@ -2080,11 +2105,42 @@ export default function UserProfileView({
               >
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
                   <div className="text-xs text-slate-600 dark:text-slate-300">
-                    Trạng thái:{" "}
+                    Cơ sở dữ liệu chính:{" "}
+                    <b className="text-cyan-600 dark:text-cyan-400">
+                      PostgreSQL Supabase
+                    </b>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Đẩy toàn bộ dữ liệu đang lưu trong IndexedDB / LocalStorage
+                    của trình duyệt lên cơ sở dữ liệu Supabase.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSyncToSupabase}
+                    disabled={isSyncingSupabase}
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    <Icon
+                      path={
+                        isSyncingSupabase ? mdiLoading : mdiCloudUploadOutline
+                      }
+                      size={0.7}
+                      className={isSyncingSupabase ? "animate-spin" : ""}
+                    />
+                    <span>
+                      {isSyncingSupabase
+                        ? "Đang đồng bộ ..."
+                        : "Đồng Bộ Dữ Liệu PostgreSQL"}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+                  <div className="text-xs text-slate-600 dark:text-slate-300">
+                    Dự phòng phân tán:{" "}
                     <b className="text-emerald-600 dark:text-emerald-400">
-                      PostgreSQL (Primary)
-                    </b>{" "}
-                    ➔ MongoDB (Cold Standby)
+                      MongoDB (Cold Standby)
+                    </b>
                   </div>
                   {lastBackupTime && (
                     <div className="text-[11px] text-slate-400">
@@ -2133,7 +2189,8 @@ export default function UserProfileView({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Đo lường độ trễ mạng Database, kiểm tra Audit Logs và an ninh phân quyền RLS
+                  Đo lường độ trễ mạng Database, kiểm tra Audit Logs và an ninh
+                  phân quyền RLS
                 </p>
               </div>
             </div>

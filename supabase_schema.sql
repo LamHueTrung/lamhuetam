@@ -266,10 +266,21 @@ ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.event_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ml_precomputed_metrics ENABLE ROW LEVEL SECURITY;
 
--- Policies: Cho phép truy cập dữ liệu
+-- Policies: Cho phép truy cập dữ liệu (Public / Authenticated User)
 CREATE POLICY user_profiles_policy ON public.user_profiles FOR ALL USING (true);
 CREATE POLICY transactions_policy ON public.transactions FOR ALL USING (true);
 CREATE POLICY categories_policy ON public.categories FOR ALL USING (true);
 CREATE POLICY debts_policy ON public.debts FOR ALL USING (true);
 CREATE POLICY diary_entries_policy ON public.diary_entries FOR ALL USING (true);
 CREATE POLICY event_logs_policy ON public.event_logs FOR ALL USING (true);
+CREATE POLICY budgets_policy ON public.budgets FOR ALL USING (true);
+CREATE POLICY savings_policy ON public.savings FOR ALL USING (true);
+CREATE POLICY fixed_expense_categories_policy ON public.fixed_expense_categories FOR ALL USING (true);
+CREATE POLICY fixed_expense_tasks_policy ON public.fixed_expense_tasks FOR ALL USING (true);
+CREATE POLICY salary_configs_policy ON public.salary_configs FOR ALL USING (true);
+CREATE POLICY tet_planner_configs_policy ON public.tet_planner_configs FOR ALL USING (true);
+CREATE POLICY calendar_events_policy ON public.calendar_events FOR ALL USING (true);
+CREATE POLICY ml_precomputed_metrics_policy ON public.ml_precomputed_metrics FOR ALL USING (true);
+CREATE POLICY shared_budgets_policy ON public.shared_budgets FOR ALL USING (true);
+CREATE POLICY budget_members_policy ON public.budget_members FOR ALL USING (true);
+
