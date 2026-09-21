@@ -18,6 +18,7 @@ import { DiaryEntry, DiaryMood } from "../types";
 import { MOOD_CONFIG } from "./DiaryMoodConfig";
 import { getLocalDateString } from "../utils/date";
 import { uploadDiaryImage } from "../services/storageService";
+import { compressAndResizeImage } from "../utils/imageUtils";
 import LocationPickerModal from "./LocationPickerModal";
 
 interface NewsfeedComposerProps {
@@ -118,11 +119,13 @@ export default function NewsfeedComposer({
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (file.size > 15 * 1024 * 1024) {
-          toast.error(`Ảnh ${file.name} quá 15MB!`);
+        if (file.size > 20 * 1024 * 1024) {
+          toast.error(`Ảnh ${file.name} quá 20MB!`);
           continue;
         }
-        const url = await uploadDiaryImage(file);
+        // Tối ưu và nén ảnh (giữ tỉ lệ chuẩn, max 1920px, loại bỏ dung lượng thừa)
+        const optimizedFile = await compressAndResizeImage(file, 1920, 0.85);
+        const url = await uploadDiaryImage(optimizedFile);
         uploadedUrls.push(url);
       }
 
@@ -443,7 +446,7 @@ export default function NewsfeedComposer({
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-600">
+                <div className="p-3 bg-slate-100/80 dark:bg-slate-800/80 rounded-2xl">
                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-2">
                     Bạn đang cảm thấy thế nào?
                   </span>
@@ -461,11 +464,11 @@ export default function NewsfeedComposer({
                           }}
                           className={`flex items-center gap-2 p-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-bold"
-                              : "hover:bg-white dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
+                              ? "bg-blue-600 text-white font-bold shadow-sm"
+                              : "bg-white/90 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
                           }`}
                         >
-                          <span className="text-base">{cfg.emoji}</span>
+                          <span className="text-base leading-none">{cfg.emoji}</span>
                           <span>{cfg.label}</span>
                         </button>
                       );

@@ -1,4 +1,5 @@
 import { Handler } from '@netlify/functions';
+import mongoose from 'mongoose';
 import { connectDB, DiaryEntry } from './_db';
 
 const headers = {
@@ -7,6 +8,15 @@ const headers = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Content-Type': 'application/json',
 };
+
+// Helper để query an toàn tránh Mongoose CastError khi id không phải 24-hex ObjectId
+function getTargetQuery(targetId: string) {
+  const isHex24 = /^[0-9a-fA-F]{24}$/.test(targetId);
+  if (isHex24 && mongoose.Types.ObjectId.isValid(targetId)) {
+    return { $or: [{ id: targetId }, { _id: targetId }] };
+  }
+  return { id: targetId };
+}
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
@@ -25,9 +35,12 @@ export const handler: Handler = async (event) => {
 
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}');
-      const { date, content, mood, location, lat, lng, tags, images, pinned } = body;
+      const { id, _id, date, content, mood, location, lat, lng, tags, images, pinned, replies } = body;
       if (!date || !content) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Ngày và nội dung bắt buộc' }) };
+      
+      const customId = id || (typeof _id === 'string' && !_id.startsWith('ObjectId') ? _id : undefined);
       const entry = await DiaryEntry.create({
+        ...(customId ? { id: customId } : {}),
         date,
         content,
         mood: mood || 'neutral',
@@ -37,22 +50,34 @@ export const handler: Handler = async (event) => {
         tags: tags || [],
         images: Array.isArray(images) ? images : [],
         pinned: Boolean(pinned),
+        replies: Array.isArray(replies) ? replies : [],
       });
       return { statusCode: 201, headers, body: JSON.stringify(entry) };
     }
 
     if (event.httpMethod === 'PUT') {
       const body = JSON.parse(event.body || '{}');
-      const { id, ...updates } = body;
-      if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Thiếu id' }) };
-      const entry = await DiaryEntry.findOneAndUpdate({ id }, { $set: updates }, { new: true });
+      const { id, _id, ...updates } = body;
+      const targetId = id || _id;
+      if (!targetId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Thiếu id' }) };
+      
+      const query = getTargetQuery(String(targetId));
+      const entry = await DiaryEntry.findOneAndUpdate(
+        query,
+        { $set: updates },
+        { new: true }
+      );
+      if (!entry) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Không tìm thấy bài viết' }) };
+      }
       return { statusCode: 200, headers, body: JSON.stringify(entry) };
     }
 
     if (event.httpMethod === 'DELETE') {
       const id = params.id;
       if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Thiếu id' }) };
-      await DiaryEntry.deleteOne({ id });
+      const query = getTargetQuery(String(id));
+      await DiaryEntry.deleteOne(query);
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 

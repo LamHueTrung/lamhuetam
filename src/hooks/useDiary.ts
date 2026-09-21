@@ -89,11 +89,12 @@ export function useDiary() {
     let result = [...entries];
 
     if (search) {
-      const q = search.toLowerCase();
+      const q = search.toLowerCase().trim();
       result = result.filter(e =>
-        e.content.toLowerCase().includes(q) ||
-        e.location.toLowerCase().includes(q) ||
-        e.tags.some(t => t.toLowerCase().includes(q))
+        (e.content || '').toLowerCase().includes(q) ||
+        (e.location || '').toLowerCase().includes(q) ||
+        (e.date || '').toLowerCase().includes(q) ||
+        (Array.isArray(e.tags) && e.tags.some(t => (t || '').toLowerCase().includes(q)))
       );
     }
 
@@ -102,11 +103,11 @@ export function useDiary() {
     }
 
     if (tag) {
-      result = result.filter(e => e.tags.some(t => t.toLowerCase() === tag.toLowerCase()));
+      result = result.filter(e => Array.isArray(e.tags) && e.tags.some(t => (t || '').toLowerCase() === tag.toLowerCase()));
     }
 
     if (month) {
-      result = result.filter(e => e.date.startsWith(month));
+      result = result.filter(e => (e.date || '').startsWith(month));
     }
 
     const sortOrder = sort === 'newest' ? -1 : 1;

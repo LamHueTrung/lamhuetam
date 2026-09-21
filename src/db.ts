@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie';
 import type {
   Transaction, Budget, DebtAccount, SavingsGoal, Category,
   FixedExpenseCategory, FixedExpenseTask, SalaryConfig, DiaryEntry, TetPlannerStoredConfig,
+  CalendarEvent,
 } from './types';
 
 export interface SyncQueueItem {
@@ -27,6 +28,7 @@ const db = new Dexie('TaiChinhCaNhan') as Dexie & {
   salaryConfigs: EntityTable<SalaryConfig & { _syncStatus?: string }, '_id'>;
   diary: EntityTable<DiaryEntry & { _syncStatus?: string }, '_id'>;
   tetPlannerConfigs: EntityTable<TetPlannerStoredConfig & { _syncStatus?: string }, 'id'>;
+  calendarEvents: EntityTable<CalendarEvent & { _syncStatus?: string }, 'id'>;
   syncQueue: EntityTable<SyncQueueItem, 'id'>;
 };
 
@@ -54,6 +56,21 @@ db.version(2).stores({
   salaryConfigs: '_id, _syncStatus',
   diary: '_id, date, mood, _syncStatus',
   tetPlannerConfigs: 'id, _syncStatus',
+  syncQueue: '++id, table, timestamp, retryCount',
+});
+
+db.version(3).stores({
+  transactions: 'id, type, category, date, _syncStatus',
+  budgets: 'category, _syncStatus',
+  debts: 'id, status, _syncStatus',
+  savings: 'id, _syncStatus',
+  categories: '_id, type, _syncStatus',
+  fixedExpenseCategories: 'id, _syncStatus',
+  fixedExpenseTasks: 'id, categoryId, month, _syncStatus',
+  salaryConfigs: '_id, _syncStatus',
+  diary: '_id, date, mood, _syncStatus',
+  tetPlannerConfigs: 'id, _syncStatus',
+  calendarEvents: 'id, eventType, dateType, month, day, _syncStatus',
   syncQueue: '++id, table, timestamp, retryCount',
 });
 
@@ -107,6 +124,7 @@ export async function clearAllCaches() {
     db.salaryConfigs.clear(),
     db.diary.clear(),
     db.tetPlannerConfigs.clear().catch(() => {}),
+    db.calendarEvents.clear().catch(() => {}),
   ]);
 }
 
@@ -121,6 +139,7 @@ export async function getDBRecordCounts() {
     fixedExpenseTasks,
     salaryConfigs,
     diary,
+    calendarEvents,
     syncQueue,
   ] = await Promise.all([
     db.transactions.count().catch(() => 0),
@@ -132,6 +151,7 @@ export async function getDBRecordCounts() {
     db.fixedExpenseTasks.count().catch(() => 0),
     db.salaryConfigs.count().catch(() => 0),
     db.diary.count().catch(() => 0),
+    db.calendarEvents.count().catch(() => 0),
     db.syncQueue.count().catch(() => 0),
   ]);
 
@@ -144,7 +164,8 @@ export async function getDBRecordCounts() {
     fixedExpenseCategories +
     fixedExpenseTasks +
     salaryConfigs +
-    diary;
+    diary +
+    calendarEvents;
 
   return {
     transactions,
@@ -156,6 +177,7 @@ export async function getDBRecordCounts() {
     fixedExpenseTasks,
     salaryConfigs,
     diary,
+    calendarEvents,
     syncQueue,
     totalRecords,
   };

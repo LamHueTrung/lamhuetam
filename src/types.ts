@@ -149,6 +149,8 @@ export interface DiaryReply {
   id: string;
   time: string;
   content: string;
+  authorName?: string;
+  authorAvatar?: string;
 }
 
 export interface DiaryEntry {
@@ -412,6 +414,31 @@ export interface MLOptimizeDebtResponse {
   debt_summary: MLDebtSummaryItem[];
   warnings?: string[];
 }
+
+// ── NEW: Calendar Events (Lịch & Sự kiện) ──────────────────
+export type CalendarEventType = 'birthday' | 'memorial' | 'holiday' | 'anniversary' | 'appointment' | 'other';
+export type CalendarDateType = 'solar' | 'lunar';
+export type CalendarEventRecurring = 'none' | 'yearly' | 'monthly' | 'lunar_1_15';
+
+export interface CalendarEvent {
+  id: string;
+  _id?: string;
+  title: string;
+  description?: string;
+  eventType: CalendarEventType;
+  dateType: CalendarDateType; // 'solar' (Dương lịch) | 'lunar' (Âm lịch)
+  day: number; // 1-31
+  month: number; // 1-12
+  year?: number; // Optional nếu lặp lại hàng năm
+  time?: string; // '09:00'
+  location?: string;
+  recurring: CalendarEventRecurring;
+  color?: string;
+  isDefaultHoliday?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 
 
 

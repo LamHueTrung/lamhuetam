@@ -216,6 +216,15 @@ const DiaryEntrySchema = new mongoose.Schema(
     tags: [{ type: String }],
     images: [{ type: String }],
     pinned: { type: Boolean, default: false },
+    replies: [
+      {
+        id: { type: String },
+        time: { type: String },
+        content: { type: String },
+        authorName: { type: String, default: "Lâm Huệ Trung" },
+        authorAvatar: { type: String, default: "/avatar.jpg" },
+      },
+    ],
     createdAt: { type: Date, default: Date.now },
   },
   { versionKey: false },

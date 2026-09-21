@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
@@ -83,25 +83,121 @@ function LeafletMap({
     entriesRef.current = entries;
   }, [entries]);
 
-  const validEntries = entries.filter(
-    (e) =>
-      e.lat !== null &&
-      e.lat !== undefined &&
-      e.lng !== null &&
-      e.lng !== undefined &&
-      e.lat !== 0,
-  ) as (DiaryEntry & { lat: number; lng: number })[];
+  const validEntries = useMemo(() => {
+    return entries
+      .filter(
+        (e) =>
+          e.lat !== null &&
+          e.lat !== undefined &&
+          e.lng !== null &&
+          e.lng !== undefined &&
+          Number(e.lat) !== 0 &&
+          !isNaN(Number(e.lat)) &&
+          !isNaN(Number(e.lng)),
+      )
+      .map((e) => ({
+        ...e,
+        lat: Number(e.lat),
+        lng: Number(e.lng),
+      })) as (DiaryEntry & { lat: number; lng: number })[];
+  }, [entries]);
 
   const handleFitAllBounds = useCallback(() => {
-    if (!mapInstanceRef.current || validEntries.length === 0) return;
+    const map = mapInstanceRef.current;
+    if (!map || validEntries.length === 0) return;
     const latLngs = validEntries.map((e) => [e.lat, e.lng]);
     if (latLngs.length === 1) {
-      mapInstanceRef.current.setView(latLngs[0], 14);
+      map.setView(latLngs[0], 14);
     } else {
-      mapInstanceRef.current.fitBounds(latLngs as any, { padding: [40, 40] });
+      map.fitBounds(latLngs as any, { padding: [50, 50], maxZoom: 16 });
     }
   }, [validEntries]);
 
+  // Cập nhật marker theo danh sách bài viết đã lọc
+  const updateMarkers = useCallback(() => {
+    const map = mapInstanceRef.current;
+    const L = (window as any).L;
+    if (!map || !L) return;
+
+    // 1. Xóa các marker cũ
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    // 2. Tạo marker mới
+    validEntries.forEach((entry) => {
+      const cfg = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.neutral;
+      const icon = L.divIcon({
+        className: "custom-diary-marker",
+        html: `
+          <div style="
+            background: ${cfg.hex};
+            width: 32px;
+            height: 32px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            cursor: pointer;
+          ">
+            <span style="transform: rotate(45deg); font-size: 14px; line-height: 1;">${cfg.emoji}</span>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+      });
+
+      const m = L.marker([entry.lat, entry.lng], { icon }).addTo(map);
+
+      const popupContent = document.createElement("div");
+      popupContent.style.cssText =
+        "min-width: 180px; max-width: 220px; font-family: sans-serif;";
+      popupContent.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="font-size:16px;">${cfg.emoji}</span>
+          <span style="font-size:11px;font-weight:800;color:#1e293b;">${entry.date}</span>
+        </div>
+        <p style="font-size:11px;color:#475569;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${entry.content}</p>
+        <button id="view-btn-${entry.id}" style="
+          width: 100%;
+          background: #06b6d4;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          padding: 4px 8px;
+          font-size: 10px;
+          font-weight: 800;
+          cursor: pointer;
+        ">Xem chi tiết bài viết</button>
+      `;
+
+      m.bindPopup(popupContent);
+      m.on("popupopen", () => {
+        const btn = document.getElementById(`view-btn-${entry.id}`);
+        if (btn) {
+          btn.onclick = () => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.closePopup();
+            }
+            const currentE = entriesRef.current.find(
+              (e) => e.id === entry.id,
+            );
+            if (currentE) onSelectEntryDetail(currentE);
+          };
+        }
+      });
+
+      markersRef.current.push(m);
+    });
+
+    if (validEntries.length > 0) {
+      handleFitAllBounds();
+    }
+  }, [validEntries, handleFitAllBounds, onSelectEntryDetail]);
+
+  // Khởi tạo bản đồ
   useEffect(() => {
     if (!mapRef.current) return;
     const link = document.createElement("link");
@@ -117,6 +213,7 @@ function LeafletMap({
       if (!L || !mapRef.current || !isMounted) return;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.invalidateSize();
+        updateMarkers();
         return;
       }
 
@@ -132,7 +229,7 @@ function LeafletMap({
         minZoom: 5,
         tap: false,
       }).setView(center, 12);
-      const mapTilerKey = "odL8F5mMYH7APbT24t4Q"; // MapTiler Key
+      const mapTilerKey = "odL8F5mMYH7APbT24t4Q";
       const adminLayer = L.tileLayer(
         `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${mapTilerKey}`,
         {
@@ -190,81 +287,7 @@ function LeafletMap({
       new MapStyleControl({ position: "topright" }).addTo(map);
 
       mapInstanceRef.current = map;
-
-      const renderMarkers = () => {
-        markersRef.current.forEach((m) => m.remove());
-        markersRef.current = [];
-
-        validEntries.forEach((entry) => {
-          const cfg = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.neutral;
-          const icon = L.divIcon({
-            className: "custom-diary-marker",
-            html: `
-              <div style="
-                background: ${cfg.hex};
-                width: 32px;
-                height: 32px;
-                border-radius: 50% 50% 50% 0;
-                transform: rotate(-45deg);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 2px solid #fff;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-                cursor: pointer;
-              ">
-                <span style="transform: rotate(45deg); font-size: 14px; line-height: 1;">${cfg.emoji}</span>
-              </div>
-            `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-          });
-
-          const m = L.marker([entry.lat, entry.lng], { icon }).addTo(map);
-
-          const popupContent = document.createElement("div");
-          popupContent.style.cssText = "min-width: 180px; max-width: 220px; font-family: sans-serif;";
-          popupContent.innerHTML = `
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-              <span style="font-size:16px;">${cfg.emoji}</span>
-              <span style="font-size:11px;font-weight:800;color:#1e293b;">${entry.date}</span>
-            </div>
-            <p style="font-size:11px;color:#475569;margin:0 0 8px 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${entry.content}</p>
-            <button id="view-btn-${entry.id}" style="
-              width: 100%;
-              background: #06b6d4;
-              color: #fff;
-              border: none;
-              border-radius: 8px;
-              padding: 4px 8px;
-              font-size: 10px;
-              font-weight: 800;
-              cursor: pointer;
-            ">Xem chi tiết bài viết</button>
-          `;
-
-          m.bindPopup(popupContent);
-          m.on("popupopen", () => {
-            const btn = document.getElementById(`view-btn-${entry.id}`);
-            if (btn) {
-              btn.onclick = () => {
-                if (mapInstanceRef.current) {
-                  mapInstanceRef.current.closePopup();
-                }
-                const currentE = entriesRef.current.find((e) => e.id === entry.id);
-                if (currentE) onSelectEntryDetail(currentE);
-              };
-            }
-          });
-
-          markersRef.current.push(m);
-        });
-      };
-
-      renderMarkers();
-      if (validEntries.length > 0) {
-        handleFitAllBounds();
-      }
+      updateMarkers();
     };
 
     if (!(window as any).L) {
@@ -288,6 +311,13 @@ function LeafletMap({
     };
   }, []);
 
+  // Tự động đồng bộ marker mỗi khi bộ lọc thay đổi
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      updateMarkers();
+    }
+  }, [updateMarkers]);
+
   return (
     <div
       className={`relative w-full rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm ${
@@ -304,9 +334,21 @@ function LeafletMap({
           <span>Quay lại</span>
         </button>
       )}
+
+      {validEntries.length === 0 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 dark:bg-slate-800/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 pointer-events-none">
+          📍 Không có bài viết nào có tọa độ khớp với bộ lọc
+        </div>
+      )}
+
       <button
         onClick={handleFitAllBounds}
-        className="absolute bottom-4 left-4 z-[1000] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+        disabled={validEntries.length === 0}
+        className={`absolute bottom-4 left-4 z-[1000] px-3.5 py-2 rounded-xl shadow-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+          validEntries.length > 0
+            ? "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50"
+            : "bg-slate-200/80 dark:bg-slate-800/80 text-slate-400 cursor-not-allowed border border-transparent"
+        }`}
       >
         <span>🔍 Thu phóng toàn bộ ({validEntries.length} địa điểm)</span>
       </button>
@@ -348,7 +390,9 @@ export default function DiaryView() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Lightbox modal state for detail view
-  const [detailLightboxIndex, setDetailLightboxIndex] = useState<number | null>(null);
+  const [detailLightboxIndex, setDetailLightboxIndex] = useState<number | null>(
+    null,
+  );
 
   // Reply state
   const [replyText, setReplyText] = useState("");
@@ -387,7 +431,7 @@ export default function DiaryView() {
           return () => clearTimeout(timer);
         }
       },
-      { rootMargin: "300px" }
+      { rootMargin: "300px" },
     );
 
     const currentSentinel = sentinelRef.current;
@@ -398,7 +442,9 @@ export default function DiaryView() {
     };
   }, [hasMore, loading]);
 
-  const handleSaveComposer = async (entryData: Omit<DiaryEntry, "id" | "_id" | "createdAt">) => {
+  const handleSaveComposer = async (
+    entryData: Omit<DiaryEntry, "id" | "_id" | "createdAt">,
+  ) => {
     if (editingEntry) {
       await updateEntry(editingEntry.id, entryData);
       setEditingEntry(null);
@@ -407,9 +453,8 @@ export default function DiaryView() {
     }
   };
 
-  const handleSaveReply = async () => {
-    if (!detailEntry || !replyText.trim()) return;
-    setIsSavingReply(true);
+  const handleAddReply = async (entryId: string, content: string) => {
+    if (!content.trim()) return;
     try {
       const nowStr = new Date().toLocaleString("vi-VN", {
         hour: "2-digit",
@@ -419,17 +464,66 @@ export default function DiaryView() {
         year: "numeric",
       });
       const newReply: DiaryReply = {
-        id: Date.now().toString(),
+        id: `reply_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         time: nowStr,
-        content: replyText.trim(),
+        content: content.trim(),
+        authorName,
+        authorAvatar,
       };
-      const updatedReplies = [...(detailEntry.replies || []), newReply];
-      await updateEntry(detailEntry.id, { replies: updatedReplies });
-      setDetailEntry({ ...detailEntry, replies: updatedReplies });
-      setReplyText("");
-      toast.success("Đã gửi phản hồi!");
+
+      const entry = entries.find(
+        (e) => e.id === entryId || (e as any)._id === entryId,
+      );
+      const existingReplies = entry?.replies || [];
+      const updatedReplies = [...existingReplies, newReply];
+
+      await updateEntry(entryId, { replies: updatedReplies });
+
+      if (
+        detailEntry &&
+        (detailEntry.id === entryId || (detailEntry as any)._id === entryId)
+      ) {
+        setDetailEntry({ ...detailEntry, replies: updatedReplies });
+      }
+
+      toast.success("Đã đăng bình luận!");
     } catch (e: any) {
-      toast.error(e.message || "Lỗi khi lưu phản hồi");
+      toast.error(e.message || "Lỗi khi lưu bình luận");
+    }
+  };
+
+  const handleDeleteReply = async (entryId: string, replyId: string) => {
+    try {
+      const entry = entries.find(
+        (e) => e.id === entryId || (e as any)._id === entryId,
+      );
+      if (!entry) return;
+      const updatedReplies = (entry.replies || []).filter(
+        (r) => r.id !== replyId,
+      );
+
+      await updateEntry(entryId, { replies: updatedReplies });
+
+      if (
+        detailEntry &&
+        (detailEntry.id === entryId || (detailEntry as any)._id === entryId)
+      ) {
+        setDetailEntry({ ...detailEntry, replies: updatedReplies });
+      }
+
+      toast.success("Đã xóa bình luận!");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xóa bình luận");
+    }
+  };
+
+  const handleSaveReply = async () => {
+    if (!detailEntry || !replyText.trim()) return;
+    setIsSavingReply(true);
+    try {
+      const targetId = detailEntry.id || (detailEntry as any)._id;
+      await handleAddReply(targetId, replyText);
+      setReplyText("");
     } finally {
       setIsSavingReply(false);
     }
@@ -472,18 +566,10 @@ export default function DiaryView() {
     );
   };
 
-  const handleSelectCalendarDate = (date: string) => {
-    setSearch(date);
-    setViewMode("feed");
-  };
-
   return (
     <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4 pb-32 space-y-4">
       {/* Header */}
-      <DiaryHeader
-        streakData={streakData}
-        totalEntries={entries.length}
-      />
+      <DiaryHeader streakData={streakData} totalEntries={entries.length} />
 
       {/* View Mode Tabs (Bản tin / Bản đồ / Lịch & Sự kiện) */}
       <div className="flex items-center justify-between gap-2 bg-slate-200/60 dark:bg-slate-800/60 p-1 rounded-2xl backdrop-blur-md">
@@ -523,7 +609,7 @@ export default function DiaryView() {
           }`}
         >
           <Icon path={mdiCalendarMonth} size={0.75} />
-          <span>Lịch & Sự kiện</span>
+          <span>Sự kiện</span>
         </button>
       </div>
 
@@ -533,16 +619,20 @@ export default function DiaryView() {
       )}
 
       {/* Search & Filters */}
-      <SearchFilterBar
-        search={search}
-        onSearchChange={setSearch}
-        selectedMood={selectedMood}
-        onMoodChange={setSelectedMood}
-        sort={sort}
-        onSortChange={setSort}
-        totalCount={entries.length}
-        filteredCount={filteredEntries.length}
-      />
+      {(viewMode === "feed" ||
+        viewMode === "timeline" ||
+        viewMode === "map") && (
+        <SearchFilterBar
+          search={search}
+          onSearchChange={setSearch}
+          selectedMood={selectedMood}
+          onMoodChange={setSelectedMood}
+          sort={sort}
+          onSortChange={setSort}
+          totalCount={entries.length}
+          filteredCount={filteredEntries.length}
+        />
+      )}
 
       {/* VIEW: FEED (BẢN TIN) */}
       {(viewMode === "feed" || viewMode === "timeline") && (
@@ -565,7 +655,9 @@ export default function DiaryView() {
                 className="mx-auto text-slate-300"
               />
               <p className="text-sm font-semibold text-slate-500">
-                {search ? "Không tìm thấy bài viết nào" : "Chưa có bài viết bản tin nào"}
+                {search
+                  ? "Không tìm thấy bài viết nào"
+                  : "Chưa có bài viết bản tin nào"}
               </p>
             </div>
           ) : (
@@ -581,6 +673,8 @@ export default function DiaryView() {
                   onDelete={handleDelete}
                   onPin={pinEntry}
                   onViewDetail={(entry) => setDetailEntry(entry)}
+                  onAddReply={handleAddReply}
+                  onDeleteReply={handleDeleteReply}
                 />
               ))}
 
@@ -615,14 +709,8 @@ export default function DiaryView() {
       {/* VIEW: CALENDAR & EVENTS (LỊCH VÀ SỰ KIỆN) */}
       {viewMode === "calendar" && (
         <CalendarView
-          entries={entries}
           month={calendarMonth}
           onMonthChange={setCalendarMonth}
-          onSelectDate={handleSelectCalendarDate}
-          onOpenCreateEntry={() => {
-            setViewMode("feed");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
         />
       )}
 
@@ -710,8 +798,12 @@ export default function DiaryView() {
                 {/* Images Lightbox / Gallery */}
                 {(() => {
                   const detailImgs = Array.isArray(detailEntry.images)
-                    ? detailEntry.images.filter((img) => typeof img === "string" && img.trim().length > 0)
-                    : typeof detailEntry.images === "string" && (detailEntry.images as string).trim().length > 0
+                    ? detailEntry.images.filter(
+                        (img) =>
+                          typeof img === "string" && img.trim().length > 0,
+                      )
+                    : typeof detailEntry.images === "string" &&
+                        (detailEntry.images as string).trim().length > 0
                       ? [detailEntry.images]
                       : [];
                   if (detailImgs.length === 0) return null;
@@ -729,7 +821,12 @@ export default function DiaryView() {
                             className="aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 group block relative cursor-pointer"
                           >
                             <img
-                              src={getThumbnailUrl(imgUrl, 600, 80)}
+                              src={getThumbnailUrl(imgUrl, 80)}
+                              onError={(e) => {
+                                if (e.currentTarget.src !== imgUrl) {
+                                  e.currentTarget.src = imgUrl;
+                                }
+                              }}
                               alt={`Detail photo ${i + 1}`}
                               loading="lazy"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -777,7 +874,9 @@ export default function DiaryView() {
                         >
                           <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
                             <span>💬 Phản hồi</span>
-                            <span className="text-[10px] text-slate-400">{r.time}</span>
+                            <span className="text-[10px] text-slate-400">
+                              {r.time}
+                            </span>
                           </div>
                           <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                             {r.content}
@@ -815,7 +914,7 @@ export default function DiaryView() {
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )}
 
       {/* Lightbox for Detail Modal */}
@@ -824,8 +923,11 @@ export default function DiaryView() {
           isOpen={detailLightboxIndex !== null}
           images={
             Array.isArray(detailEntry.images)
-              ? detailEntry.images.filter((img) => typeof img === "string" && img.trim().length > 0)
-              : typeof detailEntry.images === "string" && (detailEntry.images as string).trim().length > 0
+              ? detailEntry.images.filter(
+                  (img) => typeof img === "string" && img.trim().length > 0,
+                )
+              : typeof detailEntry.images === "string" &&
+                  (detailEntry.images as string).trim().length > 0
                 ? [detailEntry.images]
                 : []
           }

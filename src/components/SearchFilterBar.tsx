@@ -79,10 +79,10 @@ export default function SearchFilterBar({
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => onMoodChange("all")}
-          className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+          className={`shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
             selectedMood === "all"
-              ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white"
-              : "bg-white/60 dark:bg-slate-800/60 text-slate-500 border-slate-100 dark:border-slate-700 hover:border-slate-300"
+              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+              : "bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
         >
           Tất cả
@@ -92,13 +92,13 @@ export default function SearchFilterBar({
             key={key}
             whileTap={{ scale: 0.95 }}
             onClick={() => onMoodChange(key)}
-            className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
               selectedMood === key
-                ? `${cfg.bg} ${cfg.color} border-current`
-                : "bg-white/60 dark:bg-slate-800/60 text-slate-500 border-slate-100 dark:border-slate-700 hover:border-slate-300"
+                ? `${cfg.bg} ${cfg.color} shadow-xs font-extrabold`
+                : "bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
             }`}
           >
-            <span>{cfg.emoji}</span>
+            <span className="text-sm leading-none">{cfg.emoji}</span>
             <span>{cfg.label}</span>
           </motion.button>
         ))}
