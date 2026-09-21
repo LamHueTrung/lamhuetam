@@ -1,3 +1,5 @@
+import React from "react";
+
 function ShimmerBar({ className = "" }: { className?: string }) {
   return (
     <div
@@ -8,33 +10,57 @@ function ShimmerBar({ className = "" }: { className?: string }) {
   );
 }
 
+export function ImageSkeletonPlaceholder({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`bg-slate-200 dark:bg-slate-700 overflow-hidden relative ${className}`}
+    >
+      <div className="absolute inset-0 shimmer-slide" />
+    </div>
+  );
+}
+
+export function DiarySkeletonFeedPost() {
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm p-3 sm:p-4 space-y-3 overflow-hidden">
+      {/* Header Skeleton */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 relative overflow-hidden shrink-0">
+          <div className="absolute inset-0 shimmer-slide" />
+        </div>
+        <div className="flex-1 space-y-1.5">
+          <ShimmerBar className="w-1/3 h-3.5" />
+          <ShimmerBar className="w-1/4 h-2.5" />
+        </div>
+      </div>
+
+      {/* Content Text Skeleton */}
+      <div className="space-y-2 py-1">
+        <ShimmerBar className="w-full h-3" />
+        <ShimmerBar className="w-4/5 h-3" />
+        <ShimmerBar className="w-2/3 h-3" />
+      </div>
+
+      {/* Image Block Skeleton */}
+      <div className="h-48 sm:h-64 rounded-xl bg-slate-200 dark:bg-slate-700 relative overflow-hidden">
+        <div className="absolute inset-0 shimmer-slide" />
+      </div>
+
+      {/* Footer Actions Skeleton */}
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60">
+        <ShimmerBar className="w-20 h-4" />
+        <ShimmerBar className="w-20 h-4" />
+        <ShimmerBar className="w-20 h-4" />
+      </div>
+    </div>
+  );
+}
+
 export function DiarySkeletonTimeline() {
   return (
-    <div className="space-y-3 min-w-0">
+    <div className="space-y-4 min-w-0">
       {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="rounded-[20px] p-4 bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 min-w-0"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 relative overflow-hidden">
-              <div className="absolute inset-0 shimmer-slide" />
-            </div>
-            <div className="flex-1 space-y-1.5">
-              <ShimmerBar className="w-2/3 h-3" />
-              <ShimmerBar className="w-1/3 h-2.5" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <ShimmerBar className="w-full h-3" />
-            <ShimmerBar className="w-5/6 h-3" />
-            <ShimmerBar className="w-2/3 h-3" />
-          </div>
-          <div className="flex gap-1.5 mt-3">
-            <ShimmerBar className="w-14 h-5" />
-            <ShimmerBar className="w-16 h-5" />
-          </div>
-        </div>
+        <DiarySkeletonFeedPost key={i} />
       ))}
     </div>
   );

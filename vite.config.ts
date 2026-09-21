@@ -3,24 +3,13 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-
-const now = new Date();
-const __buildVersion__ =
-  "v" +
-  String(now.getHours()).padStart(2, "0") +
-  "." +
-  String(now.getMinutes()).padStart(2, "0") +
-  "." +
-  String(now.getDate()).padStart(2, "0") +
-  "." +
-  String(now.getMonth() + 1).padStart(2, "0") +
-  "." +
-  String(now.getFullYear()).slice(-2);
+import pkg from "./package.json";
 
 export default defineConfig(() => {
   return {
     define: {
-      __APP_VERSION__: JSON.stringify(__buildVersion__),
+      __APP_VERSION__: JSON.stringify(pkg.version),
+      __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
     },
     plugins: [
       react(),
@@ -38,9 +27,9 @@ export default defineConfig(() => {
           "logo_180.png"
         ],
         manifest: {
-          name: "Tài Chính Cá Nhân",
-          short_name: "LHT-Finance",
-          description: "Ứng dụng quản lý tài chính cá nhân với AI Advisor",
+          name: "Lâm Huệ Trung",
+          short_name: "Lâm Huệ Trung",
+          description: "Không gian số cá nhân và tài chính thông minh của Lâm Huệ Trung",
           start_url: "/",
           display: "standalone",
           background_color: "#F2F2F7",

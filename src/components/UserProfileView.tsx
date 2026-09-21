@@ -36,11 +36,19 @@ import {
   mdiInformationOutline,
   mdiTune,
   mdiCogOutline,
+  mdiCamera,
+  mdiImagePlus,
+  mdiViewGridOutline,
+  mdiWalletOutline,
+  mdiBookOpenVariant,
+  mdiChartTimelineVariant,
+  mdiCreation,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { UserProfile, CustomProfileField } from "../types";
 import CacheManagerSection from "./CacheManagerSection";
+import { uploadAvatar } from "../services/storageService";
 
 interface UserProfileViewProps {
   profile: UserProfile;
@@ -99,6 +107,36 @@ export default function UserProfileView({
 
   // Contact states
   const [avatar, setAvatar] = useState(profile.avatar || "");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAvatarFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Ảnh đại diện không được vượt quá 10MB!");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const toastId = toast.loading("Đang tải ảnh đại diện lên Supabase...");
+    try {
+      const publicUrl = await uploadAvatar(file, profile._id || "user");
+      setAvatar(publicUrl);
+      // Auto save avatar if user wants
+      await onUpdateProfile({ avatar: publicUrl });
+      toast.success("Đã cập nhật ảnh đại diện thành công!", { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.message || "Lỗi tải ảnh đại diện", { id: toastId });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
   const [phone, setPhone] = useState(profile.phone || "");
   const [emails, setEmails] = useState<string[]>(profile.emails || []);
   const [newEmailInput, setNewEmailInput] = useState("");
@@ -478,6 +516,15 @@ export default function UserProfileView({
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Hidden Avatar File Input (Luôn khả dụng ở mọi chế độ) */}
+      <input
+        type="file"
+        accept="image/*"
+        ref={avatarInputRef}
+        onChange={handleAvatarFileSelect}
+        className="hidden"
+      />
+
       {/* 🌟 Top Banner & Profile Hero Card */}
       <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-white rounded-3xl p-5 shadow-xl overflow-hidden border border-slate-800">
         <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -485,15 +532,35 @@ export default function UserProfileView({
 
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="relative">
+            <div
+              className="relative group cursor-pointer"
+              onClick={() => avatarInputRef.current?.click()}
+              title="Nhấn để đổi ảnh đại diện trực tiếp"
+            >
               <img
                 src={avatar || "/avatar.jpg"}
                 alt={fullName}
                 onError={(e) => {
                   e.currentTarget.src = "/avatar.jpg";
                 }}
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-md"
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-md group-hover:opacity-90 transition-opacity"
               />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  avatarInputRef.current?.click();
+                }}
+                disabled={isUploadingAvatar}
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md hover:bg-blue-700 transition-transform active:scale-95 cursor-pointer ring-2 ring-slate-900"
+                title="Thay đổi ảnh đại diện (Tải lên Supabase)"
+              >
+                <Icon
+                  path={isUploadingAvatar ? mdiLoading : mdiCamera}
+                  size={0.55}
+                  className={isUploadingAvatar ? "animate-spin" : ""}
+                />
+              </button>
             </div>
 
             <div>
@@ -501,9 +568,6 @@ export default function UserProfileView({
                 <h1 className="text-xl font-bold text-white tracking-tight">
                   {fullName || "Lâm Huệ Trung"}
                 </h1>
-                <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  Hồ sơ chính chủ
-                </span>
               </div>
               <p className="text-xs text-slate-300 font-medium mt-0.5 flex items-center gap-1.5">
                 <Icon
@@ -532,7 +596,6 @@ export default function UserProfileView({
                 className="flex-1 sm:flex-initial px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg cursor-pointer transition-all disabled:opacity-50"
               >
                 <Icon path={mdiContentSave} size={0.75} />
-                <span>{isSaving ? "Đang lưu..." : "Lưu thay đổi"}</span>
               </button>
             ) : (
               <button
@@ -562,6 +625,137 @@ export default function UserProfileView({
           <span className="bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
             🏢 {currentJob.split(" tại ")[1] || "Rynan Tech"}
           </span>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 🧰 TRUNG TÂM TIỆN ÍCH & DỊCH VỤ (Utilities & Services Hub) */}
+      {/* ========================================================================= */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+              <Icon path={mdiViewGridOutline} size={0.75} />
+            </div>
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Tiện Ích & Dịch Vụ
+              </h2>
+            </div>
+          </div>
+          <span className="text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-200/40">
+            Ứng dụng mở rộng
+          </span>
+        </div>
+
+        {/* Utilities Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Tiện ích 1: Tài chính & Sổ nợ */}
+          <motion.div
+            whileHover={{ scale: 1.015, y: -2 }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => onNavigateToTab && onNavigateToTab(4)}
+            className="p-4 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent dark:from-blue-950/40 dark:via-indigo-950/20 dark:to-slate-900 border border-blue-200/80 dark:border-blue-900/50 rounded-3xl cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                <Icon path={mdiWalletOutline} size={1.2} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                    Quản Lý Tài Chính
+                  </h3>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                  Sổ nợ, lương, chi phí cố định & tiết kiệm
+                </p>
+              </div>
+            </div>
+            <div className="p-2 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2 shadow-2xs">
+              <Icon path={mdiChevronRight} size={0.8} />
+            </div>
+          </motion.div>
+
+          {/* Tiện ích 2: Thẻ tín dụng & Sao kê */}
+          <motion.div
+            whileHover={{ scale: 1.015, y: -2 }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => toggleSection("finance_card")}
+            className="p-4 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent dark:from-purple-950/40 dark:via-pink-950/20 dark:to-slate-900 border border-purple-200/80 dark:border-purple-900/50 rounded-3xl cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                <Icon path={mdiCreditCardOutline} size={1.2} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                    Thẻ Tín Dụng & Sao Kê
+                  </h3>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                  Ngày {creditCardStatementDay || 20} hàng tháng · Cảnh báo hạn
+                </p>
+              </div>
+            </div>
+            <div className="p-2 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2 shadow-2xs">
+              <Icon path={mdiChevronRight} size={0.8} />
+            </div>
+          </motion.div>
+
+          {/* Tiện ích 3: Bản tin & Nhật ký */}
+          <motion.div
+            whileHover={{ scale: 1.015, y: -2 }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => onNavigateToTab && onNavigateToTab(6)}
+            className="p-4 bg-gradient-to-br from-violet-500/10 via-fuchsia-500/5 to-transparent dark:from-violet-950/40 dark:via-fuchsia-950/20 dark:to-slate-900 border border-violet-200/80 dark:border-violet-900/50 rounded-3xl cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white flex items-center justify-center shadow-md shadow-violet-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                <Icon path={mdiBookOpenVariant} size={1.2} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                    Bản Tin & Nhật Ký
+                  </h3>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                  Dòng thời gian, cảm xúc, bản đồ & sự kiện
+                </p>
+              </div>
+            </div>
+            <div className="p-2 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-400 group-hover:text-violet-600 dark:group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2 shadow-2xs">
+              <Icon path={mdiChevronRight} size={0.8} />
+            </div>
+          </motion.div>
+
+          {/* Tiện ích 4: Mở rộng / Phân tích nâng cao */}
+          <div className="p-4 bg-slate-50/70 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex items-center justify-between opacity-80 select-none">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Icon path={mdiChartTimelineVariant} size={1.2} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">
+                    Phân Tích Chuyên Sâu
+                  </h3>
+                  <span className="text-[9px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
+                    Sắp ra mắt
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                  Biểu đồ dòng tiền thông minh & dự báo tài chính
+                </p>
+              </div>
+            </div>
+            <div className="p-2 rounded-xl text-slate-300 dark:text-slate-600 shrink-0 ml-2">
+              <Icon path={mdiCreation} size={0.75} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -669,15 +863,34 @@ export default function UserProfileView({
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Link Ảnh Avatar
+                        Ảnh đại diện (Avatar)
                       </label>
                       <input
-                        type="text"
-                        value={avatar}
-                        onChange={(e) => setAvatar(e.target.value)}
-                        placeholder="https://example.com/avatar.jpg"
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none dark:text-white"
+                        type="file"
+                        accept="image/*"
+                        ref={avatarInputRef}
+                        onChange={handleAvatarFileSelect}
+                        className="hidden"
                       />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={isUploadingAvatar}
+                          className="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-blue-100 transition-colors cursor-pointer"
+                        >
+                          <Icon
+                            path={isUploadingAvatar ? mdiLoading : mdiImagePlus}
+                            size={0.75}
+                            className={isUploadingAvatar ? "animate-spin" : ""}
+                          />
+                          <span>
+                            {isUploadingAvatar
+                              ? "Đang tải ảnh..."
+                              : "Chọn ảnh từ máy tải lên"}
+                          </span>
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1076,15 +1289,6 @@ export default function UserProfileView({
                       <Icon path={mdiAlertDecagramOutline} size={0.8} />
                       Nỗi lo hiện tại & Định hướng dài hạn
                     </span>
-                    {onNavigateToTab && (
-                      <button
-                        onClick={() => onNavigateToTab(5)}
-                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <Icon path={mdiAutoFix} size={0.65} />
-                        Hỏi Cố Vấn AI
-                      </button>
-                    )}
                   </div>
                   {isEditing ? (
                     <textarea
@@ -1223,7 +1427,7 @@ export default function UserProfileView({
                   Định hướng & Thông tin bổ sung
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  Tùy chỉnh thông tin thêm để Cố vấn AI thấu hiểu bạn
+                  Tùy chỉnh thông tin và mục tiêu cá nhân
                 </p>
               </div>
             </div>
@@ -1257,7 +1461,7 @@ export default function UserProfileView({
                       size={0.65}
                       className="text-amber-500"
                     />
-                    Gợi ý thông tin nên bổ sung cho Cố vấn AI:
+                    Gợi ý thông tin nên bổ sung:
                   </span>
 
                   <div className="flex flex-wrap gap-2">
@@ -1577,16 +1781,17 @@ export default function UserProfileView({
             </div>
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Hệ Thống, AI & Dữ Liệu
+                Hệ Thống & Dữ Liệu
               </h2>
             </div>
           </div>
           <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
-            3 mục
+            2 mục
           </span>
         </div>
 
-        {/* 3.1: Cấu hình AI Model & API Key */}
+        {/* 3.1: Cấu hình AI Model & API Key (Tạm ẩn - Nâng cấp và deploy sau) */}
+        {/*
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div
             onClick={() => toggleSection("system_ai")}
@@ -1627,7 +1832,6 @@ export default function UserProfileView({
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden space-y-4 pt-1"
               >
-                {/* Chọn mô hình AI */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                     <Icon
@@ -1667,7 +1871,6 @@ export default function UserProfileView({
                     </option>
                   </select>
 
-                  {/* Provider Presets */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider self-center mr-1">
                       Preset:
@@ -1695,7 +1898,6 @@ export default function UserProfileView({
                   </div>
                 </div>
 
-                {/* API Key */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                     <span className="flex items-center gap-1">
@@ -1741,7 +1943,6 @@ export default function UserProfileView({
                   </p>
                 </div>
 
-                {/* Base URL */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                     <Icon
@@ -1760,7 +1961,6 @@ export default function UserProfileView({
                   />
                 </div>
 
-                {/* Status Badge */}
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-2xl space-y-1.5">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Trạng thái kết nối AI
@@ -1824,7 +2024,6 @@ export default function UserProfileView({
                   )}
                 </div>
 
-                {/* AI Config Actions */}
                 <div className="flex gap-2 pt-1.5">
                   <button
                     type="button"
@@ -1847,6 +2046,7 @@ export default function UserProfileView({
             )}
           </AnimatePresence>
         </div>
+        */}
 
         {/* 3.2: Quản lý Bộ nhớ đệm & Dung lượng */}
         <CacheManagerSection

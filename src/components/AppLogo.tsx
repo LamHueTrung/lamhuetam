@@ -9,7 +9,7 @@ export default function AppLogo({ size = 64, className = "" }: AppLogoProps) {
   return (
     <img
       src="/logo_192.png"
-      alt="Tài Chính Cá Nhân"
+      alt="Lâm Huệ Trung"
       width={size}
       height={size}
       className={`rounded-2xl ${className}`}

@@ -25,7 +25,7 @@ export default function Navbar({
     { id: 1, label: "Tổng quan", icon: mdiHome },
     { id: 2, label: "Sổ cái", icon: mdiReceiptTextCheckOutline },
     { id: 3, label: "Thêm nhanh", icon: mdiPlus, isFab: true },
-    { id: 4, label: "Tài chính", icon: mdiSwapHorizontal },
+    { id: 6, label: "Bản tin", icon: mdiBookOpenVariant },
     { id: 7, label: "Tôi", icon: mdiAccountCircle },
   ];
 
@@ -88,34 +88,6 @@ export default function Navbar({
           );
         })}
       </div>
-
-      {/* AI floating button — above Diary */}
-      {currentTab !== 5 && (
-        <motion.button
-          id="btn-ai"
-          onClick={() => setCurrentTab(5)}
-          whileHover={{ scale: 1.12 }}
-          whileTap={{ scale: 0.88 }}
-          className="fixed bottom-44 right-5 md:right-[calc(50%-12.75rem)] w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 bg-accent-gradient glow-accent border-0"
-          title="Cố vấn AI"
-        >
-          <img src="/logo_chat.png" alt="AI" className="w-8 h-8 rounded-full" />
-        </motion.button>
-      )}
-
-      {/* Diary floating button — bottom right */}
-      {currentTab !== 6 && (
-        <motion.button
-          id="btn-diary"
-          onClick={() => setCurrentTab(6)}
-          whileHover={{ scale: 1.12 }}
-          whileTap={{ scale: 0.88 }}
-          className={`fixed bottom-24 right-5 md:right-[calc(50%-12.75rem)] w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer pointer-events-auto z-50 bg-gradient-to-br from-violet-50 to-purple-50 text-violet-600 border border-violet-200 shadow-[0_4px_16px_rgba(139,92,246,0.2)]`}
-          title="Nhật ký"
-        >
-          <Icon path={mdiBookOpenVariant} size={1.25} />
-        </motion.button>
-      )}
     </div>
   );
 }

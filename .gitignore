@@ -11,3 +11,4 @@ coverage/
 # Local Netlify folder
 .netlify
 /.agents
+/tmp

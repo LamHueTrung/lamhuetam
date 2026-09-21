@@ -23,5 +23,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": ["netlify/"]
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["node_modules", "dist", "tmp", "ml_finance", "netlify"]
 }

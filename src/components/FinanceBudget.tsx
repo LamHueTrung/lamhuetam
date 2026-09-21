@@ -69,6 +69,7 @@ import {
   mdiCheckCircle,
   mdiInformationOutline,
   mdiHistory,
+  mdiArrowLeft,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
@@ -116,6 +117,7 @@ interface FinanceBudgetProps {
   onDeleteDebt: (id: string) => void;
   onUpdateDebt: (id: string, data: Partial<DebtAccount>) => void;
   onTransactionAdded?: () => void;
+  onBack?: () => void;
 }
 
 type ViewTab = "debts" | "salary" | "fixed" | "optimizer";
@@ -305,6 +307,7 @@ export default function FinanceBudget({
   onDeleteDebt,
   onUpdateDebt,
   onTransactionAdded,
+  onBack,
 }: FinanceBudgetProps) {
   const [activeTab, setActiveTab] = useState<ViewTab>("debts");
   const [showSalary, setShowSalary] = useState(false);
@@ -2920,7 +2923,24 @@ export default function FinanceBudget({
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="space-y-6 pb-10 min-w-0">
+    <div className="space-y-4 pb-10 min-w-0">
+      {/* Top Header with Back button if opened from Utilities */}
+      {onBack && (
+        <div className="flex items-center justify-between px-1">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer active:scale-95"
+          >
+            <Icon path={mdiArrowLeft} size={0.65} className="text-slate-500 dark:text-slate-400" />
+            <span>Quay lại</span>
+          </button>
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">
+            Quản Lý Tài Chính
+          </span>
+        </div>
+      )}
+
       {/* Tab bar */}
       <div className="flex items-center gap-1 bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-[20px] p-1 shadow-sm">
         {[

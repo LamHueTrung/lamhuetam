@@ -18,7 +18,7 @@ import Dashboard from "./components/Dashboard";
 import Ledger from "./components/Ledger";
 import QuickAddModal from "./components/QuickAddModal";
 import FinanceBudget from "./components/FinanceBudget";
-import AICovisor from "./components/AICovisor";
+// import AICovisor from "./components/AICovisor";
 import CategoryManager from "./components/CategoryManager";
 import DiaryView from "./components/DiaryView";
 import UserProfileView from "./components/UserProfileView";
@@ -352,7 +352,7 @@ function AppContent() {
     const diffX = touchStartX - e.changedTouches[0].clientX;
     const diffY = touchStartY - e.changedTouches[0].clientY;
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
-      const tabSequence = [1, 2, 4, 5, 7, 6];
+      const tabSequence = [1, 2, 4, 6, 7];
       const currentIndex = tabSequence.indexOf(currentTab);
 
       if (diffX > 0 && currentIndex < tabSequence.length - 1)
@@ -424,7 +424,7 @@ function AppContent() {
       <main
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`flex-1 w-full max-w-md mx-auto px-5 pt-4 min-h-0 overflow-hidden relative ${currentTab === 5 ? "pb-4" : "pb-[127px]"}`}
+        className="flex-1 w-full max-w-md mx-auto px-5 pt-4 min-h-0 overflow-hidden relative pb-[127px]"
       >
         {isInitialLoading ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
@@ -445,11 +445,7 @@ function AppContent() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -12 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={
-                currentTab === 5
-                  ? "h-full flex flex-col min-h-0 overflow-x-hidden"
-                  : "h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"
-              }
+              className="h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"
             >
               {currentTab === 1 && (
                 <Dashboard
@@ -483,20 +479,7 @@ function AppContent() {
                   onDeleteDebt={handleDeleteDebt}
                   onUpdateDebt={(id, data) => updateDebt(id, data)}
                   onTransactionAdded={refetchTransactions}
-                />
-              )}
-              {currentTab === 5 && (
-                <AICovisor
-                  transactions={transactions}
-                  budgets={budgets}
-                  debts={debts}
-                  savings={savings}
-                  userProfile={userProfile}
-                  salaryConfig={salaryConfig}
-                  fixedCats={fixedCats}
-                  fixedTasks={fixedTasks}
-                  totalFixed={totalFixed}
-                  onBack={() => setCurrentTab(1)}
+                  onBack={() => setCurrentTab(7)}
                 />
               )}
               {currentTab === 6 && (
@@ -517,13 +500,11 @@ function AppContent() {
         )}
       </main>
 
-      {currentTab !== 5 && (
-        <Navbar
-          currentTab={currentTab}
-          setCurrentTab={setCurrentTab}
-          onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-        />
-      )}
+      <Navbar
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+      />
 
       <QuickAddModal
         isOpen={isQuickAddOpen}

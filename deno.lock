@@ -15,6 +15,7 @@
         "npm:@mdi/js@^7.4.47",
         "npm:@mdi/react@^1.6.1",
         "npm:@netlify/functions@^5.3.0",
+        "npm:@supabase/supabase-js@^2.109.0",
         "npm:@tailwindcss/vite@^4.1.14",
         "npm:@types/bcryptjs@^2.4.6",
         "npm:@types/express@^4.17.21",

@@ -31,8 +31,8 @@ export default function LoginPage() {
           <div className="flex justify-center">
             <AppLogo size={72} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Đăng nhập</h1>
-          <p className="text-xs text-slate-400 font-medium">Tiếp tục quản lý tài chính của bạn</p>
+          <h1 className="text-2xl font-bold text-slate-900">Lâm Huệ Trung</h1>
+          <p className="text-xs text-slate-400 font-medium">Không gian cá nhân & tài chính thông minh</p>
         </div>
         <div className="space-y-4">
           <div className="relative">

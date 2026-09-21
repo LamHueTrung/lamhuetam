@@ -161,12 +161,13 @@ export interface DiaryEntry {
   lat: number | null;
   lng: number | null;
   tags: string[];
+  images?: string[];
   replies?: DiaryReply[];
   createdAt?: string;
   pinned?: boolean;
 }
 
-export type DiaryViewMode = 'timeline' | 'tree' | 'map' | 'calendar';
+export type DiaryViewMode = 'feed' | 'timeline' | 'map' | 'calendar';
 
 export interface DiaryFilterState {
   search: string;

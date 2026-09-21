@@ -33,8 +33,8 @@ export default function RegisterPage() {
           <div className="flex justify-center">
             <AppLogo size={72} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Thiết lập tài khoản</h1>
-          <p className="text-xs text-slate-400 font-medium">Tạo tài khoản để bắt đầu quản lý tài chính</p>
+          <h1 className="text-2xl font-bold text-slate-900">Lâm Huệ Trung</h1>
+          <p className="text-xs text-slate-400 font-medium">Khởi tạo tài khoản không gian cá nhân</p>
         </div>
         <div className="space-y-4">
           <div className="relative">

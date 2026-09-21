@@ -25,9 +25,19 @@ export const handler: Handler = async (event) => {
 
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}');
-      const { date, content, mood, location, lat, lng, tags } = body;
+      const { date, content, mood, location, lat, lng, tags, images, pinned } = body;
       if (!date || !content) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Ngày và nội dung bắt buộc' }) };
-      const entry = await DiaryEntry.create({ date, content, mood: mood || 'neutral', location: location || '', lat: lat || null, lng: lng || null, tags: tags || [] });
+      const entry = await DiaryEntry.create({
+        date,
+        content,
+        mood: mood || 'neutral',
+        location: location || '',
+        lat: lat || null,
+        lng: lng || null,
+        tags: tags || [],
+        images: Array.isArray(images) ? images : [],
+        pinned: Boolean(pinned),
+      });
       return { statusCode: 201, headers, body: JSON.stringify(entry) };
     }
 

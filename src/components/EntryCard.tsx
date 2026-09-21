@@ -1,230 +1,442 @@
-import { useState, useRef } from "react";
+import React, { useState } from "react";
 import { Icon } from "@mdi/react";
 import {
   mdiPencil,
   mdiDeleteOutline,
   mdiPin,
   mdiPinOff,
-  mdiCommentTextOutline,
+  mdiCommentOutline,
   mdiMapMarker,
-  mdiCalendar,
+  mdiThumbUp,
+  mdiThumbUpOutline,
+  mdiShareOutline,
+  mdiDotsHorizontal,
   mdiContentCopy,
-  mdiShareVariant,
+  mdiEarth,
 } from "@mdi/js";
-import { motion, useDragControls, AnimatePresence, useMotionValue, useTransform } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import type { DiaryEntry } from "../types";
 import { MOOD_CONFIG } from "./DiaryMoodConfig";
+import { getThumbnailUrl } from "../utils/imageUtils";
+import PhotoLightboxModal from "./PhotoLightboxModal";
 
 interface Props {
   entry: DiaryEntry;
   index: number;
+  authorAvatar?: string;
+  authorName?: string;
   onEdit: (entry: DiaryEntry) => void;
   onDelete: (id: string) => void;
   onPin: (id: string) => void;
   onViewDetail: (entry: DiaryEntry) => void;
 }
 
-export default function EntryCard({ entry, index, onEdit, onDelete, onPin, onViewDetail }: Props) {
-  const [swiped, setSwiped] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragControls = useDragControls();
-  const m = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.neutral;
-
-  const springConfig = {
-    positive: { damping: 14, stiffness: 200 },
-    excited: { damping: 10, stiffness: 170 },
-    grateful: { damping: 16, stiffness: 190 },
-    neutral: { damping: 22, stiffness: 220 },
-    sad: { damping: 26, stiffness: 240 },
-    angry: { damping: 20, stiffness: 210 },
-    negative: { damping: 24, stiffness: 230 },
-  };
-
-  const formatDate = (d: string) =>
-    new Date(d + "T00:00:00").toLocaleDateString("vi-VN", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-
-  const snippet =
-    entry.content.length > 120
-      ? entry.content.slice(0, 120) + "..."
-      : entry.content;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(entry.content);
-  };
-
-  const dragX = useMotionValue(0);
-  const actionsOpacity = useTransform(dragX, [-80, 0], [1, 0]);
+function FeedImageItem({
+  src,
+  alt,
+  className = "",
+  onClick,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const thumbSrc = getThumbnailUrl(src, 600, 80);
 
   return (
-    <div className="relative min-w-0 overflow-hidden">
-      {/* Swipe-reveal actions */}
-      <motion.div
-        style={{ opacity: actionsOpacity }}
-        className="absolute inset-y-0 right-0 flex items-center gap-1 pr-3"
-      >
-        <button
-          onClick={() => onEdit(entry)}
-          className="w-11 h-11 rounded-xl bg-cyan-500 text-white flex items-center justify-center shadow-lg cursor-pointer"
-        >
-          <Icon path={mdiPencil} size={0.7} />
-        </button>
-        <button
-          onClick={() => onDelete(entry.id)}
-          className="w-11 h-11 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg cursor-pointer"
-        >
-          <Icon path={mdiDeleteOutline} size={0.7} />
-        </button>
-        <button
-          onClick={() => onPin(entry.id)}
-          className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-lg cursor-pointer ${
-            entry.pinned ? "bg-amber-500 text-white" : "bg-slate-200 dark:bg-slate-600 text-slate-500"
-          }`}
-        >
-          <Icon path={entry.pinned ? mdiPinOff : mdiPin} size={0.7} />
-        </button>
-      </motion.div>
+    <div
+      className={`relative overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer ${className}`}
+      onClick={onClick}
+    >
+      {!loaded && (
+        <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 relative overflow-hidden">
+          <div className="absolute inset-0 shimmer-slide" />
+        </div>
+      )}
+      <img
+        src={thumbSrc}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        className={`w-full h-full object-cover transition-opacity duration-300 hover:opacity-95 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+      />
+    </div>
+  );
+}
 
-      {/* Main card */}
-      <motion.div
+export default function EntryCard({
+  entry,
+  index,
+  authorAvatar = "/avatar.jpg",
+  authorName = "Lâm Huệ Trung",
+  onEdit,
+  onDelete,
+  onPin,
+  onViewDetail,
+}: Props) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const m = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.positive;
+
+  const formatDate = (d: string) => {
+    try {
+      const dateObj = new Date(d + "T00:00:00");
+      return dateObj.toLocaleDateString("vi-VN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return d;
+    }
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(entry.content);
+    setShowMenu(false);
+  };
+
+  const images = Array.isArray(entry.images)
+    ? entry.images.filter((img) => typeof img === "string" && img.trim().length > 0)
+    : typeof entry.images === "string" && (entry.images as string).trim().length > 0
+      ? [entry.images]
+      : [];
+  const replyCount = (entry.replies || []).length;
+
+  const handleOpenPhoto = (e: React.MouseEvent, imgIndex: number) => {
+    e.stopPropagation();
+    setLightboxIndex(imgIndex);
+  };
+
+  return (
+    <>
+      <motion.article
         layout
-        drag="x"
-        dragControls={dragControls}
-        dragConstraints={{ left: -160, right: 0 }}
-        dragElastic={{ left: 0.3, right: 0 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.x < -60) setSwiped(true);
-          else setSwiped(false);
-        }}
-        style={{ x: dragX }}
-        initial={{ opacity: 0, y: 24, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{
-          type: "spring",
-          ...springConfig[entry.mood],
-          delay: Math.min(index * 0.04, 0.4),
-        }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => onViewDetail(entry)}
-        className="relative bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[20px] overflow-hidden cursor-pointer select-none min-w-0"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.25) }}
+        className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm overflow-hidden"
       >
-        {/* Left accent bar */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-1.5"
-          style={{
-            background: `linear-gradient(to bottom, ${m.hex}, ${m.hex}88)`,
-          }}
-        />
+        {/* 1. Facebook Post Header */}
+        <div className="p-3 sm:p-4 pb-2 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <img
+              src={authorAvatar || "/avatar.jpg"}
+              onError={(e) => {
+                e.currentTarget.src = "/avatar.jpg";
+              }}
+              alt={authorName}
+              className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
+            />
 
-        <div className="pl-4 pr-4 pt-3.5 pb-3.5 space-y-2.5">
-          {/* Header row */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <motion.div
-                whileHover={{ scale: 1.15, rotate: [0, -8, 8, 0] }}
-                className={`p-1.5 rounded-xl bg-white dark:bg-slate-800 shadow-sm ${m.color} shrink-0`}
-                style={{ boxShadow: `0 2px 8px ${m.hex}22` }}
-              >
-                <Icon path={m.icon} size={0.8} />
-              </motion.div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[11px] font-bold text-slate-800 dark:text-white block truncate">
-                  {formatDate(entry.date)}
+            <div className="min-w-0 flex-1">
+              {/* Top row: Name + Feeling */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm font-bold text-slate-900 dark:text-white hover:underline cursor-pointer">
+                  {authorName}
                 </span>
-                <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-medium">
-                  {entry.location && (
-                    <span className="flex items-center gap-0.5 truncate">
-                      <Icon path={mdiMapMarker} size={0.45} />
-                      {entry.location}
+
+                {entry.mood && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                    đang cảm thấy{" "}
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {m.emoji} {m.label}
                     </span>
-                  )}
-                  {entry.pinned && (
-                    <span className="flex items-center gap-0.5 text-amber-500 font-bold">
-                      <Icon path={mdiPin} size={0.45} />
-                      Ghim
+                  </span>
+                )}
+              </div>
+
+              {/* Sub row: Date + Privacy icon + Pinned badge + Location */}
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 font-normal mt-0.5 flex-wrap">
+                <span>{formatDate(entry.date)}</span>
+                <span>·</span>
+                <span title="Công khai">
+                  <Icon path={mdiEarth} size={0.55} className="inline" />
+                </span>
+
+                {entry.location && (
+                  <>
+                    <span>·</span>
+                    <span className="flex items-center gap-0.5 text-slate-500 dark:text-slate-400 font-medium truncate max-w-[140px]">
+                      <Icon path={mdiMapMarker} size={0.5} className="text-rose-500 shrink-0" />
+                      <span className="truncate">{entry.location}</span>
                     </span>
-                  )}
-                </div>
+                  </>
+                )}
+
+                {entry.pinned && (
+                  <span className="inline-flex items-center gap-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.2 rounded">
+                    <Icon path={mdiPin} size={0.45} />
+                    Đã ghim
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Content */}
-          <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium whitespace-pre-wrap break-words">
-            {snippet}
-          </p>
+          {/* Three Dots Menu Button */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
+              title="Tùy chọn bài viết"
+            >
+              <Icon path={mdiDotsHorizontal} size={0.85} />
+            </button>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between gap-2 pt-0.5">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              {(entry.tags || []).slice(0, 3).map((t, i) => (
-                <span
-                  key={i}
-                  className="text-[8px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full truncate"
-                >
-                  #{t}
-                </span>
-              ))}
-              {(entry.tags || []).length > 3 && (
-                <span className="text-[8px] font-bold text-slate-400">
-                  +{entry.tags.length - 3}
-                </span>
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-9 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-1.5 z-50 space-y-0.5 select-none"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onPin(entry.id);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Icon path={entry.pinned ? mdiPinOff : mdiPin} size={0.7} className="text-amber-500" />
+                      <span>{entry.pinned ? "Bỏ ghim bài viết" : "Ghim bài viết"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Icon path={mdiContentCopy} size={0.7} className="text-indigo-500" />
+                      <span>Sao chép nội dung</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onEdit(entry);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Icon path={mdiPencil} size={0.7} className="text-blue-500" />
+                      <span>Chỉnh sửa bài viết</span>
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDelete(entry.id);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Icon path={mdiDeleteOutline} size={0.7} />
+                      <span>Xóa bài viết</span>
+                    </button>
+                  </motion.div>
+                </>
               )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {(entry.replies || []).length > 0 && (
-                <span className="flex items-center gap-0.5 text-[9px] font-bold text-cyan-500">
-                  <Icon path={mdiCommentTextOutline} size={0.5} />
-                  {entry.replies!.length}
-                </span>
-              )}
-            </div>
+            </AnimatePresence>
           </div>
         </div>
-      </motion.div>
 
-      {/* Long-press context menu */}
-      <AnimatePresence>
-        {showMenu && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50"
-            onClick={() => setShowMenu(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 rounded-[20px] shadow-2xl border border-slate-100 dark:border-slate-700 p-2 min-w-[200px]"
-            >
-              {[
-                { icon: mdiContentCopy, label: "Sao chép nội dung", action: handleCopy },
-                { icon: mdiShareVariant, label: "Chia sẻ", action: () => {} },
-                { icon: entry.pinned ? mdiPinOff : mdiPin, label: entry.pinned ? "Bỏ ghim" : "Ghim lên đầu", action: () => onPin(entry.id) },
-                { icon: mdiPencil, label: "Sửa", action: () => onEdit(entry) },
-                { icon: mdiDeleteOutline, label: "Xóa", action: () => onDelete(entry.id) },
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => { item.action(); setShowMenu(false); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                >
-                  <Icon path={item.icon} size={0.667} className="text-slate-400" />
-                  {item.label}
-                </button>
-              ))}
-            </motion.div>
-          </motion.div>
+        {/* 2. Text Content */}
+        <div
+          className="px-3 sm:px-4 pb-3 cursor-pointer"
+          onClick={() => onViewDetail(entry)}
+        >
+          <p className="text-[15px] text-slate-900 dark:text-slate-100 leading-relaxed whitespace-pre-wrap break-words">
+            {entry.content}
+          </p>
+        </div>
+
+        {/* 3. Photo Grid Gallery with Thumbnail + Lightbox Trigger */}
+        {images.length > 0 && (
+          <div className="mb-2 select-none">
+            {images.length === 1 && (
+              <div className="max-h-[480px] overflow-hidden">
+                <FeedImageItem
+                  src={images[0]}
+                  alt="Ảnh bài viết"
+                  className="w-full max-h-[480px]"
+                  onClick={(e) => handleOpenPhoto(e, 0)}
+                />
+              </div>
+            )}
+
+            {images.length === 2 && (
+              <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-900">
+                {images.map((imgUrl, i) => (
+                  <FeedImageItem
+                    key={i}
+                    src={imgUrl}
+                    alt={`Ảnh ${i + 1}`}
+                    className="aspect-square"
+                    onClick={(e) => handleOpenPhoto(e, i)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {images.length === 3 && (
+              <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-900">
+                <FeedImageItem
+                  src={images[0]}
+                  alt="Ảnh 1"
+                  className="col-span-2 aspect-[4/3]"
+                  onClick={(e) => handleOpenPhoto(e, 0)}
+                />
+                <div className="flex flex-col gap-1">
+                  <FeedImageItem
+                    src={images[1]}
+                    alt="Ảnh 2"
+                    className="flex-1 aspect-square"
+                    onClick={(e) => handleOpenPhoto(e, 1)}
+                  />
+                  <FeedImageItem
+                    src={images[2]}
+                    alt="Ảnh 3"
+                    className="flex-1 aspect-square"
+                    onClick={(e) => handleOpenPhoto(e, 2)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {images.length >= 4 && (
+              <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-900">
+                {images.slice(0, 4).map((imgUrl, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-square overflow-hidden cursor-pointer"
+                    onClick={(e) => handleOpenPhoto(e, i)}
+                  >
+                    <FeedImageItem
+                      src={imgUrl}
+                      alt={`Ảnh ${i + 1}`}
+                      className="w-full h-full"
+                    />
+                    {i === 3 && images.length > 4 && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-bold text-2xl hover:bg-black/50 transition-colors">
+                        +{images.length - 4}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
-      </AnimatePresence>
-    </div>
+
+        {/* 4. Tags List */}
+        {entry.tags && entry.tags.length > 0 && (
+          <div className="px-3 sm:px-4 pb-2 flex items-center gap-1.5 flex-wrap">
+            {entry.tags.map((t, idx) => (
+              <span
+                key={idx}
+                className="text-xs font-semibold text-[#1877F2] hover:underline cursor-pointer"
+              >
+                #{t}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* 5. Metrics row */}
+        <div className="px-3 sm:px-4 py-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700/60">
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-[9px]">
+              <Icon path={mdiThumbUp} size={0.5} />
+            </span>
+            <span>{liked ? 1 : 0}</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onViewDetail(entry)}
+              className="hover:underline cursor-pointer"
+            >
+              {replyCount > 0 ? `${replyCount} bình luận` : "Chưa có bình luận"}
+            </button>
+            <span>·</span>
+            <span>Chia sẻ</span>
+          </div>
+        </div>
+
+        {/* 6. Action Buttons Bar (Like / Comment / Share) */}
+        <div className="px-2 py-1 border-t border-slate-100 dark:border-slate-700/60 grid grid-cols-3 gap-1">
+          <button
+            type="button"
+            onClick={() => setLiked(!liked)}
+            className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/60 active:scale-95 ${
+              liked
+                ? "text-[#1877F2]"
+                : "text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            <Icon
+              path={liked ? mdiThumbUp : mdiThumbUpOutline}
+              size={0.75}
+              className={liked ? "scale-110" : ""}
+            />
+            <span>Thích</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onViewDetail(entry)}
+            className="py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 active:scale-95 transition-all cursor-pointer"
+          >
+            <Icon path={mdiCommentOutline} size={0.75} />
+            <span>Bình luận</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 active:scale-95 transition-all cursor-pointer"
+          >
+            <Icon path={mdiShareOutline} size={0.75} />
+            <span>Chia sẻ</span>
+          </button>
+        </div>
+      </motion.article>
+
+      {/* Lightbox Modal */}
+      {lightboxIndex !== null && (
+        <PhotoLightboxModal
+          isOpen={lightboxIndex !== null}
+          images={images}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          title={`Bài viết ngày ${formatDate(entry.date)}`}
+        />
+      )}
+    </>
   );
 }
