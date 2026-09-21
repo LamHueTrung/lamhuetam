@@ -43,12 +43,16 @@ import {
   mdiBookOpenVariant,
   mdiChartTimelineVariant,
   mdiCreation,
+  mdiDatabaseSync,
+  mdiShieldCheck,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { UserProfile, CustomProfileField } from "../types";
 import CacheManagerSection from "./CacheManagerSection";
 import { uploadAvatar } from "../services/storageService";
+import { backupDataToMongoDB } from "../services/mongoBackupService";
+import SOCNOCLabModal from "./SOCNOCLabModal";
 
 interface UserProfileViewProps {
   profile: UserProfile;
@@ -69,6 +73,39 @@ export default function UserProfileView({
 }: UserProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSOCNOCModalOpen, setIsSOCNOCModalOpen] = useState(false);
+  const [isBackingUpMongo, setIsBackingUpMongo] = useState(false);
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => {
+    try {
+      const snap = localStorage.getItem("last_mongodb_backup_snapshot");
+      return snap ? JSON.parse(snap).timestamp : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleBackupToMongo = async () => {
+    setIsBackingUpMongo(true);
+    const toastId = toast.loading(
+      "Đang lấy dữ liệu từ PostgreSQL và sao lưu sang MongoDB...",
+    );
+    try {
+      const res = await backupDataToMongoDB();
+      if (res.success) {
+        setLastBackupTime(res.timestamp);
+        toast.success(
+          `Sao lưu hoàn tất! (${res.collectionsBackedUp.transactions} giao dịch, ${res.collectionsBackedUp.diary} nhật ký)`,
+          { id: toastId, duration: 4000 },
+        );
+      } else {
+        toast.error(res.message, { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Lỗi khi sao lưu dữ liệu", { id: toastId });
+    } finally {
+      setIsBackingUpMongo(false);
+    }
+  };
 
   // Form states
   const [fullName, setFullName] = useState(profile.fullName || "");
@@ -1994,6 +2031,122 @@ export default function UserProfileView({
         </div>
         */}
 
+        {/* 3.1.1: Quản Trị Dữ Liệu & Sao Lưu MongoDB */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+          <div
+            onClick={() => toggleSection("system_backup")}
+            className={`flex items-center justify-between pb-3 ${
+              openSection !== "system_backup"
+                ? ""
+                : "border-b border-slate-100 dark:border-slate-800"
+            } cursor-pointer select-none`}
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                <Icon path={mdiDatabaseSync} size={0.9} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Sao Lưu</span>
+                  <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+                    Dự phòng an toàn
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Lấy dữ liệu từ Supabase PostgreSQL và sao lưu dự phòng sang
+                  MongoDB
+                </p>
+              </div>
+            </div>
+            <Icon
+              path={
+                openSection === "system_backup"
+                  ? mdiChevronDown
+                  : mdiChevronRight
+              }
+              size={0.9}
+              className="text-slate-400"
+            />
+          </div>
+
+          <AnimatePresence>
+            {openSection === "system_backup" && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden space-y-4 pt-2"
+              >
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+                  <div className="text-xs text-slate-600 dark:text-slate-300">
+                    Trạng thái:{" "}
+                    <b className="text-emerald-600 dark:text-emerald-400">
+                      PostgreSQL (Primary)
+                    </b>{" "}
+                    ➔ MongoDB (Cold Standby)
+                  </div>
+                  {lastBackupTime && (
+                    <div className="text-[11px] text-slate-400">
+                      Lần sao lưu gần nhất:{" "}
+                      {new Date(lastBackupTime).toLocaleString("vi-VN")}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleBackupToMongo}
+                    disabled={isBackingUpMongo}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    <Icon
+                      path={mdiDatabaseSync}
+                      size={0.7}
+                      className={isBackingUpMongo ? "animate-spin" : ""}
+                    />
+                    <span>
+                      {isBackingUpMongo
+                        ? "Đang xuất snapshot & sao lưu..."
+                        : "Sao Lưu Dữ Liệu Về MongoDB"}
+                    </span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* 3.1.2: Phòng Lab Giám Sát SOC - NOC */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-cyan-500/10 via-emerald-500/10 to-blue-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 shrink-0">
+                <Icon path={mdiShieldCheck} size={1} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Phòng Lab SOC - NOC
+                  </h3>
+                  <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Sẵn sàng
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Đo lường độ trễ mạng Database, kiểm tra Audit Logs và an ninh phân quyền RLS
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigateToTab?.(8)}
+              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 dark:from-slate-800 dark:to-slate-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <span>Mở Console Lab</span>
+            </button>
+          </div>
+        </div>
+
         {/* 3.2: Quản lý Bộ nhớ đệm & Dung lượng */}
         <CacheManagerSection
           isOpen={openSection === "system_cache"}
@@ -2096,6 +2249,12 @@ export default function UserProfileView({
           </button>
         )}
       </div>
+
+      {/* SOC-NOC Lab Modal */}
+      <SOCNOCLabModal
+        isOpen={isSOCNOCModalOpen}
+        onClose={() => setIsSOCNOCModalOpen(false)}
+      />
     </div>
   );
 }

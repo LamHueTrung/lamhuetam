@@ -86,6 +86,48 @@ export default defineConfig(() => {
               },
             },
             {
+              urlPattern: /^https:\/\/[a-c]\.tile\.openstreetmap\.org\/.*\.png/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "osm-tiles",
+                expiration: {
+                  maxEntries: 1000,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 ngày (~25MB)
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/.*\.basemaps\.cartocdn\.com\/.*\/.*\/.*\.png/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "carto-tiles",
+                expiration: {
+                  maxEntries: 800,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/unpkg\.com\/leaflet@.*\/dist\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "leaflet-assets",
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
               urlPattern:
                 /^https:\/\/maps\.vietmap\.vn\/maps\/tiles\/(tm|st)\/.*\.png/,
               handler: "CacheFirst",

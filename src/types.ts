@@ -11,6 +11,7 @@ export interface Transaction {
   isCreditCardPaid?: boolean;
   creditCardPaidDate?: string;
   creditCardDueDate?: string;
+  receiptUrl?: string;
 }
 
 export interface Budget {

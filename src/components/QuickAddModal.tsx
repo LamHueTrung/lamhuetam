@@ -14,6 +14,9 @@ import {
   mdiCheck,
   mdiClose,
   mdiInformationOutline,
+  mdiCamera,
+  mdiPaperclip,
+  mdiLoading,
 } from "@mdi/js";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence, useDragControls } from "motion/react";
@@ -21,6 +24,7 @@ import { Transaction, Category } from "../types";
 import { iconMap } from "../lib/iconMap";
 import { getLocalDateString } from "../utils/date";
 import { calcCreditCardDueDate } from "../lib/debtUtils";
+import { uploadReceiptImage } from "../services/supabaseDataService";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -55,8 +59,26 @@ export default function QuickAddModal({
   const suggestTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
-  const dragControls = useDragControls();
   const [showKeypad, setShowKeypad] = useState(false);
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const receiptFileRef = useRef<HTMLInputElement>(null);
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingReceipt(true);
+    const toastId = toast.loading("Đang tải ảnh hóa đơn/chứng từ lên Supabase...");
+    try {
+      const url = await uploadReceiptImage(file);
+      setReceiptUrl(url);
+      toast.success("Đã đính kèm ảnh hóa đơn thành công!", { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message || "Lỗi tải ảnh hóa đơn", { id: toastId });
+    } finally {
+      setIsUploadingReceipt(false);
+    }
+  };
 
   const handleKeypadPress = useCallback((key: string) => {
     setAmountStr((prev) => {
@@ -228,12 +250,14 @@ export default function QuickAddModal({
       wallet: wallet || "Ngân hàng",
       isCreditCardPaid: isCreditCard ? false : undefined,
       creditCardDueDate,
+      receiptUrl: receiptUrl || undefined,
     });
 
     // Reset Form
     setAmountStr("");
     setDescription("");
     setSelectedDate(getLocalDateString());
+    setReceiptUrl(null);
     onClose();
   };
 
@@ -538,6 +562,44 @@ export default function QuickAddModal({
                         </strong>{" "}
                         (Trước ngày sao kê {statementDay} hàng tháng 1 ngày).
                       </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* RECEIPT ATTACHMENT SECTION */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Hóa đơn / Chứng từ thanh toán
+                    </label>
+                    <input
+                      type="file"
+                      ref={receiptFileRef}
+                      onChange={handleReceiptUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => receiptFileRef.current?.click()}
+                      disabled={isUploadingReceipt}
+                      className="text-xs text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                    >
+                      <Icon path={isUploadingReceipt ? mdiLoading : mdiCamera} size={0.7} className={isUploadingReceipt ? 'animate-spin' : ''} />
+                      <span>{receiptUrl ? 'Đổi ảnh' : 'Chụp / Tải ảnh'}</span>
+                    </button>
+                  </div>
+
+                  {receiptUrl && (
+                    <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 max-h-36 bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
+                      <img src={receiptUrl} alt="Hóa đơn" className="object-cover w-full h-36" />
+                      <button
+                        type="button"
+                        onClick={() => setReceiptUrl(null)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/70 text-white hover:bg-slate-900 transition-colors"
+                      >
+                        <Icon path={mdiClose} size={0.6} />
+                      </button>
                     </div>
                   )}
                 </div>

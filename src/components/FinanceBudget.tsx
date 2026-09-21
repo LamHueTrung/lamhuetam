@@ -565,7 +565,9 @@ export default function FinanceBudget({
   const handleRunDebtOptimizer = useCallback(
     async (strategyToUse: "avalanche" | "snowball" = debtStrategy) => {
       if (!navigator.onLine) {
-        toast.error("Vui lòng kết nối Internet để sử dụng tính năng tối ưu trả nợ AI.");
+        toast.error(
+          "Vui lòng kết nối Internet để sử dụng tính năng tối ưu trả nợ AI.",
+        );
         return;
       }
 
@@ -657,7 +659,11 @@ export default function FinanceBudget({
           const nextUnpaid = d.installments?.find(
             (i) => i.status === "pending" || i.status === "partial",
           );
-          const debtType = d.type || (d.installments && d.installments.length > 0 ? "installment" : "credit_card");
+          const debtType =
+            d.type ||
+            (d.installments && d.installments.length > 0
+              ? "installment"
+              : "credit_card");
 
           return {
             id: d.id,
@@ -671,9 +677,14 @@ export default function FinanceBudget({
                   ? 0.15
                   : 0.0,
             type: debtType as "installment" | "credit_card" | "friend",
-            due_date: nextUnpaid?.dueDate || (d.paymentDay ? `2026-09-${String(d.paymentDay).padStart(2, "0")}` : null),
+            due_date:
+              nextUnpaid?.dueDate ||
+              (d.paymentDay
+                ? `2026-09-${String(d.paymentDay).padStart(2, "0")}`
+                : null),
             min_payment: d.monthlyPayment || null,
-            installment_amount: d.monthlyPayment || (nextUnpaid ? nextUnpaid.amount : null),
+            installment_amount:
+              d.monthlyPayment || (nextUnpaid ? nextUnpaid.amount : null),
             installments: (d.installments || []).map((inst) => ({
               index: inst.index,
               dueDate: inst.dueDate,
@@ -1381,23 +1392,26 @@ export default function FinanceBudget({
 
   const renderDebtDashboard = () => (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
-            QUẢN LÝ NỢ
-          </span>
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
+            Quản Lý Nợ & Trả Góp
+          </h2>
+          <p className="text-[11px] text-slate-400">
+            Theo dõi dư nợ, tiến độ các kỳ trả góp và thẻ tín dụng
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => handleRunDebtOptimizer()}
             disabled={isOptimizingDebt}
-            className="text-white font-bold text-xs px-3.5 py-2.5 rounded-full hover:opacity-95 transition-all cursor-pointer shadow-sm flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
+            className="text-white font-bold text-xs px-3.5 py-2 rounded-xl hover:opacity-95 transition-all cursor-pointer shadow-sm flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
             title="Tối ưu hóa phân bổ dòng tiền trả nợ bằng thuật toán AI"
           >
             <Icon
               path={isOptimizingDebt ? mdiLoading : mdiCreation}
-              size={0.75}
+              size={0.7}
               className={isOptimizingDebt ? "animate-spin" : ""}
             />
             <span>{isOptimizingDebt ? "Đang tính..." : "Gợi ý trả nợ AI"}</span>
@@ -1407,9 +1421,9 @@ export default function FinanceBudget({
               resetDebtForm();
               setShowAddForm(true);
             }}
-            className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs px-3.5 py-2 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            <Icon path={mdiPlus} size={0.875} />
+            <Icon path={mdiPlus} size={0.7} />
             <span>Thêm nợ</span>
           </button>
         </div>
@@ -1722,29 +1736,29 @@ export default function FinanceBudget({
 
   const renderSalary = () => (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
-            DÒNG TIỀN
-          </span>
-          {/* <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
-            Quản Lý Lương
-          </h1> */}
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
+            Cấu Hình & Thu Nhập Lương
+          </h2>
+          <p className="text-[11px] text-slate-400">
+            Theo dõi lương Gross/Net, ngày nhận lương và số ngày nghỉ phép
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={() => setShowSalary((s) => !s)}
-            className="p-2.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+            className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer shadow-2xs"
             title={showSalary ? "Ẩn số tiền" : "Hiển thị số tiền"}
           >
-            <Icon path={showSalary ? mdiEye : mdiEyeOff} size={0.875} />
+            <Icon path={showSalary ? mdiEye : mdiEyeOff} size={0.7} />
           </button>
           {!salaryEdit && (
             <button
               onClick={startEditSalary}
-              className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold text-xs px-4 py-2.5 rounded-full hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+              className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs px-3.5 py-2 rounded-xl shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <Icon path={mdiPencil} size={0.875} />
+              <Icon path={mdiPencil} size={0.7} />
               <span>Cấu hình</span>
             </button>
           )}
@@ -2082,22 +2096,29 @@ export default function FinanceBudget({
     </div>
   );
 
-  const renderFixed = () => (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
-            CHI TIÊU CỐ ĐỊNH
-          </span>
-          {/* <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">Task Chi Tiêu</h1> */}
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="month"
-            value={fixedMonth}
-            onChange={(e) => setFixedMonth(e.target.value)}
-            className="bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-2 py-1.5 text-[10px] font-bold outline-none dark:text-white"
-          />
+  const renderFixed = () => {
+    const [fYear, fMon] = fixedMonth.split("-");
+    const displayMonthText = fYear && fMon ? `Tháng ${fMon}/${fYear}` : fixedMonth;
+
+    return (
+      <div className="space-y-4">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Custom Pill Month Picker */}
+          <label className="relative flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors cursor-pointer group shrink-0">
+            <Icon path={mdiCalendarMonth} size={0.7} className="text-rose-500 shrink-0" />
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 select-none">
+              {displayMonthText}
+            </span>
+            <input
+              type="month"
+              value={fixedMonth}
+              onChange={(e) => setFixedMonth(e.target.value)}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            />
+          </label>
+
+          {/* Add Category Button */}
           <button
             onClick={() => {
               setShowCatForm(true);
@@ -2106,15 +2127,15 @@ export default function FinanceBudget({
               setCatIcon("cash");
               setCatColor("slate");
             }}
-            title="Thêm danh mục"
-            className="bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-bold p-2.5 rounded-xl hover:opacity-90 cursor-pointer flex items-center justify-center"
+            title="Thêm danh mục chi phí"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs rounded-2xl shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
           >
-            <Icon path={mdiPlus} size={0.75} />
+            <Icon path={mdiPlus} size={0.7} />
+            <span>Thêm mục</span>
           </button>
         </div>
-      </div>
 
-      {/* Total summary */}
+        {/* Total summary */}
       <div className="bg-gradient-to-r from-rose-500 via-pink-600 to-fuchsia-600 rounded-[24px] p-4 text-white flex items-center justify-between shadow-lg shadow-rose-200/60">
         <div>
           <span className="text-[9px] font-bold uppercase opacity-80 block">
@@ -2483,7 +2504,8 @@ export default function FinanceBudget({
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER OPTIMIZER (TIẾT KIỆM & TỐI ƯU CHI TIÊU)
@@ -2932,7 +2954,11 @@ export default function FinanceBudget({
             onClick={onBack}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer active:scale-95"
           >
-            <Icon path={mdiArrowLeft} size={0.65} className="text-slate-500 dark:text-slate-400" />
+            <Icon
+              path={mdiArrowLeft}
+              size={0.65}
+              className="text-slate-500 dark:text-slate-400"
+            />
             <span>Quay lại</span>
           </button>
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">

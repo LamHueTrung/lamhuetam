@@ -22,6 +22,7 @@ import FinanceBudget from "./components/FinanceBudget";
 import CategoryManager from "./components/CategoryManager";
 import DiaryView from "./components/DiaryView";
 import UserProfileView from "./components/UserProfileView";
+import SOCNOCLabPage from "./components/SOCNOCLabPage";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import SyncStatus from "./components/SyncStatus";
@@ -530,6 +531,9 @@ function AppContent() {
                   needRefresh={needRefresh}
                   updateServiceWorker={updateServiceWorker}
                 />
+              )}
+              {currentTab === 8 && (
+                <SOCNOCLabPage onBack={() => setCurrentTab(7)} />
               )}
             </motion.div>
           </AnimatePresence>
