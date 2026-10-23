@@ -406,14 +406,14 @@ export default function NewsfeedComposer({
           </div>
 
           {/* Location Chip */}
-          {location && (
+          {(location || (lat !== null && lng !== null)) && (
             <div className="flex items-center justify-between p-2.5 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-100 dark:border-rose-900/40">
               <div className="flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 min-w-0">
                 <Icon path={mdiMapMarker} size={0.7} className="shrink-0 text-rose-500" />
-                <span className="truncate">tại {location}</span>
+                <span className="truncate">{location ? `tại ${location}` : "Vị trí đã ghim"}</span>
                 {lat && lng && (
-                  <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
-                    ({lat.toFixed(2)}, {lng.toFixed(2)})
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono hidden sm:inline bg-white/80 dark:bg-slate-800/80 px-2 py-0.5 rounded-md border border-rose-200/50 dark:border-rose-900/50">
+                    {lat.toFixed(4)}, {lng.toFixed(4)}
                   </span>
                 )}
               </div>
@@ -421,7 +421,7 @@ export default function NewsfeedComposer({
                 <button
                   type="button"
                   onClick={() => setIsLocationModalOpen(true)}
-                  className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
                 >
                   Đổi
                 </button>
@@ -432,7 +432,7 @@ export default function NewsfeedComposer({
                     setLat(null);
                     setLng(null);
                   }}
-                  className="text-slate-400 hover:text-rose-600 cursor-pointer"
+                  className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
                 >
                   <Icon path={mdiClose} size={0.6} />
                 </button>
@@ -663,11 +663,16 @@ export default function NewsfeedComposer({
         isOpen={isLocationModalOpen}
         initialLat={lat}
         initialLng={lng}
+        initialLocationName={location}
         onClose={() => setIsLocationModalOpen(false)}
-        onSelectLocation={(selectedLat, selectedLng) => {
+        onSelectLocation={(selectedLat, selectedLng, address) => {
           setLat(selectedLat);
           setLng(selectedLng);
-          if (!location) setLocation(`Tọa độ [${selectedLat}, ${selectedLng}]`);
+          if (address) {
+            setLocation(address);
+          } else if (!location) {
+            setLocation(`Tọa độ [${selectedLat}, ${selectedLng}]`);
+          }
         }}
       />
     </div>

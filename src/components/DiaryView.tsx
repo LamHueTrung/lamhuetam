@@ -417,9 +417,25 @@ function LeafletMap({
       <div ref={mapRef} className="w-full h-full" />
 
       {/* 2. Top Floating Search Box & Action Controls */}
-      <div className="fixed top-3 pt-safe left-0 right-0 z-[1000] px-3.5 flex flex-col gap-2 max-w-md mx-auto pointer-events-none">
-        {/* Row 1: Search + Add Location Button */}
+      <div className="fixed top-3 pt-safe left-0 right-0 z-[1000] px-3.5 flex flex-col gap-2 max-w-xl mx-auto pointer-events-none">
+        {/* Row 1: Back to Feed + Search + Add Location Button */}
         <div className="flex items-center gap-2 w-full">
+          {/* Nút quay lại màn hình Bản tin */}
+          <button
+            type="button"
+            onClick={() => onSwitchViewMode?.("feed")}
+            title="Quay lại Bản tin"
+            className="pointer-events-auto h-10 px-3 sm:px-3.5 rounded-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md shadow-lg border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 font-extrabold text-xs flex items-center gap-1.5 shrink-0 transition-all active:scale-95 cursor-pointer"
+          >
+            <Icon
+              path={mdiArrowLeft}
+              size={0.75}
+              className="text-blue-600 dark:text-blue-400"
+            />
+            <span className="hidden sm:inline">Bản tin</span>
+          </button>
+
+          {/* Search Box */}
           <div className="pointer-events-auto flex-1 flex items-center gap-2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-full px-3.5 py-2.5 shadow-lg border border-slate-200/80 dark:border-slate-700/80">
             <Icon
               path={mdiMagnify}
@@ -450,7 +466,7 @@ function LeafletMap({
             className="pointer-events-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-full shadow-lg flex items-center gap-1 shrink-0 transition-all active:scale-95 cursor-pointer"
           >
             <Icon path={mdiPlus} size={0.65} />
-            <span>Viết bài</span>
+            <span className="hidden xs:inline">Viết bài</span>
           </button>
         </div>
 
@@ -659,7 +675,7 @@ function LeafletMap({
         initialLat={myCoords?.lat || (validEntries[0]?.lat ?? 9.9482)}
         initialLng={myCoords?.lng || (validEntries[0]?.lng ?? 106.3356)}
         onClose={() => setIsLocationPickerOpen(false)}
-        onSelectLocation={(selectedLat, selectedLng) => {
+        onSelectLocation={(selectedLat, selectedLng, address) => {
           setMyCoords({ lat: selectedLat, lng: selectedLng });
           if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo([selectedLat, selectedLng], 16, {
@@ -667,7 +683,9 @@ function LeafletMap({
             });
           }
           toast.success(
-            `Đã chọn tọa độ: [${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}]`,
+            address
+              ? `Đã chọn: ${address}`
+              : `Đã chọn tọa độ: [${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}]`,
           );
         }}
       />
