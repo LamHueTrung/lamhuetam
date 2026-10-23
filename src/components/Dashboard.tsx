@@ -174,9 +174,9 @@ export default function Dashboard({
     teal: "#0d9488",
     emerald: "#10b981",
     slate: "#64748b",
-    indigo: "#6366f1",
+    indigo: "#1f3fd6",
     rose: "#f43f5e",
-    purple: "#8b5cf6",
+    purple: "#38bdf8",
     orange: "#f97316",
   };
 
@@ -515,7 +515,7 @@ export default function Dashboard({
         badgeLabel = `${percentChange}% (Giảm mạnh)`;
       } else if (percentChange <= -5) {
         status = "decrease";
-        gradient = "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)"; // Vivid Teal
+        gradient = "linear-gradient(135deg, #5b8cff 0%, #0f766e 100%)"; // Vivid Teal
         glowColor = "rgba(13, 148, 136, 0.5)";
         badgeBg = "bg-teal-950/60 text-teal-100 border border-teal-300/40";
         badgeLabel = `${percentChange}% (Tiết kiệm)`;
@@ -1096,10 +1096,10 @@ export default function Dashboard({
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0%" stopColor="#818cf8" stopOpacity={0.35} />
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
                     <stop
                       offset="100%"
-                      stopColor="#818cf8"
+                      stopColor="#38bdf8"
                       stopOpacity={0.05}
                     />
                   </linearGradient>
@@ -1110,25 +1110,25 @@ export default function Dashboard({
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.0} />
+                    <stop offset="0%" stopColor="#2f5bff" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#2f5bff" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#f1f5f9"
+                  stroke="#d9defb"
                   opacity={0.6}
                 />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatChartDate}
-                  tick={{ fontSize: 9, fill: "#94a3b8" }}
+                  tick={{ fontSize: 9, fill: "#8089c0" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   width={34}
-                  tick={{ fontSize: 8.5, fill: "#94a3b8" }}
+                  tick={{ fontSize: 8.5, fill: "#8089c0" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) => {
@@ -1143,8 +1143,8 @@ export default function Dashboard({
                 <Tooltip
                   contentStyle={{
                     borderRadius: 14,
-                    border: "1px solid #e0e7ff",
-                    boxShadow: "0 8px 20px rgba(99,102,241,0.12)",
+                    border: "1px solid #c9d0fb",
+                    boxShadow: "0 8px 20px rgba(47,91,255,0.14)",
                     fontSize: 10.5,
                     padding: "6px 10px",
                   }}
@@ -1166,7 +1166,7 @@ export default function Dashboard({
                 <Area
                   type="monotone"
                   dataKey="upper_bound"
-                  stroke="#818cf8"
+                  stroke="#38bdf8"
                   strokeDasharray="2 2"
                   strokeWidth={1}
                   fill="url(#fanCorridorGrad)"
@@ -1177,11 +1177,11 @@ export default function Dashboard({
                 <Area
                   type="monotone"
                   dataKey="predicted_balance"
-                  stroke="#4f46e5"
+                  stroke="#2f5bff"
                   strokeWidth={2.5}
                   fill="url(#predictedBalanceGrad)"
                   dot={false}
-                  activeDot={{ r: 4, fill: "#4f46e5" }}
+                  activeDot={{ r: 4, fill: "#2f5bff" }}
                   name="predicted_balance"
                 />
                 {/* Daily expense predicted */}
@@ -1232,13 +1232,13 @@ export default function Dashboard({
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatChartDate}
-                  tick={{ fontSize: 9, fill: "#94a3b8" }}
+                  tick={{ fontSize: 9, fill: "#8089c0" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   width={36}
-                  tick={{ fontSize: 8.5, fill: "#94a3b8" }}
+                  tick={{ fontSize: 8.5, fill: "#8089c0" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) => {
@@ -1343,11 +1343,11 @@ export default function Dashboard({
                   type="monotone"
                   dataKey="balance"
                   name="Số dư"
-                  stroke="#f59e0b"
+                  stroke="#4f8bff"
                   strokeWidth={2.5}
                   dot={{
                     r: 2.5,
-                    fill: "#f59e0b",
+                    fill: "#4f8bff",
                     stroke: "#ffffff",
                     strokeWidth: 1.5,
                   }}
@@ -1355,7 +1355,7 @@ export default function Dashboard({
                     r: 5,
                     stroke: "#ffffff",
                     strokeWidth: 2,
-                    fill: "#f59e0b",
+                    fill: "#4f8bff",
                   }}
                 />
               </ComposedChart>
@@ -1421,7 +1421,7 @@ export default function Dashboard({
                         <Tooltip
                           contentStyle={{
                             borderRadius: 12,
-                            border: "1px solid #e2e8f0",
+                            border: "1px solid #c9d0fb",
                             fontSize: 11,
                           }}
                           formatter={(value: number) => [
@@ -1535,7 +1535,7 @@ export default function Dashboard({
                         <Tooltip
                           contentStyle={{
                             borderRadius: 12,
-                            border: "1px solid #e2e8f0",
+                            border: "1px solid #c9d0fb",
                             fontSize: 11,
                           }}
                           formatter={(value: number) => [
@@ -1797,8 +1797,8 @@ export default function Dashboard({
                         x2="100%"
                         y2="0%"
                       >
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="100%" stopColor="#a855f7" />
+                        <stop offset="0%" stopColor="#2f5bff" />
+                        <stop offset="100%" stopColor="#1f3fd6" />
                       </linearGradient>
 
                       <linearGradient
@@ -1808,7 +1808,7 @@ export default function Dashboard({
                         x2="100%"
                         y2="0%"
                       >
-                        <stop offset="0%" stopColor="#94a3b8" />
+                        <stop offset="0%" stopColor="#8089c0" />
                         <stop offset="100%" stopColor="#cbd5e1" />
                       </linearGradient>
                     </defs>
@@ -1823,7 +1823,7 @@ export default function Dashboard({
                     <XAxis
                       type="number"
                       tickFormatter={(v) => formatVND(v)}
-                      tick={{ fontSize: 9, fill: "#94a3b8" }}
+                      tick={{ fontSize: 9, fill: "#8089c0" }}
                       axisLine={{ stroke: "#cbd5e1", opacity: 0.3 }}
                       tickLine={false}
                     />
@@ -1907,7 +1907,7 @@ export default function Dashboard({
                         style={{
                           fontSize: "9px",
                           fontWeight: 800,
-                          fill: "#6366f1",
+                          fill: "#2f5bff",
                         }}
                       />
                     </Bar>
@@ -1926,7 +1926,7 @@ export default function Dashboard({
                         style={{
                           fontSize: "8.5px",
                           fontWeight: 600,
-                          fill: "#94a3b8",
+                          fill: "#8089c0",
                         }}
                       />
                     </Bar>

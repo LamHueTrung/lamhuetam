@@ -986,7 +986,7 @@ export default function TetFinancialPlanner({
 
                     {/* Gradients cho Chế độ Bóc tách Stacked */}
                     <linearGradient id="salaryGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.95} />
+                      <stop offset="0%" stopColor="#2f5bff" stopOpacity={0.95} />
                       <stop offset="100%" stopColor="#0284c7" stopOpacity={0.75} />
                     </linearGradient>
                     <linearGradient id="bonusGrad" x1="0" y1="0" x2="0" y2="1">
@@ -994,8 +994,8 @@ export default function TetFinancialPlanner({
                       <stop offset="100%" stopColor="#d97706" stopOpacity={0.85} />
                     </linearGradient>
                     <linearGradient id="livingGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#7e22ce" stopOpacity={0.7} />
+                      <stop offset="0%" stopColor="#5b8cff" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#0f766e" stopOpacity={0.7} />
                     </linearGradient>
                     <linearGradient id="fixedGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#64748b" stopOpacity={0.9} />
@@ -1006,14 +1006,14 @@ export default function TetFinancialPlanner({
                       <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.85} />
                     </linearGradient>
                     <linearGradient id="holidayGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ec4899" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#be185d" stopOpacity={0.85} />
+                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#0284c7" stopOpacity={0.85} />
                     </linearGradient>
 
                     {/* Quỹ Tích Lũy Area Gradient */}
                     <linearGradient id="fundAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.0} />
+                      <stop offset="0%" stopColor="#4f8bff" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#4f8bff" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
 
@@ -1021,13 +1021,13 @@ export default function TetFinancialPlanner({
 
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }}
+                    tick={{ fontSize: 11, fill: '#8089c0', fontWeight: 600 }}
                     axisLine={false}
                     tickLine={false}
                   />
 
                   <YAxis
-                    tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
+                    tick={{ fontSize: 10, fill: '#8089c0', fontWeight: 600 }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(val) => `${Math.round(val / 1000000)}M`}
@@ -1123,13 +1123,13 @@ export default function TetFinancialPlanner({
                     type="monotone"
                     dataKey="cumulativeFund"
                     name="Quỹ tích lũy lũy kế"
-                    stroke="#fbbf24"
+                    stroke="#4f8bff"
                     strokeWidth={3.5}
-                    dot={{ fill: '#f59e0b', r: 4.5, strokeWidth: 2, stroke: '#ffffff' }}
+                    dot={{ fill: '#2f5bff', r: 4.5, strokeWidth: 2, stroke: '#ffffff' }}
                     activeDot={{ r: 7, stroke: '#ffffff', strokeWidth: 2.5 }}
                   />
 
-                  <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" opacity={0.6} />
+                  <ReferenceLine y={0} stroke="#8089c0" strokeDasharray="3 3" opacity={0.6} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>

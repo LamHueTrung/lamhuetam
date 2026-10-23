@@ -69,19 +69,19 @@ export default function Navbar({
               className="flex-1 flex flex-col items-center justify-center py-2 relative cursor-pointer group"
             >
               <div
-                className={`p-1.5 rounded-xl transition-all duration-300 ${isActive ? "bg-accent-light text-accent-primary scale-110 font-bold" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
+                className={`nav-tab-icon p-2 rounded-2xl ${isActive ? "is-active" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
               >
                 <Icon path={tab.icon} size={1.25} />
               </div>
               <span
-                className={`text-[10px] font-medium mt-0.5 transition-all ${isActive ? "text-accent-primary font-bold scale-105" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
+                className={`nav-tab-label text-[10px] font-medium mt-0.5 transition-all ${isActive ? "is-active font-bold" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`}
               >
                 {tab.label}
               </span>
               {isActive && (
                 <motion.span
                   layoutId="active-tab-indicator"
-                  className="absolute bottom-0 w-1.5 h-1.5 bg-accent-primary rounded-full"
+                  className="absolute bottom-0 w-1 h-1 bg-accent-primary rounded-full"
                 />
               )}
             </motion.button>

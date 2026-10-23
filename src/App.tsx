@@ -367,7 +367,7 @@ function AppContent() {
   // Auth loading
   if (authLoading) {
     return (
-      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
+      <div className="h-screen min-h-0 flex items-center justify-center">
         <Icon
           path={mdiLoading}
           size={2}
@@ -383,12 +383,12 @@ function AppContent() {
   }
 
   return (
-    <div className="h-screen min-h-0 bg-[#F2F2F7] dark:bg-[#1C1C1E] flex flex-col select-none overflow-hidden">
+    <div className="h-screen min-h-0 flex flex-col select-none overflow-hidden">
       {/* iOS Status Bar */}
-      <div className="w-full max-w-md mx-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/30 dark:border-slate-700/30 px-6 py-3 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 z-10">
+      <div className="ds-topbar w-full max-w-md mx-auto px-5 py-3 flex items-center justify-between text-xs font-bold text-slate-500 shrink-0 z-10">
         <button
           onClick={handleCopyFinancialMarkdown}
-          className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 px-2.5 py-1 rounded-lg transition-all text-[11px] font-bold cursor-pointer border border-slate-200/50 dark:border-slate-700 shadow-sm"
+          className="ds-chip"
           title="Sao chép toàn bộ dữ liệu tài chính (dạng Markdown)"
         >
           <Icon path={mdiContentCopy} size={0.7} />
@@ -399,7 +399,7 @@ function AppContent() {
 
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="flex items-center gap-1 text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-black cursor-pointer"
+            className="ds-chip"
             title={isDarkMode ? "Chế độ sáng" : "Chế độ tối"}
           >
             <Icon
@@ -409,7 +409,7 @@ function AppContent() {
           </button>
           <button
             onClick={logout}
-            className="flex items-center gap-1 text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md hover:bg-rose-100 transition-colors text-[10px] font-black cursor-pointer"
+            className="ds-chip danger"
             title="Đăng xuất"
           >
             <Icon path={mdiLogout} size={0.75} />
@@ -443,7 +443,7 @@ function AppContent() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -12 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"
+              className="tab-stage h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"
             >
               {currentTab === 1 && (
                 <Dashboard
@@ -553,7 +553,7 @@ function AuthRouter() {
 
   if (hasUser === null) {
     return (
-      <div className="h-screen min-h-0 bg-[#F2F2F7] flex items-center justify-center">
+      <div className="h-screen min-h-0 flex items-center justify-center">
         <Icon
           path={mdiLoading}
           size={2}

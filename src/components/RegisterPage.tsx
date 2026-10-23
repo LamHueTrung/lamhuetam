@@ -1,15 +1,24 @@
 import React, { useState } from "react";
 import { Icon } from "@mdi/react";
-import { mdiAccountPlus, mdiLoading } from "@mdi/js";
+import {
+  mdiAccountOutline,
+  mdiLockOutline,
+  mdiLockCheckOutline,
+  mdiEyeOutline,
+  mdiEyeOffOutline,
+  mdiArrowRight,
+  mdiLoading,
+} from "@mdi/js";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
-import AppLogo from "./AppLogo";
+import AuthShell from "./AuthShell";
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,72 +36,31 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="h-screen bg-[#F2F2F7] flex items-center justify-center p-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-3">
-          <div className="flex justify-center">
-            <AppLogo size={72} />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Lâm Huệ Trung</h1>
-          <p className="text-xs text-slate-400 font-medium">Khởi tạo tài khoản không gian cá nhân</p>
+    <AuthShell title="Tạo tài khoản" subtitle="Khởi tạo không gian cá nhân">
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="auth-field">
+          <span className="lead"><Icon path={mdiAccountOutline} size={1} /></span>
+          <input id="username-reg" type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Tên đăng nhập" />
         </div>
-        <div className="space-y-4">
-          <div className="relative">
-            <input
-              type="text"
-              id="username-reg"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder=" "
-              className="peer w-full px-4 pt-5 pb-2 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-[#2D5A27] focus:ring-2 focus:ring-[#2D5A27]/20 transition-all"
-            />
-            <label
-              htmlFor="username-reg"
-              className="absolute left-4 top-3.5 text-xs text-slate-400 font-medium transition-all pointer-events-none origin-[0_0] peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#2D5A27] peer-focus:scale-90 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:scale-90"
-            >
-              Tên đăng nhập
-            </label>
-          </div>
-
-          <div className="relative">
-            <input
-              type="password"
-              id="password-reg"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder=" "
-              className="peer w-full px-4 pt-5 pb-2 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-[#2D5A27] focus:ring-2 focus:ring-[#2D5A27]/20 transition-all"
-            />
-            <label
-              htmlFor="password-reg"
-              className="absolute left-4 top-3.5 text-xs text-slate-400 font-medium transition-all pointer-events-none origin-[0_0] peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#2D5A27] peer-focus:scale-90 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:scale-90"
-            >
-              Mật khẩu
-            </label>
-          </div>
-
-          <div className="relative">
-            <input
-              type="password"
-              id="confirmpassword-reg"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder=" "
-              className="peer w-full px-4 pt-5 pb-2 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-[#2D5A27] focus:ring-2 focus:ring-[#2D5A27]/20 transition-all"
-            />
-            <label
-              htmlFor="confirmpassword-reg"
-              className="absolute left-4 top-3.5 text-xs text-slate-400 font-medium transition-all pointer-events-none origin-[0_0] peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#2D5A27] peer-focus:scale-90 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:scale-90"
-            >
-              Xác nhận mật khẩu
-            </label>
-          </div>
+        <div className="auth-field">
+          <span className="lead"><Icon path={mdiLockOutline} size={1} /></span>
+          <input id="password-reg" type={showPw ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mật khẩu" />
+          <button type="button" className="trail" onClick={() => setShowPw((v) => !v)} aria-label="Hiện/ẩn mật khẩu">
+            <Icon path={showPw ? mdiEyeOutline : mdiEyeOffOutline} size={0.95} />
+          </button>
         </div>
-        <button type="submit" disabled={loading} className="w-full bg-[#2D5A27] text-white font-bold text-sm py-3.5 rounded-2xl hover:bg-[#20401C] disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2">
-          {loading ? <Icon path={mdiLoading} size={1} className="animate-spin" /> : <Icon path={mdiAccountPlus} size={1} />}
+        <div className="auth-field" style={{ marginBottom: 22 }}>
+          <span className="lead"><Icon path={mdiLockCheckOutline} size={1} /></span>
+          <input id="confirmpassword-reg" type={showPw ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Xác nhận mật khẩu" />
+        </div>
+
+        <button type="submit" disabled={loading} className="auth-submit">
           <span>{loading ? "Đang tạo..." : "Tạo tài khoản"}</span>
+          <span className="arrow">
+            <Icon path={loading ? mdiLoading : mdiArrowRight} size={0.95} className={loading ? "animate-spin" : ""} />
+          </span>
         </button>
       </form>
-    </div>
+    </AuthShell>
   );
 }
