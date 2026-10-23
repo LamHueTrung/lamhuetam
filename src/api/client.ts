@@ -62,7 +62,7 @@ async function listTransactions() {
   } catch (err: any) {
     if (isNetworkError(err)) {
       const cached = await readCache<any>(db.transactions);
-      if (cached.length) return cached;
+      return cached || [];
     }
     throw err;
   }
@@ -122,7 +122,7 @@ async function listBudgets() {
   } catch (err: any) {
     if (isNetworkError(err)) {
       const cached = await readCache<any>(db.budgets);
-      if (cached.length) return cached;
+      return cached || [];
     }
     throw err;
   }
@@ -152,7 +152,7 @@ async function listDebts() {
   } catch (err: any) {
     if (isNetworkError(err)) {
       const cached = await readCache<any>(db.debts);
-      if (cached.length) return cached;
+      return cached || [];
     }
     throw err;
   }
@@ -199,8 +199,24 @@ async function payDebtInstallments(debtId: string, installmentIndices: number[],
       if (!isNetworkError(err)) throw err;
     }
   }
+  const existing = await db.debts.get(debtId);
+  if (existing) {
+    const updated = { ...existing, _syncStatus: 'pending' };
+    if (updated.installments) {
+      updated.installments = updated.installments.map((inst: any, idx: number) => {
+        if (installmentIndices.includes(idx)) {
+          return { ...inst, isPaid: true, paidDate: date, partialAmount: partialAmounts?.[idx] };
+        }
+        return inst;
+      });
+      updated.paidInstallments = updated.installments.filter((i: any) => i.isPaid).length;
+    }
+    await db.debts.put(updated);
+    await enqueue('debts', 'update', `${BASE}/debts`, 'PUT', { debtId, installmentIndices, partialAmounts, note, date });
+    return updated;
+  }
   await enqueue('debts', 'update', `${BASE}/debts`, 'PUT', { debtId, installmentIndices, partialAmounts, note, date });
-  throw new Error('Không có kết nối mạng. Vui lòng thử lại sau.');
+  return { id: debtId, _syncStatus: 'pending' };
 }
 
 async function updateDebt(debtId: string, updateData: any) {
@@ -212,8 +228,11 @@ async function updateDebt(debtId: string, updateData: any) {
       if (!isNetworkError(err)) throw err;
     }
   }
+  const existing = await db.debts.get(debtId);
+  const updated = { ...(existing || {}), id: debtId, ...updateData, _syncStatus: 'pending' };
+  await db.debts.put(updated);
   await enqueue('debts', 'update', `${BASE}/debts`, 'PUT', { debtId, updateData });
-  throw new Error('Không có kết nối mạng. Vui lòng thử lại sau.');
+  return updated;
 }
 
 // ── Savings ────────────────────────────────────────────────
@@ -225,7 +244,7 @@ async function listSavings() {
   } catch (err: any) {
     if (isNetworkError(err)) {
       const cached = await readCache<any>(db.savings);
-      if (cached.length) return cached;
+      return cached || [];
     }
     throw err;
   }
@@ -240,8 +259,10 @@ async function updateSavings(amount: number) {
       if (!isNetworkError(err)) throw err;
     }
   }
+  const local = { id: 'default', amount, _syncStatus: 'pending' };
+  await db.savings.put(local);
   await enqueue('savings', 'update', `${BASE}/savings`, 'PUT', { amount });
-  throw new Error('Không có kết nối mạng. Vui lòng thử lại sau.');
+  return local;
 }
 
 // ── Categories ─────────────────────────────────────────────
@@ -253,7 +274,7 @@ async function listCategories() {
   } catch (err: any) {
     if (isNetworkError(err)) {
       const cached = await readCache<any>(db.categories);
-      if (cached.length) return cached;
+      return cached || [];
     }
     throw err;
   }
@@ -284,8 +305,10 @@ async function updateCategory(data: any) {
       if (!isNetworkError(err)) throw err;
     }
   }
+  const updateData = { ...data, _syncStatus: 'pending' };
+  await db.categories.put(updateData);
   await enqueue('categories', 'update', `${BASE}/categories`, 'PUT', data);
-  throw new Error('Không có kết nối mạng. Vui lòng thử lại sau.');
+  return updateData;
 }
 
 async function deleteCategory(_id: string) {
@@ -328,7 +351,6 @@ async function reorderCategories(orderedIds: string[]) {
     }
   }
   await enqueue('categories', 'update', `${BASE}/categories/reorder`, 'PUT', { orderedIds });
-  throw new Error('Không có kết nối mạng. Vui lòng thử lại sau.');
 }
 
 // ── Salary ─────────────────────────────────────────────────
@@ -423,8 +445,10 @@ async function updateFixedCategory(data: any) {
       if (!isNetworkError(err)) throw err;
     }
   }
+  const local = { ...data, _syncStatus: 'pending' };
+  await db.fixedExpenseCategories.put(local);
   await enqueue('fixedExpenseCategories', 'update', `${BASE}/fixed-expenses`, 'PUT', { ...data, entity: 'category' });
-  throw new Error('Không có kết nối mạng.');
+  return local;
 }
 
 async function deleteFixedCategory(id: string) {
@@ -470,8 +494,10 @@ async function updateFixedTask(data: any) {
       if (!isNetworkError(err)) throw err;
     }
   }
+  const local = { ...data, _syncStatus: 'pending' };
+  await db.fixedExpenseTasks.put(local);
   await enqueue('fixedExpenseTasks', 'update', `${BASE}/fixed-expenses`, 'PUT', { ...data, entity: 'task' });
-  throw new Error('Không có kết nối mạng.');
+  return local;
 }
 
 async function deleteFixedTask(id: string) {
@@ -504,7 +530,7 @@ async function listDiary(params?: { month?: string; mood?: string }) {
       if (params?.mood) {
         cached = cached.filter((e: any) => e.mood === params.mood);
       }
-      if (cached.length) return cached;
+      return cached || [];
     }
     throw err;
   }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
   mdiClose,
@@ -242,8 +243,8 @@ export default function EventModal({
 
   const daysInMonth = 31;
 
-  return (
-    <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-fadeIn select-none">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto overflow-x-hidden animate-fadeIn select-none">
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-700 my-auto"
@@ -281,7 +282,7 @@ export default function EventModal({
         {/* Form Body */}
         <form
           onSubmit={handleSubmit}
-          className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1"
+          className="p-4 sm:p-5 space-y-4 overflow-y-auto overflow-x-hidden flex-1"
         >
           {/* 1. Tên sự kiện */}
           <div>
@@ -303,7 +304,7 @@ export default function EventModal({
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               Loại sự kiện
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {(Object.keys(EVENT_TYPE_CONFIG) as CalendarEventType[]).map(
                 (key) => {
                   const cfg = EVENT_TYPE_CONFIG[key];
@@ -313,14 +314,14 @@ export default function EventModal({
                       key={key}
                       type="button"
                       onClick={() => handleEventTypeChange(key)}
-                      className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer min-w-0 ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-sm"
                           : "bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
                       }`}
                     >
-                      <span className="text-sm leading-none">{cfg.emoji}</span>
-                      <span className="truncate">{cfg.label}</span>
+                      <span className="text-sm leading-none shrink-0">{cfg.emoji}</span>
+                      <span className="truncate min-w-0">{cfg.label}</span>
                     </button>
                   );
                 },
@@ -545,13 +546,13 @@ export default function EventModal({
           </div>
 
           {/* Footer Action Buttons */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3">
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5">
             {initialEvent && onDelete ? (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={isSubmitting}
-                className="px-3.5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
                 <Icon path={mdiDeleteOutline} size={0.7} />
                 <span>Xóa sự kiện</span>
@@ -560,12 +561,12 @@ export default function EventModal({
               <div />
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-auto shrink-0">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
@@ -573,7 +574,7 @@ export default function EventModal({
               <button
                 type="submit"
                 disabled={isSubmitting || !title.trim()}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
                 {initialEvent ? "Lưu thay đổi" : "Tạo sự kiện"}
               </button>
@@ -581,6 +582,7 @@ export default function EventModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

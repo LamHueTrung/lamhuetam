@@ -112,6 +112,14 @@ export async function scheduleSync() {
     const count = await getQueueCount();
     notify(count);
   }
+
+  // Tự động đồng bộ các bản ghi offline lên Supabase (best-effort)
+  try {
+    const { syncAllLocalDataToSupabase } = await import('./supabaseDataService');
+    await syncAllLocalDataToSupabase();
+  } catch {
+    /* Supabase sync best-effort */
+  }
 }
 
 // Lắng nghe tự động đồng bộ ngay khi thiết bị có lại kết nối Internet

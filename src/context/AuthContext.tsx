@@ -23,7 +23,18 @@ function normalizeEmail(usernameOrEmail: string): string {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<any | null>(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const savedName = localStorage.getItem(USER_KEY);
+    if (token && savedName) {
+      return {
+        id: 'offline_user',
+        email: savedName.includes('@') ? savedName : `${savedName}@gmail.com`,
+        user_metadata: { username: savedName },
+      };
+    }
+    return null;
+  });
   const [username, setUsername] = useState<string | null>(() => localStorage.getItem(USER_KEY));
   const [loading, setLoading] = useState(true);
 
@@ -37,29 +48,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(USER_KEY, name);
         localStorage.setItem(TOKEN_KEY, session.access_token);
       } else {
-        // Fallback: kiểm tra token cũ nếu có
+        // Fallback: nếu offline hoặc không có session mới từ Supabase, giữ session nếu có token
         const oldToken = localStorage.getItem(TOKEN_KEY);
-        if (!oldToken) {
+        const oldName = localStorage.getItem(USER_KEY);
+        if (oldToken && oldName) {
+          setUser((prev: any) => prev || {
+            id: 'offline_user',
+            email: oldName.includes('@') ? oldName : `${oldName}@gmail.com`,
+            user_metadata: { username: oldName },
+          });
+          setUsername(oldName);
+        } else {
           setUser(null);
           setUsername(null);
         }
       }
       setLoading(false);
+    }).catch(() => {
+      // Khi offline / network fail, giữ session cũ nếu có token trong localStorage
+      const oldToken = localStorage.getItem(TOKEN_KEY);
+      const oldName = localStorage.getItem(USER_KEY);
+      if (oldToken && oldName) {
+        setUser((prev: any) => prev || {
+          id: 'offline_user',
+          email: oldName.includes('@') ? oldName : `${oldName}@gmail.com`,
+          user_metadata: { username: oldName },
+        });
+        setUsername(oldName);
+      } else {
+        setUser(null);
+        setUsername(null);
+      }
+      setLoading(false);
     });
 
     // 2. Lắng nghe thay đổi trạng thái đăng nhập
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user);
         const name = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'lamhuetrung';
         setUsername(name);
         localStorage.setItem(USER_KEY, name);
         localStorage.setItem(TOKEN_KEY, session.access_token);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
+        // CHỈ xóa khi người dùng thực sự bấm Đăng xuất
         setUser(null);
         setUsername(null);
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+      } else {
+        // Với các event khác (ví dụ token refresh fail do mất mạng), không xóa token trong localStorage
+        const oldToken = localStorage.getItem(TOKEN_KEY);
+        if (!oldToken) {
+          setUser(null);
+          setUsername(null);
+        }
       }
       setLoading(false);
     });

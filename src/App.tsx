@@ -363,44 +363,6 @@ function AppContent() {
     }
   };
 
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const target = e.target as HTMLElement;
-    if (
-      target.closest(".no-swipe") ||
-      target.closest(".leaflet-container") ||
-      target.closest(".leaflet-control") ||
-      target.closest("[drag]") ||
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest("select") ||
-      target.closest("textarea") ||
-      target.closest("a")
-    ) {
-      return;
-    }
-    setTouchStartX(e.targetTouches[0].clientX);
-    setTouchStartY(e.targetTouches[0].clientY);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null || touchStartY === null) return;
-    const diffX = touchStartX - e.changedTouches[0].clientX;
-    const diffY = touchStartY - e.changedTouches[0].clientY;
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
-      const tabSequence = [1, 2, 4, 6, 7];
-      const currentIndex = tabSequence.indexOf(currentTab);
-
-      if (diffX > 0 && currentIndex < tabSequence.length - 1)
-        setCurrentTab(tabSequence[currentIndex + 1]);
-      else if (diffX < 0 && currentIndex > 0)
-        setCurrentTab(tabSequence[currentIndex - 1]);
-    }
-    setTouchStartX(null);
-    setTouchStartY(null);
-  };
 
   // Auth loading
   if (authLoading) {
@@ -460,8 +422,6 @@ function AppContent() {
       </div>
 
       <main
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
         className="flex-1 w-full max-w-md mx-auto px-5 pt-4 min-h-0 overflow-hidden relative pb-[75px]"
       >
         {isInitialLoading ? (
@@ -569,13 +529,26 @@ function AppContent() {
 }
 
 function AuthRouter() {
-  const [hasUser, setHasUser] = useState<boolean | null>(null);
+  const [hasUser, setHasUser] = useState<boolean | null>(() => {
+    // Nếu thiết bị đang offline, mặc định sẵn sàng hiển thị LoginPage (được PWA cache)
+    if (!navigator.onLine) return true;
+    return null;
+  });
 
   useEffect(() => {
-    fetch("/.netlify/functions/auth")
+    if (!navigator.onLine) {
+      setHasUser(true);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3500);
+
+    fetch("/.netlify/functions/auth", { signal: controller.signal })
       .then((r) => r.json())
-      .then((data) => setHasUser(data.hasUser))
-      .catch(() => setHasUser(false));
+      .then((data) => setHasUser(data.hasUser ?? true))
+      .catch(() => setHasUser(true))
+      .finally(() => clearTimeout(timer));
   }, []);
 
   if (hasUser === null) {

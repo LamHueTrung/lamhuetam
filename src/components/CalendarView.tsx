@@ -193,7 +193,7 @@ export default function CalendarView({
   };
 
   return (
-    <div className="space-y-3.5 select-none">
+    <div className="space-y-3.5 select-none pb-24 sm:pb-28">
       {/* 1. Sleek Compact Top Bar */}
       <div className="bg-white dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-2 sm:p-2.5 shadow-xs flex items-center justify-between gap-2">
         {/* Switch View Segmented Control */}

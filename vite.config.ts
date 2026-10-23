@@ -86,6 +86,21 @@ export default defineConfig(() => {
               },
             },
             {
+              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "supabase-api-cache",
+                networkTimeoutSeconds: 3,
+                expiration: {
+                  maxEntries: 150,
+                  maxAgeSeconds: 60 * 60 * 24 * 7,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
               urlPattern: /^https:\/\/[a-c]\.tile\.openstreetmap\.org\/.*\.png/i,
               handler: "CacheFirst",
               options: {
