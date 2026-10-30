@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@mdi/react";
 import {
   mdiClose,
@@ -680,13 +681,13 @@ export default function NewsfeedComposer({
 
   // If used as an embedded modal or opened modal
   if (isModal) {
-    return modalComposer;
+    return createPortal(modalComposer, document.body);
   }
 
   return (
     <>
       {collapsedComposer}
-      {isOpenModal && modalComposer}
+      {isOpenModal && createPortal(modalComposer, document.body)}
     </>
   );
 }

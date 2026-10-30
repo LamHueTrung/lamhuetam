@@ -197,6 +197,16 @@ input:focus, textarea:focus, select:focus {
 }
 input::placeholder, textarea::placeholder { color: var(--ds-muted); opacity: .85; }
 
+/* Input "trần" nằm trong khung wrapper (bg-transparent): bỏ style inset để không bị hộp trong hộp thiếu padding */
+input.bg-transparent:not([type="checkbox"]):not([type="radio"]),
+input.bg-transparent:not([type="checkbox"]):not([type="radio"]):focus,
+textarea.bg-transparent,
+textarea.bg-transparent:focus {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0;
+}
+
 /* Nút tương tác */
 button, [role="button"] {
   transition: transform .2s var(--ds-ease), box-shadow .25s var(--ds-ease), filter .2s, background-color .2s;
