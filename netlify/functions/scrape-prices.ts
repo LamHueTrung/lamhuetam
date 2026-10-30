@@ -5,7 +5,7 @@ import { scrapeAll, type PriceRow } from "./_market-scraper";
 /**
  * Netlify Scheduled Function — cào giá vàng/xăng từ webgia.com mỗi 30 phút (07h–22h giờ VN).
  * Chỉ INSERT khi giá khác bản ghi mới nhất của chuỗi => DB không phình.
- * Env: SUPABASE_URL (hoặc VITE_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY
+ * Env: SUPABASE_URL (hoặc VITE_SUPABASE_URL), VITE_SUPABASE_ANON_KEY
  */
 export const config: Config = {
   schedule: "*/30 0-15 * * *",
@@ -13,9 +13,11 @@ export const config: Config = {
 
 export default async (): Promise<Response> => {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.VITE_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    console.error("[scrape-prices] Thiếu SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
+    console.error(
+      "[scrape-prices] Thiếu SUPABASE_URL / VITE_SUPABASE_ANON_KEY",
+    );
     return new Response("missing env", { status: 500 });
   }
   const supabase = createClient(url, key, { auth: { persistSession: false } });
@@ -24,7 +26,9 @@ export default async (): Promise<Response> => {
   errors.forEach((e) => console.error("[scrape-prices]", e));
   if (rows.length === 0) {
     // Giữ nguyên dữ liệu cũ khi nguồn lỗi
-    return new Response(JSON.stringify({ inserted: 0, errors }), { status: 200 });
+    return new Response(JSON.stringify({ inserted: 0, errors }), {
+      status: 200,
+    });
   }
 
   const { data: latest, error: latestErr } = await supabase
