@@ -46,6 +46,7 @@ import {
   mdiDatabaseSync,
   mdiShieldCheck,
   mdiCloudUploadOutline,
+  mdiGold,
 } from "@mdi/js";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
@@ -711,7 +712,7 @@ export default function UserProfileView({
         </div>
 
         {/* Utilities Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
           {/* Tiện ích 1: Tài chính & Sổ nợ */}
           <motion.div
             whileHover={{ scale: 1.015, y: -2 }}
@@ -740,8 +741,33 @@ export default function UserProfileView({
             </div>
           </motion.div>
 
+          {/* Tiện ích 2: Giá vàng & xăng (tự động cập nhật) */}
+          <motion.div
+            whileHover={{ scale: 1.015, y: -2 }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => onNavigateToTab && onNavigateToTab(9)}
+            className="p-4 bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-transparent dark:from-amber-950/40 dark:via-yellow-950/20 dark:to-slate-900 border border-amber-200/80 dark:border-amber-900/50 rounded-3xl cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                <Icon path={mdiGold} size={1.2} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                  Giá Vàng & Xăng
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                  Vàng cưới, trang sức, xăng dầu · tăng giảm & cảnh báo
+                </p>
+              </div>
+            </div>
+            <div className="p-2 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2 shadow-2xs">
+              <Icon path={mdiChevronRight} size={0.8} />
+            </div>
+          </motion.div>
+
           {/* Tiện ích : Mở rộng / Phân tích nâng cao */}
-          <div className="p-4 bg-slate-50/70 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex items-center justify-between opacity-80 select-none">
+          {/* <div className="p-4 bg-slate-50/70 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex items-center justify-between opacity-80 select-none">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                 <Icon path={mdiChartTimelineVariant} size={1.2} />
@@ -763,7 +789,7 @@ export default function UserProfileView({
             <div className="p-2 rounded-xl text-slate-300 dark:text-slate-600 shrink-0 ml-2">
               <Icon path={mdiCreation} size={0.75} />
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

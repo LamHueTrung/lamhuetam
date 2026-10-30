@@ -750,6 +750,13 @@ export default function DiaryView() {
     setDisplayLimit(PAGE_SIZE);
   }, [search, selectedMood, sort, viewMode]);
 
+  // Chế độ bản đồ: ẩn header của App (Copy MD / Thoát / ngày) để không đè lên ô tìm kiếm & bộ lọc
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("map-fullscreen", viewMode === "map");
+    return () => root.classList.remove("map-fullscreen");
+  }, [viewMode]);
+
   // Các bài viết đang hiển thị (Pagination slice)
   const visibleEntries = filteredEntries.slice(0, displayLimit);
   const hasMore = displayLimit < filteredEntries.length;

@@ -23,6 +23,7 @@ import CategoryManager from "./components/CategoryManager";
 import DiaryView from "./components/DiaryView";
 import UserProfileView from "./components/UserProfileView";
 import SOCNOCLabPage from "./components/SOCNOCLabPage";
+import MarketPricesPage from "./components/MarketPricesPage";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import SyncStatus from "./components/SyncStatus";
@@ -494,6 +495,9 @@ function AppContent() {
               )}
               {currentTab === 8 && (
                 <SOCNOCLabPage onBack={() => setCurrentTab(7)} />
+              )}
+              {currentTab === 9 && (
+                <MarketPricesPage onBack={() => setCurrentTab(7)} />
               )}
             </motion.div>
           </AnimatePresence>

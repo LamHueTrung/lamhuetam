@@ -408,3 +408,7 @@ button.bg-white:hover { box-shadow: var(--ds-shadow-hover); transform: translate
 .recharts-legend-item-text { color: var(--ds-muted) !important; font-weight: 600; font-size: 11px; }
 .recharts-surface:focus, .recharts-wrapper:focus, .recharts-wrapper *:focus { outline: none; }
 .recharts-reference-line line { stroke: var(--ds-muted); }
+
+/* Tab Bản tin - chế độ bản đồ: ẩn header App, bản đồ chiếm toàn màn hình */
+html.map-fullscreen .ds-topbar { display: none !important; }
+html.map-fullscreen main { padding-top: 0 !important; }
