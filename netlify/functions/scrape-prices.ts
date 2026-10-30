@@ -12,13 +12,23 @@ export const config: Config = {
 };
 
 export default async (): Promise<Response> => {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  const url =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     console.error(
-      "[scrape-prices] Thiếu SUPABASE_URL / VITE_SUPABASE_ANON_KEY",
+      "[scrape-prices] Thiếu SUPABASE_URL hoặc SUPABASE_SERVICE_ROLE_KEY",
     );
-    return new Response("missing env", { status: 500 });
+    return new Response(
+      JSON.stringify({
+        error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
@@ -36,7 +46,10 @@ export default async (): Promise<Response> => {
     .select("series_key, buy_price, sell_price");
   if (latestErr) {
     console.error("[scrape-prices] đọc latest lỗi:", latestErr.message);
-    return new Response(latestErr.message, { status: 500 });
+    return new Response(JSON.stringify({ error: latestErr.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const prev = new Map<string, { buy: number | null; sell: number | null }>();
@@ -56,7 +69,10 @@ export default async (): Promise<Response> => {
     const { error } = await supabase.from("market_prices").insert(changed);
     if (error) {
       console.error("[scrape-prices] insert lỗi:", error.message);
-      return new Response(error.message, { status: 500 });
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   }
 

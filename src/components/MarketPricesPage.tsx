@@ -106,6 +106,8 @@ export default function MarketPricesPage({ onBack }: MarketPricesPageProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [thresholds, setThresholds] = useState<AlertThresholds>(loadThresholds);
 
+  const [fuelFilter, setFuelFilter] = useState<"e" | "all" | "oil">("e");
+
   // Luôn lấy ≥ 30 ngày để tính biến động xăng dầu (đổi giá theo tuần) & cảnh báo
   const fetchDays = Math.max(days, 30);
 
@@ -139,20 +141,59 @@ export default function MarketPricesPage({ onBack }: MarketPricesPageProps) {
     return c;
   }, [latestByKey]);
 
-  const seriesInCategory = useMemo(
-    () =>
-      Array.from(latestByKey.values())
-        .filter((r) => r.category === category)
-        .sort((a, b) => seriesLabel(a).localeCompare(seriesLabel(b), "vi")),
-    [latestByKey, category],
-  );
+  const seriesInCategory = useMemo(() => {
+    let list = Array.from(latestByKey.values()).filter(
+      (r) => r.category === category,
+    );
+
+    if (category === "fuel") {
+      if (fuelFilter === "e") {
+        list = list.filter((r) => r.product.toLowerCase().includes("xăng e"));
+      } else if (fuelFilter === "oil") {
+        list = list.filter((r) => !r.product.toLowerCase().includes("xăng e"));
+      }
+    }
+
+    return list.sort((a, b) => {
+      if (category === "fuel") {
+        // Ưu tiên xăng E: E5 -> E10 -> Dầu DO
+        const getScore = (p: string) => {
+          const s = p.toLowerCase();
+          if (s.includes("e5")) return 1;
+          if (s.includes("e10")) return 2;
+          if (s.includes("dầu do")) return 3;
+          return 4;
+        };
+        const scoreA = getScore(a.product);
+        const scoreB = getScore(b.product);
+        if (scoreA !== scoreB) return scoreA - scoreB;
+        if (a.region !== b.region) {
+          if (a.region === "Vùng 1") return -1;
+          if (b.region === "Vùng 1") return 1;
+        }
+      }
+      return seriesLabel(a).localeCompare(seriesLabel(b), "vi");
+    });
+  }, [latestByKey, category, fuelFilter]);
 
   // Tự chọn chuỗi đầu tiên khi đổi nhóm hoặc khi chuỗi đang chọn không còn
   useEffect(() => {
     if (!seriesInCategory.some((r) => r.series_key === selectedKey)) {
-      setSelectedKey(seriesInCategory[0]?.series_key || "");
+      if (category === "fuel") {
+        const pref =
+          seriesInCategory.find(
+            (r) => r.product.includes("E5") && r.region === "Vùng 1",
+          ) ||
+          seriesInCategory.find((r) =>
+            r.product.toLowerCase().includes("xăng e"),
+          ) ||
+          seriesInCategory[0];
+        setSelectedKey(pref?.series_key || "");
+      } else {
+        setSelectedKey(seriesInCategory[0]?.series_key || "");
+      }
     }
-  }, [seriesInCategory, selectedKey]);
+  }, [seriesInCategory, selectedKey, category]);
 
   const alerts = useMemo(
     () => detectAlerts(grouped, thresholds),
@@ -363,22 +404,69 @@ export default function MarketPricesPage({ onBack }: MarketPricesPageProps) {
         </div>
       ) : (
         <>
+          {/* Bộ lọc nhanh cho Xăng Dầu: Ưu tiên Xăng E */}
+          {category === "fuel" && (
+            <div className="flex items-center gap-1.5 px-1 pb-1">
+              <span className="text-[10px] font-bold text-slate-400">Xem:</span>
+              <button
+                onClick={() => setFuelFilter("e")}
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold cursor-pointer transition-all ${
+                  fuelFilter === "e"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                }`}
+              >
+                🌱 Chỉ Xăng E (E5 & E10)
+              </button>
+              <button
+                onClick={() => setFuelFilter("all")}
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold cursor-pointer transition-all ${
+                  fuelFilter === "all"
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                }`}
+              >
+                Tất cả
+              </button>
+              <button
+                onClick={() => setFuelFilter("oil")}
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold cursor-pointer transition-all ${
+                  fuelFilter === "oil"
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                }`}
+              >
+                Dầu DO
+              </button>
+            </div>
+          )}
+
           {/* Chọn loại */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {seriesInCategory.map((r) => {
               const active = r.series_key === selectedKey;
               const ch = computeChange(grouped.get(r.series_key) || [], r.category);
+              const isE = r.product.toLowerCase().includes("xăng e");
               return (
                 <button
                   key={r.series_key}
                   onClick={() => setSelectedKey(r.series_key)}
                   className={`shrink-0 max-w-[220px] text-left px-3 py-2 rounded-2xl border text-[11px] cursor-pointer transition-all ${
                     active
-                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40"
+                      ? isE
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40"
+                        : "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40"
                       : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
                   }`}
                 >
-                  <div className="font-bold text-slate-700 dark:text-slate-200 truncate">{seriesLabel(r)}</div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="font-bold text-slate-700 dark:text-slate-200 truncate">{seriesLabel(r)}</div>
+                    {isE && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
+                        Xăng E
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="font-black text-slate-900 dark:text-white">{formatVnd(r.sell_price)}</span>
                     {ch && ch.diff !== 0 && (

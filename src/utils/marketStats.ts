@@ -23,7 +23,7 @@ export const CATEGORY_META: Record<
   },
   fuel: {
     label: "Xăng dầu",
-    hint: "Giá bán lẻ Petrolimex (Vùng 1: nội thành; Vùng 2: vùng xa).",
+    hint: "Xăng sinh học E5 & E10 (xăng pha cồn sinh học phổ biến xe máy, ô tô) & Dầu DO Petrolimex. Vùng 1: nội thành; Vùng 2: vùng xa.",
     unitLabel: "đ/lít",
   },
 };
@@ -246,16 +246,20 @@ export function detectAlerts(
   return items.sort((a, b) => Math.abs(b.change.pct) - Math.abs(a.change.pct));
 }
 
-/** Câu tóm tắt dễ hiểu cho người không rành về vàng. */
+/** Câu tóm tắt dễ hiểu cho người không rành về vàng / xăng dầu. */
 export function summarize(
   r: MarketPrice,
   change: Change | null,
   unitLabel: string,
 ): string {
-  const name = CATEGORY_META[r.category].label.toLowerCase();
+  const name =
+    r.category === "fuel"
+      ? r.product
+      : CATEGORY_META[r.category].label.toLowerCase();
   const cur = formatVnd(r.sell_price);
   if (!change) return `Giá ${name} hiện ở mức ${cur} ${unitLabel}. Chưa đủ dữ liệu để so sánh.`;
   if (change.diff === 0) return `Giá ${name} đứng yên so với ${change.basis}, ở mức ${cur} ${unitLabel}.`;
   const dir = change.diff > 0 ? "tăng" : "giảm";
   return `Giá ${name} ${dir} ${formatVnd(Math.abs(change.diff))} ${unitLabel} (${formatPct(change.pct)}) so với ${change.basis}, hiện ${cur} ${unitLabel}.`;
 }
+
